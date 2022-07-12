@@ -1,0 +1,11 @@
+{
+  "utterance": "pause playback",
+  "intent_type": "handle_pause",
+  "intent": {
+    "Pause": "pause"
+  },
+  "expected_data": {
+      "__type__": "mycroft.audio.service.pause"
+  }
+}
+

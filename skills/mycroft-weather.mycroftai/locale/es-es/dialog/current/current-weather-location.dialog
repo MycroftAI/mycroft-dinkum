@@ -1,0 +1,3 @@
+Con una máxima {high_temperature} y una mínima de {low_temperature}, {location} está {condition} con una temperatura en estos momentos de {temperature} grados.
+En este momento el tiempo es {condition} con una temperatura de {temperature} grados {temperature_unit} en {location}. La previsión para hoy es de máximas de {high_temperature} grados y {low_temperature} de mínimas.
+Ahora mismo {condition} con {temperature} grados, con máximas de {high_temperature} y mínimas de {low_temperature} en {location}.

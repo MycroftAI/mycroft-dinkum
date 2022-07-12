@@ -1,0 +1,1 @@
+.*(wiki|najdi|wikipedia)(?! (o)) (?P<ArticleTitle>.+)

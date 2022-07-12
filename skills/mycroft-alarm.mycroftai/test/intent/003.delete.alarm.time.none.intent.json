@@ -1,0 +1,5 @@
+{
+    "utterance": "cancel my 9 a.m. alarm",
+    "intent_type": "handle_delete",
+    "expected_dialog": "alarm.not.found"
+}

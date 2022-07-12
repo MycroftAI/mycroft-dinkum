@@ -1,0 +1,8 @@
+# A low of {low_temperature} degrees {temperature_unit} is expected. 
+En lav af {low_temperature} grader {temperature_unit} er forventet.   
+# A low of {low_temperature} degrees can be expected.
+En lav af {low_temperature} grader kan forventes.  
+# Today it will be as low as {low_temperature} degrees.
+I dag vil det være så lavt som {low_temperature} grader.  
+# 
+  

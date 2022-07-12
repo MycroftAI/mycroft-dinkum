@@ -1,0 +1,8 @@
+minuteur
+(un autre|un deuxième|un troisième|un quatrième|un cinquième|) minuteur ((pour |) {duration}|)
+envoi moi un rappel dans {duration}
+Minuteur pour {duration}.
+minuteur (pour|appelé|nommé) {name}
+
+
+minuteur de {duration} (nommé|appelé|pour) {name}.

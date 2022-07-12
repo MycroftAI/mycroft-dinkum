@@ -1,0 +1,3 @@
+Il tempo è attualmente {condition} e ci sono {temperature} gradi {temperature_unit} a in {location}. La previsione da una massima di {high_temperature} e una minima di {low_temperature}.
+Al momento c'è {condition} con una temperatura di {temperature} gradi, con una massima di {high_temperature} e una minima di {low_temperature} a {location}.
+Con una massima di {high_temperature} e una minima di {low_temperature}, {location} ha {condition} e ci sono {temperature} gradi.

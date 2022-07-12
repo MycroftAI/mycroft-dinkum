@@ -1,0 +1,3 @@
+a {location} {day} il tempo sarà {condition}, con una massima di {high_temperature} e una minima di {low_temperature}
+{day}, {location} avràò una massima di {high_temperature} ed una minima di {low_temperature}, con condizioni {condition}
+A {location} la previsione per {day} è di {high_temperature} per la massima e di {low_temperature} per la minima

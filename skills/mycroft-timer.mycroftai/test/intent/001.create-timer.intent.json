@@ -1,0 +1,7 @@
+{
+    "utterance": "start a timer",
+    "expected_dialog": "ask.how.long",
+    "responses": ["1 minute"],
+    "expected_dialog": "started.timer",
+    "evaluation_timeout": 10
+}

@@ -1,0 +1,13 @@
+# This is currently disabled because the CommonPlay mechanism ends the intent test
+# when the main handler completes, which is before the play:query sequence completes.
+# We will have to extend the testing mechanism to support testing of CommonPlaySkill
+# based skills.
+
+{
+  "utterance": "play npr news",
+  "expected_data": {
+      "__type__": "mycroft.audio.service.play"
+  }
+}
+
+

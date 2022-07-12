@@ -1,0 +1,9 @@
+# nom, pourcentage
+# NOTE: Ajouter à vocab/xx-xx/brightness.entity, aussi
+pleine, 100
+lumineux,75
+moitié,50
+sombre,25
+faible,10
+auto,-1
+automatique, -1

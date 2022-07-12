@@ -1,0 +1,1 @@
+Ρώτησες <br/><ul><tt>'{{query}}'</tt></ul><br/> και έλαβες την απάντηση <br/><ul><tt>'{{answer}}'</tt></ul><P> Για περισσότερες λεπτομέρειες και για τις πηγές που χρησιμοποιήθηκαν στην απάντηση επισκέψου το:<br/><a href="http://www.wolframalpha.com/input/?i={{url_query}}">www.wolframalpha.com</a>

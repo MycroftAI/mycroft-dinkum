@@ -1,0 +1,9 @@
+# Name, Prozentsatz
+# HINWEIS: Fügen Sie Vocab / xx-xx / bright.entity ebenfalls hinzu
+voll,100
+hell,75
+halb,50
+dunkel,25
+niedrig,10
+automatisch,-1
+automatisch,-1

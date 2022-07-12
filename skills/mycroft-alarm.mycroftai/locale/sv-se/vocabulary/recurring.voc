@@ -1,0 +1,30 @@
+# These values must also be supported in the recurring.value file
+återkommande
+upprepande
+varje
+varje
+dagligen
+veckodagar
+helger
+måndagar
+tisdagar
+onsdagar
+torsdagar
+fredagar
+lördagar
+söndagar
+arbetsdagar
+arbetsdagar
+# Yes, it should already catch 'each' and 'every', but Adapt is missing these
+varje dag
+varje vardag
+varje morgon
+varje eftermiddag
+varje kväll
+varje natt
+varje dag
+varje vardag
+varje morgon
+varje eftermiddag
+varje kväll
+varje natt

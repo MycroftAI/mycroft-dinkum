@@ -1,0 +1,2 @@
+(disable|afslut|afbryd|stop) ssh (login|connection|forbindelse)
+(forbyd|disable|afbryd) remote (login|forbindelse)

@@ -1,0 +1,9 @@
+retrasa
+pon la alarma
+pon|activa la alarma para las|la {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+pon|activala para las {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+pausa (la|esta|) alarma
+todavía no
+dame {{time}} más (segundo(|s)|minuto(|s)|hora(|s)) 
+levántame a las {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+déjame dormir|no me despiertes

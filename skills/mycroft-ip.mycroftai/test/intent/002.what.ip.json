@@ -1,0 +1,8 @@
+{
+  "utterance": "what is the ip",
+  "intent_type": "IPIntent",
+  "intent": {
+    "IP": "ip"
+  },
+  "expected_response": ".*[0-9]+ dot [0-9]+ dot [0-9]+ dot [0-9]+.*"
+}

@@ -1,0 +1,6 @@
+{
+    "utterance": "set alarm",
+    "intent_type": "handle_set_alarm",
+    "responses": ["3 p.m."],
+    "expected_dialog": "alarm.scheduled.for.time"
+}

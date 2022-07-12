@@ -1,0 +1,5 @@
+{
+  "utterance": "what time is it in paris",
+  "intent_type": "handle_query_time",
+  "expected_dialog": "time.current"
+}

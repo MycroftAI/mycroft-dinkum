@@ -1,0 +1,3 @@
+oynat (?P<Phrase>.*)
+başlat (?P<Phrase>.*)
+bork (?P<Phrase>.*)

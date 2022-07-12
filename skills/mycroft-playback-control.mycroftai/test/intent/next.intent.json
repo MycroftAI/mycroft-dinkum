@@ -1,0 +1,12 @@
+{
+  "utterance": "next track please",
+  "intent_type": "handle_next",
+  "intent": {
+    "Next": "next",
+    "Track": "track"
+  },
+  "expected_data": {
+      "__type__": "mycroft.audio.service.next"
+  }
+}
+

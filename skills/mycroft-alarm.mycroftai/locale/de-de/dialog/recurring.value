@@ -1,0 +1,36 @@
+# Übersetzter Name, Tag(e) der Woche
+# Mehrzahl-Version zuerst auflisten, also "19 Uhr an Freitagen" oder "19 Uhr täglich"
+montags,1
+Montag,1
+dienstags,2
+Dienstag,2
+mittwochs,3
+Mittwoch,3
+donnerstags,4
+Donnerstag,4
+freitags,5
+Freitag,5
+samstags,6
+Samstag,6
+sonntags,0
+Sonntag,0
+Wochentage,1 2 3 4 5
+Wochentag,1 2 3 4 5
+an jedem Wochentag, 1 2 3 4 5
+an jedem Wochentag, 1 2 3 4 5
+Wochenende,0 6
+Wochenende,0 6
+jeden Tag,0 1 2 3 4 5 6
+jeden Tag,0 1 2 3 4 5 6
+jeden Tag,0 1 2 3 4 5 6
+jeden Morgen,0 1 2 3 4 5 6
+jeden Nachmittag,0 1 2 3 4 5 6
+jeden Abend,0 1 2 3 4 5 6
+jede Nacht,0 1 2 3 4 5 6
+jeden Morgen,0 1 2 3 4 5 6
+jeden Nachmittag,0 1 2 3 4 5 6
+jeden Abend,0 1 2 3 4 5 6
+jede Nacht,0 1 2 3 4 5 6
+täglich,0 1 2 3 4 5 6
+Werktage,1 2 3 4 5
+Arbeit,1 2 3 4 5

@@ -1,0 +1,3 @@
+reproducir (?P<Phrase>.*)
+iniciar (?P<Phrase>.*)
+parar (?P<Phrase>.*)

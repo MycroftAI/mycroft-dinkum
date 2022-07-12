@@ -1,0 +1,9 @@
+snooza
+snooze (larmet)
+väck mig (om|) {{time}} (sekund(|er)|minut(|er)|timme|timmar)
+väck mig om {{time}} (sekund(|er)|minut(|er)|timme|timmar)
+pausa larmet
+inte ännu
+ge mig {{time}} mer (sekund(|er)|minut(|er)|timme|timmar)
+väck mig om {{time}} (sekund(|er)|minut(|er)|timme|timmar)
+låt mig sova

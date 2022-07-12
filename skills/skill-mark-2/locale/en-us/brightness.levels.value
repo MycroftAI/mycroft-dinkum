@@ -1,0 +1,10 @@
+# name, percentage
+# NOTE: Add to vocab/xx-xx/brightness.entity, also
+
+full,100
+bright,75
+half,50
+dim,25
+low,10
+auto,-1
+automatic,-1

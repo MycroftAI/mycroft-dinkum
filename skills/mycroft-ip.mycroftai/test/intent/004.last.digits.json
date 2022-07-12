@@ -1,0 +1,10 @@
+{
+  "utterance": "what's the last digits of your ip",
+  "intent_type": "handle_query_last_part_IP",
+  "intent": {
+    "IP": "ip",
+    "last": "last",
+    "digits": "digits"
+  },
+  "expected_dialog": "last digits"
+}

@@ -1,0 +1,6 @@
+{
+    "utterance": "cancel my 11:59 p.m. alarm",
+    "intent_type": "handle_delete",
+    "responses": ["yes"],
+    "expected_dialog": "alarm.cancelled.desc"
+}

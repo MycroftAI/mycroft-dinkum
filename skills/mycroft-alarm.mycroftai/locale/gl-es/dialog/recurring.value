@@ -1,0 +1,36 @@
+# nome traducido, día(s) da semana
+#lista primeiro a versión plural, resultando en "7pm os venres" ou "7pm cada día"
+os luns,1
+luns,1
+os martes,2
+martes,2
+os mércores,3
+mércores,3
+os xoves,4
+xoves,4
+os venres,5
+venres,5
+os sábados,6
+sábados,6
+os domingos,0
+domingo,0
+días da semana,1 2 3 4 5
+día da semana, 1 2 3 4 5
+cada día da semana, 1 2 3 4 5
+cada día da semana, 1 2 3 4 5
+fin das semanas,0 6
+fin de semana,0 6
+todos os días,0 1 2 3 4 5 6
+cada día,0 1 2 3 4 5 6
+todos os días,0 1 2 3 4 5 6
+cada mañá,0 1 2 3 4 5 6
+cada tarde,0 1 2 3 4 5 6
+cada noitiña,0 1 2 3 4 5 6
+cada noite,0 1 2 3 4 5 6
+cada mañá,0 1 2 3 4 5 6
+cada tarde,0 1 2 3 4 5 6
+cada noitiña,0 1 2 3 4 5 6
+cada noite,0 1 2 3 4 5 6
+diariamente,0 1 2 3 4 5 6
+días laborais,1 2 3 4 5
+traballar,1 2 3 4 5

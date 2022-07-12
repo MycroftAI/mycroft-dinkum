@@ -1,0 +1,3 @@
+(giorno | feriale | festivo)
+(lunedì | i lunedì | martedì | i martedì | mercoledì | i mercoledì | giovedì | i giovedì | venerdì | i venerdì | sabato | i sabati | domenica | le domeniche)
+(lunedì | i lunedì | martedì | i martedì | mercoledì | i mercoledì | giovedì | i giovedì | venerdì | i venerdì | sabato | i sabati | domenica | le domeniche) e (lunedì | i lunedì | martedì | i martedì | mercoledì | i mercoledì | giovedì | i giovedì | venerdì | i venerdì | sabato | i sabati | domenica | le domeniche)

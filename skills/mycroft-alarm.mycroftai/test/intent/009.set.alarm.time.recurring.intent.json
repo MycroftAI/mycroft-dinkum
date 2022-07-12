@@ -1,0 +1,5 @@
+{
+    "utterance": "add an alarm daily for 11 a.m.",
+    "intent_type": "handle_set_alarm",
+    "expected_dialog": "recurring.alarm.scheduled.for.time"
+}

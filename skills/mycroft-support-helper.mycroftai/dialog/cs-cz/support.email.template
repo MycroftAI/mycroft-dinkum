@@ -1,0 +1,19 @@
+<p>Níže je uveden odkaz na balíček pro odstraňování problémů vytvořený Mycroftem:</p>
+
+<ul><tt>
+<p><b>Jméno zařízení:</b> {{device_name}}</p>
+<p><b>Popis:</b> {{description}}</p>
+<br>
+<p>
+    Tento balíček je komprimovaný ZIP soubor, který obsahuje následující data: <br>
+     - Zvuková ukázka dle popisu k ověření funkčnosti mikrofonu <br>
+     - Všechny nejnovější logy ze zařízení <br>
+     - Veškeré konfigurační soubory
+</p>
+<br>
+<a href='{{url}}'>{{url}}</a>
+</tt></ul>
+
+<p>
+<a href='mailto:support@mycroft.ai?Subject=Troubleshooting%20Package&amp;body=Troubleshooting%20Package:%20{{url}}' target='_top'>Pošli to na support@mycroft.ai</a> a předej balíček týmu Mycroft pro analýzu a získání další pomoci.
+</p>

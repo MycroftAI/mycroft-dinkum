@@ -1,0 +1,28 @@
+{
+    "skillMetadata": {
+        "sections": [
+            {
+                "name": "Alarm Sound",
+                "fields": [
+                    {
+                        "type": "label",
+                        "label": "Choose the sound to play when your alarms go off.  <P/>Previews:<p/><ul><h4>Constant Beep</h4><audio controls><source src='https://raw.githubusercontent.com/MycroftAI/skill-alarm/18.08/sounds/constant_beep.mp3' type='audio/mpeg'></audio><h4>Beep-Beep-Beep-Beep</h4><audio controls><source src='https://raw.githubusercontent.com/MycroftAI/skill-alarm/18.08/sounds/beep4.mp3' type='audio/mpeg'></audio><h4>Escalating Beeps</h4><audio controls><source src='https://raw.githubusercontent.com/MycroftAI/skill-alarm/18.08/sounds/escalate.mp3' type='audio/mpeg'></audio><h4>Bell</h4><audio controls><source src='https://raw.githubusercontent.com/MycroftAI/skill-alarm/18.08/sounds/bell.mp3' type='audio/mpeg'></audio><h4>Gentle Chimes</h4><audio controls><source src='https://raw.githubusercontent.com/MycroftAI/skill-alarm/18.08/sounds/chimes.mp3' type='audio/mpeg'></audio></ul>"
+                    },
+                    {
+                        "name": "sound",
+                        "type": "select",
+                        "label": "Selection:",
+                        "options": "Beep-Beep-Beep-Beep|beep4;Bell|bell;Constant Beep (default)|beep;Escalating Beeps|escalate;Gentle Chimes|chimes",
+                        "value": "beep"
+                    },
+                    {
+                        "name": "start_quiet",
+                        "type": "checkbox",
+                        "label": "Start Quietly, Grow Louder",
+                        "value": "false"
+                    }
+                ]
+            }
+        ]
+    }
+}

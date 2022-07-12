@@ -1,0 +1,3 @@
+Actualmente, está {condition} e fai {temperature} graos {temperature_unit} en {location}. A previsión para hoxe é máxima de {high_temperature} graos e mínima de {low_temperature} graos.
+Neste momento, está {condition} e fai {temperature} graos, con máxima de {high_temperature} e unha mínima de {low_temperature} en {location}.
+Cunha máxima de {high_temperature} e mínima de {low_temperature}, {location} ten {condition} e no momento fai {temperature} graos.

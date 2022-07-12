@@ -1,0 +1,36 @@
+# nom traduït, dia|dies de la setmana
+# llista la versió plural primer, resultant en "19:00 (hores) els divendres" o "19:00 (hores) cada dia"
+els dilluns,1
+dilluns,1
+dimarts,2
+dimarts,2
+dimecres,3
+dimecres,3
+els dijous,4
+dijous,4
+els divendres,5
+divendres,5
+els dissabtes,6
+dissabte,6
+els diumenges,0
+diumenge,0
+dies feiners,1 2 3 4 5
+dies feiners,1 2 3 4 5
+cada dia laborable,1 2 3 4 5
+cada dia laborable,1 2 3 4 5
+caps de setmana,0 6
+caps de setmana,0 6
+cada dia,0 1 2 3 4 5 6
+cada dia,0 1 2 3 4 5 6
+diàriament|cada dia,0 1 2 3 4 5 6
+cada matí,0 1 2 3 4 5 6
+cada tarda|vesprada,0 1 2 3 4 5 6
+cada nit,0 1 2 3 4 5 6
+cada nit,0 1 2 3 4 5 6
+cada matí,0 1 2 3 4 5 6
+cada tarda,0 1 2 3 4 5 6
+cada nit,0 1 2 3 4 5 6
+cada nit,0 1 2 3 4 5 6
+diari,0 1 2 3 4 5 6
+dies laborables,1 2 3 4 5
+feina,1 2 3 4 5

@@ -1,0 +1,4 @@
+{
+    "utterance": "temperature",
+    "expected_dialog": "current.local.temperature"
+}

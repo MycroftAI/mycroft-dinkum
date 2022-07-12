@@ -1,0 +1,4 @@
+{location} il meteo nelle prossime ore sarà {condition} con {high_temperature} gradi
+Più tardi sarà {condition} a {location}, con temperature di circa {high_temperature} gradi
+{location} sarà a circa {high_temperature} con {condition}
+{location} sarà a circa {high_temperature} gradi e {condition}

@@ -1,0 +1,9 @@
+snooze
+snooze (the|) alarm
+snooze (the|) alarm for {{time}} (second(|s)|minute(|s)|hour(|s))
+snooze for {{time}} (second(|s)|minute(|s)|hour(|s))
+pause (the|) alarm
+not yet
+give me {{time}} more (second(|s)|minute(|s)|hour(|s))
+wake me up in {{time}} (second(|s)|minute(|s)|hour(|s))
+let me sleep

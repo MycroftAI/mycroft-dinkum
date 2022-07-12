@@ -1,0 +1,5 @@
+On {{ device }} my I.P. ends with {{ digits }}
+On {{ device }} my I.P. address ends with {{ digits }}
+On {{ device }} my I.P. ends with {{ digits }}
+On {{ device }} my I.P. address ends with {{ digits }}
+On {{ device }} it ends with {{ digits }}

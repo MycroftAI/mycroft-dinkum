@@ -1,0 +1,5 @@
+\bför.* (kallad|för|namn) (?P<Name>.*)
+\b(kallad|för|namn) (?P<Name>.*) för
+\b(kallad|för|namn) (?P<Name>.*)
+\b^.*(en|av|den) (?P<Name>.*) timer
+\b^.* (?P<Name>.*)(?<!en)(?<!ett)(?<!annan)(?<!någon)(?<!min)(?<!en till)(?<!vår)(?<!den) timer$

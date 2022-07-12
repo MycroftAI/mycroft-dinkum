@@ -1,0 +1,36 @@
+# nom traduits, jour(s) de la semaine
+# lister la version plurielle en premier, ce qui donne "19h le vendredi" ou "19h tous les jours"
+lundis,1
+lundi,1
+mardis,2
+mardi,2
+mercredis,3
+mercredi,3
+jeudis,4
+jeudi,4
+vendredis,5
+vendredi,5
+samedis,6
+samedi,6
+dimanches,0
+dimanche,0
+jours ouvrables,1 2 3 4 5
+jour ouvrable, 1 2 3 4 5
+tous les jours de la semaine, 1 2 3 4 5
+chaque jour de la semaine, 1 2 3 4 5
+week-ends,0 6
+week-end, 0 6
+chaquejour,0 1 2 3 4 5 6
+chaque jour,0 1 2 3 4 5 6
+chaque jour,0 1 2 3 4 5 6
+tous les matins,0 1 2 3 4 5 6
+tous les après-midi,0 1 2 3 4 5 6
+tous les soirs,0 1 2 3 4 5 6
+toutes les nuits,0 1 2 3 4 5 6
+chaque matin,0 1 2 3 4 5 6
+chaque après-midi,0 1 2 3 4 5 6
+chaque soir,0 1 2 3 4 5 6
+chaque nuit,0 1 2 3 4 5 6
+tous les jours,0 1 2 3 4 5 6
+jours de travail,1 2 3 4 5
+travail, 1 2 3 4 5

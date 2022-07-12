@@ -1,0 +1,1 @@
+.*(wiki|de|sobre|wikipedia|viquipèdia)(?! (de|sobre|en quant a)) (?P<ArticleTitle>.+)

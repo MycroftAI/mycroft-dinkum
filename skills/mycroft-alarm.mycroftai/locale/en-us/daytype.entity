@@ -1,0 +1,3 @@
+(day | weekday | weekdays | weekend | weekends | tomorrow | today)
+(monday  | tuesday  | wednesday  | thursday  | friday  | saturday  | sunday )
+(mondays  | tuesdays  | wednesdays  | thursdays  | fridays | saturdays  | sundays )

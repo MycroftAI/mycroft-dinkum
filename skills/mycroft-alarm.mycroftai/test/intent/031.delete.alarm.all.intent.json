@@ -1,0 +1,7 @@
+{
+    "utterance": "kill all the alarms",
+    "intent_type": "handle_delete",	
+    "responses": ["yes please"],
+    "expected_dialog": ["ask.cancel.alarm.plural",
+                        "alarm.cancelled.multi"]
+}

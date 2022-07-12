@@ -1,0 +1,4 @@
+{location} погода в ближайшие несколько часов будет {condition} и {high_temperature} градусов
+Позже будет {condition} в {location}, с температурами около {high_temperature}
+{location} будет около {high_temperature} с {condition}
+{location} будет около {high_temperature} градусов с {condition}

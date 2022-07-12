@@ -1,0 +1,4 @@
+El temps a {location} en les pròximes hores serà {condition} amb {temperature} graus
+Més tard farà {condition} a {location}, amb temperatures al voltant de {temperature}
+A {location} la temperatura rondarà {temperature} i farà {condition}
+A {location} farà aproximadament {temperature} graus amb {condition}

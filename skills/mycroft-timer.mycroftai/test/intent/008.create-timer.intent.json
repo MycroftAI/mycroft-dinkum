@@ -1,0 +1,5 @@
+{
+    "utterance": "start a 1 hour timer",
+    "expected_dialog": "started.timer",
+    "evaluation_timeout": 10
+}

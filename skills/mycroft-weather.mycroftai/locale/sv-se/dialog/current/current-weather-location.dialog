@@ -1,0 +1,3 @@
+Det är nu {condition} och {temperature} grader {temperature_unit} i {location}. Dagens prognos visar på som högst {high_temperature} och som lägst {low_temperature}.
+Just nu, är det {condition} och {temperature} grader, som högst {high_temperature} och som lägst {low_temperature} i {location}.
+Med en högsta temperatur på {high_temperature} och lägsta på {low_temperature}, {location} har {condition} och just nu {temperature} grader.

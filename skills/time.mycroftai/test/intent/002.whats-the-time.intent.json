@@ -1,0 +1,4 @@
+{
+  "utterance": "whats the time",
+  "expected_dialog": "time.current"
+}

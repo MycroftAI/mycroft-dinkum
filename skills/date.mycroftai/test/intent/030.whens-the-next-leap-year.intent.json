@@ -1,0 +1,9 @@
+{
+  "utterance": "when is the next leap year",
+  "intent_type": "handle_query_next_leap_year",
+  "intent": {
+    "Query": "when",
+    "LeapYear": "leap year"
+  },
+  "expected_dialog": "next.leap.year"
+}

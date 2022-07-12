@@ -1,0 +1,5 @@
+\bfor.* (chiamato|di nome) (?P<Name>.*)
+\b(chiamato|di nome) (?P<Name>.*) di
+\b(chiamato|di nome) (?P<Name>.*)
+\b^.*(un|il) timer (?P<Name>.*)
+\b^.* (?P<Name>.*)(?<!un)(?<!un altro)(?<!qualche)(?<!il mio)(?<!un altro)(?<!il nostro)(?<!il) timer$

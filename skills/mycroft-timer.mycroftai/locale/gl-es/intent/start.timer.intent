@@ -1,0 +1,8 @@
+temporizador
+(outro|máis un|segundo|terceiro|carto|quinto|) temporizador ((para|) {duration}|)
+dáme un toque en {duration}
+(Temporizador|Alarma) (de|para|) {duration}.
+temporizador {name} (para|chamado)
+temporizador {name} (para|chamado) para {duration}
+temporizador {duration} (segundos|minutos|horas)
+(Temporizador|Alarma) (de|para) {duration} (chamado|con nome|para) (o|a) {name}.

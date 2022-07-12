@@ -1,0 +1,5 @@
+{day} kommer det vara {condition}, med en hösta temperatur på {high_temperature} och en lägsta temperatur på {low_temperature} grader
+På {day} kommer det vara {condition}, med en högsta temperatur på {high_temperature} och en lägsta temperatur på {low_temperature} grader
+för {day} kommer toppen bli {high_temperature} och botten {low_temperature}, med {condition}
+{day} kommer det vara {condition}, med en högsta temperatur på {high_temperature} grader och {low_temperature} som minst
+Prognosen för {day} är en högsta temperatur på {high_temperature} och en lägsta temperatur på {low_temperature} grader

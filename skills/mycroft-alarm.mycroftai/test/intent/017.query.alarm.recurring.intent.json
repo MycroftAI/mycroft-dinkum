@@ -1,0 +1,5 @@
+{
+    "utterance": "what time will my daily alarms go off",
+    "intent_type": "handle_status",
+    "expected_dialog": "alarms.list.multi"
+}

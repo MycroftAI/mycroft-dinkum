@@ -1,0 +1,30 @@
+# Estos valores también deben ser soportados en el archivo recurrente.value
+periódica
+repitiendo
+cada
+cada
+diariamente
+días de la semana
+fines de semana
+los lunes
+los martes
+los miércoles
+los jueves
+los viernes
+los sábados
+los domingos
+días laborables
+días laborables
+# Sí, ya debería entender 'cada' y 'todos', pero a Adapt le faltan esos
+todos los días
+todos los días de la semana
+todas las mañanas
+todas las tardes
+todas las tardes-noches
+todas las noches
+cada día
+cada día de la semana
+cada mañana
+cada tarde
+cada tarde-noche
+cada noche

@@ -1,0 +1,2 @@
+(enable|allow) ssh (login|connection)
+(enable|allow) remote (login|connection)

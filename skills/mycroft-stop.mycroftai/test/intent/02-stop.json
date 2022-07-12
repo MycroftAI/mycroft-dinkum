@@ -1,0 +1,10 @@
+{
+  "utterance": "stop",
+  "intent_type": "handle_stop",
+  "intent": {
+    "Stop": "stop"
+  },
+  "expected_data": {
+    "__type__": "mycroft.stop"
+  }
+}

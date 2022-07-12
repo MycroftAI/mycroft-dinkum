@@ -1,0 +1,12 @@
+settings.json
+
+# python compiled files
+*.pyc
+
+# Vim temp files
+.*.sw?
+
+# Dev stuff
+backup/.wh.*
+
+.wh.*

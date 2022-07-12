@@ -1,0 +1,4 @@
+\b^.*larm.* (kallas|för|namngiven) (?P<Name>.*) (varje|för|på|i).*$
+\b^.*larm.* (kallas|för|namngiven) (?P<Name>.*)$
+\b^.* larm (?P<Name>.*) (varje|för|på|i).*$
+\b^.* (?P<Name>.*) larm$

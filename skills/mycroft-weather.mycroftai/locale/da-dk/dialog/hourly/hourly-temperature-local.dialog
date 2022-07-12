@@ -1,0 +1,4 @@
+# It will be about {temperature} degrees {time}
+Det vil handle om {temperature} grader {time}  
+# {time}, it will be {temperature} degrees
+{time}, det vil være {temperature} grader  

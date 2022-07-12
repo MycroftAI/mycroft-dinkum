@@ -1,0 +1,6 @@
+unmute
+turn (volume|speaker|sound|audio)( back|) on
+turn( back|) on (volume|speaker|sound|audio)
+turn( the|) (mute|muting) off
+turn off( the|) (mute|muting)
+stop (mute|muting)

@@ -1,0 +1,5 @@
+\bfor.* (trucada|per a|nom) (?P<Name>.*)
+\b(trucada|per a|nom) (?P<Name>.*) per a
+\b(trucada|per a|nom) (?P<Name>.*)
+\b^.*(un|de|el) (?P<Name>.*) temporitzador
+\b^.* (?P<Name>.*)(?<!a)(?<!una)(?<!una altra)(?<!algun|alguna)(?<!my)(?<!un|una més)(?<!el nostre|la nostra)(?<!el|la) temporitzador$

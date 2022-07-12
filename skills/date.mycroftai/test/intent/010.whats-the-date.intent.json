@@ -1,0 +1,9 @@
+{
+  "utterance": "whats the date",
+  "intent_type": "handle_query_date_simple",
+  "intent": {
+    "Date": "date",
+    "Query": "what"
+  },
+  "expected_dialog": "date"
+}

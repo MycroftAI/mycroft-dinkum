@@ -1,0 +1,2 @@
+{{ device }} má I.P. končící na {{ digits }}
+Na {{ device }} má I.P. adresu končící na {{ digits }}

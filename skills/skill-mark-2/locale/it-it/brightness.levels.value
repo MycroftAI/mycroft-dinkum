@@ -1,0 +1,9 @@
+# name, percentage
+# NOTE: Add to vocab/xx-xx/brightness.entity, also
+piena,100
+luminosa,75
+metà,50
+scura,25
+bassa,10
+auto,-1
+automatica,-1

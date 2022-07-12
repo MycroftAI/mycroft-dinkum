@@ -1,0 +1,7 @@
+{
+  "utterance": "news briefing",
+  "intent_type": "PlayTheNews.intent",
+  "expected_data": {
+      "__type__": "mycroft.audio.service.play"
+  }
+}

@@ -1,0 +1,8 @@
+{
+    "utterance": "disable the alarms for 11 a.m.",
+    "intent_type": "handle_delete",	
+    "responses": ["all of them", "yes sure"],
+    "expected_dialog": ["ask.which.alarm.delete",
+                        "ask.cancel.alarm.plural",
+                        "alarm.cancelled.multi"]
+}

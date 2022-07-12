@@ -1,0 +1,7 @@
+{
+    "utterance": "wake me up every day",
+    "intent_type": "handle_wake_me",
+    "responses": ["8 a.m."],
+    "expected_dialog": ["query.for.when",
+                        "recurring.alarm.scheduled.for.time"]
+}

@@ -1,0 +1,9 @@
+{
+  "utterance": "when is the 1st of september",
+  "intent_type": "handle_day_for_date",
+  "intent": {
+    "Month": "september",
+    "Query": "when"
+  },
+  "expected_dialog": "date"
+}

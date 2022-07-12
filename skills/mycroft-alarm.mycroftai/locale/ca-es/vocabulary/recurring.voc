@@ -1,0 +1,30 @@
+# Aquests valors també han de funcionar en el fitxer recurring.value
+(recurrent|recurrents|periòdic|periòdica|periòdics|periòdiques)
+(repeteix|repetint|repetint-se|repetitiu|repetitiva|repetitius|repetitives)
+cada
+(cada|tots|tots els|totes|totes les)
+(dia|cada dia|diàriament|de forma diària)
+(dies feiners|de dilluns a divendres|entre setmana|dies laborables|dies entre setmana)
+(cap de setmana|caps de setmana|de dissabte a diumenge)
+els dilluns
+(cada |el |els |tots els |)dimarts
+(cada |el |els |tots els |)dimecres
+(cada |el |els |tots els |)dijous
+(cada |el |els |tots els |)divendres
+(cada |el |els |tots els |)dissabte
+(cada |el |els |tots els |)diumenge
+(dies |)(feiners|laborables)
+(dies |dia |)(feiner|feiners|laborable|laborables)
+# Sí, ja hauria de detectar 'cada' i 'tots', però manquen a Adapt
+(cada dia|tots els dies)
+(cada setmana|totes les setmanes)
+(cada matí|tots els matins)
+(cada tarda|cada vesprada|totes les tardes|totes les vesprades)
+(cada vespre|cada horabaixa|tots els vespres|totes les horabaixes|cada capvespre|tots els capvespres)
+(cada nit|totes les nits)
+(cada dia|tots els dies)
+(cada dia feiner|tots els dies feiners|cada dia laborable|tots els dies laborables|de dilluns a divendres|entre dilluns i divendres)
+(cada mati|tots els matins)
+cada tarda
+(cada nit|tots les nits)
+cada nit

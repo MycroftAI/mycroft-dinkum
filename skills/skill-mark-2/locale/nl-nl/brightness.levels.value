@@ -1,0 +1,9 @@
+# naam, percentage
+# OPMERKING: voeg ook toe aan vocab / xx-xx / helderheid. Identiteit
+vol, 100
+helder, 75
+half,50
+dim,25
+laag, 10
+auto,-1
+automatisch,-1

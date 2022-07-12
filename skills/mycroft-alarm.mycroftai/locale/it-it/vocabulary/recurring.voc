@@ -1,0 +1,30 @@
+# These values must also be supported in the recurring.value file
+periodico
+ripetitivo
+ogni
+ogni
+giornaliero
+giorni lavorativi
+fine settimana
+lunedì
+martedì
+i mercoledì
+i giovedì
+i venerdì
+i sabati
+le domeniche
+giorni lavorativi
+giorni lavorativi
+# Sì, dovrebbe già prendere "ciascuno" e "ogni", ma Adapt non ha questi elementi
+ogni giorno
+ogni giorno feriale
+ogni mattina
+ogni pomeriggio
+ogni sera
+ogni notte
+ogni giorno
+ogni giorno feriale
+ogni mattina
+ogni pomeriggio
+ogni sera
+ogni notte

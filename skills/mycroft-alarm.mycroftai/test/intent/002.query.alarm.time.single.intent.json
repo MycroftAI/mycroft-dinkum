@@ -1,0 +1,5 @@
+{
+    "utterance": "what's the status of my alarm for 12 a.m.",
+    "intent_type": "handle_status",
+    "expected_dialog": "alarms.list.single"
+}

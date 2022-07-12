@@ -1,0 +1,11 @@
+{
+  "utterance": "resume playback",
+  "intent_type": "handle_play",
+  "intent": {
+    "Resume": "resume"
+  },
+  "expected_data": {
+      "__type__": "mycroft.audio.service.resume"
+  }
+}
+

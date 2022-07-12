@@ -1,0 +1,7 @@
+{
+  "utterance": "contact support",
+  "expected_data": {"__type__": "contact.support.intent"},
+  "responses": ["no"],
+  "expected_dialog": "cancelled"
+}
+

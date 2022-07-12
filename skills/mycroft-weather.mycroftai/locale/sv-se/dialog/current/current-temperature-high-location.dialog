@@ -1,0 +1,3 @@
+Som högst förväntas det vara {high_temperature} grader {temperature_unit} i {location}. 
+Som högst kan {high_temperature} grader förväntas i {location}.
+Idag kommer det bli {high_temperature} grader som mest i {location}.

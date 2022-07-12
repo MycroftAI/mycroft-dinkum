@@ -1,0 +1,7 @@
+{
+    "utterance": "how are my 11 a.m. alarms",
+    "intent_type": "handle_status",
+    "responses": ["alarm number 8 please"],
+    "expected_dialog": ["ask.which.alarm",
+                        "alarm.not.found"]
+}

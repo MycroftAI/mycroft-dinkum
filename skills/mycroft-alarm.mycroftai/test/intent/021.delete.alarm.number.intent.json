@@ -1,0 +1,7 @@
+{
+    "utterance": "cancel the first alarm",
+    "intent_type": "handle_delete",	
+    "responses": ["yes please"],
+    "expected_dialog": ["ask.cancel.desc.alarm",
+                        "alarm.cancelled.desc"]
+}

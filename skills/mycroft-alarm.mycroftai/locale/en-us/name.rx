@@ -1,0 +1,40 @@
+# Intended Matches:
+#   set a timer for ten minutes called chicken
+#   create timer for five minutes for sauce
+#   start a timer for fifteen minutes named rice pilaf
+\b(every|for|on|at).* (called|for|named) (?P<name>.*)
+
+# Intended Matches:
+#   set an alarm named take medicine for 10:00
+#   create alarm called feed dogs every Monday at noon
+#   start an alarm for wake up at 9:00
+\b(called|for|named) (?P<name>.*) (every|for|on|at).*$
+
+# Intended Matches:
+#   set an alarm named wake up
+#   create alarm called take medicine
+#   cancel alarm for feed dogs
+\b(called|for|named) (?P<name>.*)$
+
+# Intended Matches:
+#   set a feed dogs alarm
+#   create a wake up alarm
+#   cancel the take medicine alarm
+\b^.*(a|of|the) (?P<name>.*)(?<!\recurring)(?<!\brepeating) alarm
+
+# Intended Matches:
+#   set wake up alarm
+#   cancel take medicine alarm
+# Intended Won't Match:
+#   set a alarm
+#   set another alarm
+#   cancel the alarm
+^(start|set|create|begin|need|give|make) (?P<name>.*)(?<!\ban)(?<!another)(?<!\bmy)(?<!one more)(?<!\bthe)(?<!\brecurring)(?<!\brepeating) alarm$
+^(cancel|clear|delete|disable|end|kill|remove|stop) (?P<name>.*)(?<!\ban)(?<!another)(?<!\bmy)(?<!one more)(?<!\bthe) alarm$
+
+# Intended to match a cancel request for "alarm X"
+^(cancel|clear|delete|disable|end|kill|remove|stop) alarm (?P<name>.*)$
+
+# Intended to match a reply to a "which alarm" question when the answer is "alarm 2"
+# Exclude name of "status" to allow simple intent: "alarm status"
+^alarm (?P<name>.*)(?<!\bstatus)$

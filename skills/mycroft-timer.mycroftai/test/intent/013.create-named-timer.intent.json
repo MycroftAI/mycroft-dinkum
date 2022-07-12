@@ -1,0 +1,5 @@
+{
+    "utterance": "start a 7 minute timer called lasagna",
+    "expected_dialog": "started.timer.with.name",
+    "evaluation_timeout": 10
+}

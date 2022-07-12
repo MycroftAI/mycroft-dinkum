@@ -1,0 +1,14 @@
+# MycroftSkill runtime files
+settings.json
+
+# python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Vim temp files
+.*.sw?
+
+# VS Code work files
+.vscode
+.wh.*

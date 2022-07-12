@@ -1,0 +1,8 @@
+temporizador
+(otro|uno más|segundo|tercero|cuarto|quinto|) temporizador ((durante |){duration}|)
+avísame en {duration}
+Temporizador de {duration} (de duración|).
+Temporizador (para|llamado|nombrado) {name}
+temporizador (para|llamado|con nombre) {name} de {duration} (de duración|de tiempo|)
+temporizador de {duration} (segundos|minutos|horas)
+temporizador de {duration} (llamado|de nombre|con nombre|para) {name}.

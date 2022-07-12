@@ -1,0 +1,9 @@
+{
+  "utterance": "whats the date next tuesday",
+  "intent_type": "handle_query_relative_date_alt",
+  "intent": {
+    "RelativeDay": "tuesday",
+    "Date": "date"
+  },
+  "expected_dialog": "date.relative.future"
+}

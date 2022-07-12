@@ -1,0 +1,6 @@
+# Compiled files
+*.pyc
+__pycache__/*
+# Files created by the skill
+settings.json
+.wh.*

@@ -1,0 +1,46 @@
+# izen itzulia, asteko eguna(k)
+# lehenengo pluralezko bertsioa: "7pm ostiraletan" edo "7pm egunero"
+asteko egunetan,1 2 3 4 5
+astegunetan,1 2 3 4 5
+astegunero,1 2 3 4 5
+asteburutan,6 0
+asteburuetan,6 0
+astebururo,6 0
+asteburuero,6 0
+astelehenetan,1
+astelehen,1
+astelehena,1
+asteartetan,2
+astearte,2
+asteartea,2
+astearteetan,2
+asteazkenetan,3
+asteazken,3
+asteazkena,3
+ostegunetan,4
+ostegun,4
+osteguna,4
+ostiraletan,5
+ostiral,5
+ostirala,5
+larunbatetan,6
+larunbat,6
+larunbata,6
+igandetan,0
+igandeetan,0
+igande,0
+igandea,0
+lanegunetan,1 2 3 4 5
+lanegunero,1 2 3 4 5
+egunero,1 2 3 4 5 6 0
+asteko egun guztietan,1 2 3 4 5 6 0
+asteko egun denetan,1 2 3 4 5 6 0
+goiz guztietan,1 2 3 4 5 6 0
+goizero,1 2 3 4 5 6 0
+goizetan,1 2 3 4 5 6 0
+arratsalde guztietan,1 2 3 4 5 6 0
+arratsaldero,1 2 3 4 5 6 0
+arratsaldetan,1 2 3 4 5 6 0
+gau guztietan,1 2 3 4 5 6 0
+gauero,1 2 3 4 5 6 0
+gauetan,1 2 3 4 5 6 0

@@ -1,0 +1,4 @@
+In {num_days} it will be {date}
+It will be {date}, in {num_days}
+It will be {date}, {num_days} from now
+{num_days} from today it will be {date}

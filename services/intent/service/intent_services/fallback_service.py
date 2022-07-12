@@ -1,0 +1,107 @@
+# Copyright 2020 Mycroft AI Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""Intent service for Mycroft's fallback system."""
+import itertools
+import operator
+from collections import defaultdict, namedtuple
+from typing import Dict, Set
+
+from mycroft.messagebus.message import Message
+from mycroft.util.log import LOG
+
+from .base import IntentMatch
+
+FallbackRange = namedtuple("FallbackRange", ["start", "stop"])
+
+
+class FallbackService:
+    """Intent Service handling fallback skills."""
+
+    def __init__(self, bus):
+        self.bus = bus
+        self._fallback_handlers: Dict[int, Set[str]] = defaultdict(set)
+
+        self.bus.on("mycroft.skills.register-fallback", self._register_fallback)
+        self.bus.on("mycroft.skills.unregister-fallback", self._unregister_fallback)
+
+    def _register_fallback(self, message):
+        """Register a fallback handler by priority/name"""
+        name = message.data["name"]
+        priority = message.data["priority"]
+        skill_id = message.data["skill_id"]
+        self._fallback_handlers[priority].add(name)
+        LOG.debug(
+            "Registered fallback for %s (priority=%s, id=%s)", skill_id, priority, name
+        )
+
+    def _unregister_fallback(self, message):
+        """Unregister a fallback handler by name"""
+        name = message.data["name"]
+        skill_id = message.data["skill_id"]
+
+        for handler_names in self._fallback_handlers.values():
+            handler_names.discard(name)
+
+        LOG.debug("Unregistered fallback for %s (id=%s)", skill_id, name)
+
+    def _fallback_range(self, utterances, lang, message, fb_range: FallbackRange):
+        """Send fallback request for a specified priority range.
+
+        Args:
+            utterances (list): List of tuples,
+                               utterances and normalized version
+            lang (str): Langauge code
+            message: Message for session context
+            fb_range (FallbackRange): fallback order start and stop.
+
+        Returns:
+            IntentMatch or None
+        """
+        sorted_handlers = sorted(
+            self._fallback_handlers.items(), key=operator.itemgetter(0)
+        )
+        handlers = [
+            f[1] for f in sorted_handlers if fb_range.start <= f[0] < fb_range.stop
+        ]
+        for handler in itertools.chain.from_iterable(handlers):
+            reply = self.bus.wait_for_response(
+                Message(
+                    "mycroft.skills.handle-fallback",
+                    data={
+                        "name": handler,
+                        "utterance": utterances[0][0],
+                        "lang": lang,
+                        "fallback_range": (fb_range.start, fb_range.stop),
+                    },
+                )
+            )
+
+            if reply:
+                skill_id = reply.data["skill_id"]
+                return IntentMatch("Fallback", None, {}, skill_id)
+
+        return None
+
+    def high_prio(self, utterances, lang, message):
+        """Pre-padatious fallbacks."""
+        return self._fallback_range(utterances, lang, message, FallbackRange(0, 5))
+
+    def medium_prio(self, utterances, lang, message):
+        """General fallbacks."""
+        return self._fallback_range(utterances, lang, message, FallbackRange(5, 90))
+
+    def low_prio(self, utterances, lang, message):
+        """Low prio fallbacks with general matching such as chat-bot."""
+        return self._fallback_range(utterances, lang, message, FallbackRange(90, 101))

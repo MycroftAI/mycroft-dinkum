@@ -1,0 +1,3 @@
+spiele (?P<Phrase>.*)
+starte (?P<Phrase>.*)
+wiedergabe (?P<Phrase>.*)

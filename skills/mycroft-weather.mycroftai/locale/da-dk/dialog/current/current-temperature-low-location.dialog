@@ -1,0 +1,4 @@
+# Today the temperature will be as low as {low_temperature} degrees {temperature_unit} in {location}. 
+I dag vil temperaturen være så lav som {low_temperature} grader {temperature_unit} i {location}.   
+# Temperatures can be as low as {low_temperature} degrees in {location}.
+Temperaturerne kan være så lave som {low_temperature} grader i {location}.  

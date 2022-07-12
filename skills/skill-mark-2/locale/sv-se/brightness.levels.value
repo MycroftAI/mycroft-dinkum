@@ -1,0 +1,9 @@
+# namn, procent
+# OBS: Lägg även till i vocab/xx-xx/brightness.entity
+full,100
+ljust,75
+halv,50
+dimma,25
+låg,10
+automatisk,-1
+automatiskt,-1

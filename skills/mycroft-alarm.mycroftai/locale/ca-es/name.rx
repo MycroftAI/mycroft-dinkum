@@ -1,0 +1,4 @@
+\b^.*alarma.* (cridar|a|anomenat) (?P<Name>.*) (cada|per|a|als).*$
+\b^.*alarma.* (cridar|a|anomenat) (?P<Name>.*)$
+\b^.* alarma(?P<Name>.*) (cada|per|a les|a la).*$
+\b^.* (?P<Name>.*) alarma$

@@ -1,0 +1,3 @@
+El {day} será {condition}, con máximas de {high_temperature} y mínimas de {low_temperature}
+El {day} tendremos en {location} temperaturas máximas de {high_temperature} y mínimas de {low_temperature}, y el tiempo será {condition}
+El pronóstico para {day} es de {high_temperature} de máximas y {low_temperature} de mínimas

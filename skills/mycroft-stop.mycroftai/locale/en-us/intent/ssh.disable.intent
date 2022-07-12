@@ -1,0 +1,2 @@
+(deny|disable) ssh (login|connection)
+(deny|disable) remote (login|connection)

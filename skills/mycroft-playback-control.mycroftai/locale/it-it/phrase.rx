@@ -1,0 +1,3 @@
+riproduci (?P<Phrase>.*)
+avvia (?P<Phrase>.*)
+ferma (?P<Phrase>.*)

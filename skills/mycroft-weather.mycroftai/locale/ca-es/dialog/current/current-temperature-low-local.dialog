@@ -1,0 +1,3 @@
+S'espera un mínim de {low_temperature} graus {temperature_unit}. 
+S'espera un mínim de {low_temperature} graus.
+Avui la temperatura descendirà fins a {low_temperature} graus.

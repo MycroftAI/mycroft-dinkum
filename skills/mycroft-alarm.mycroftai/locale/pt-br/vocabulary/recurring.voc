@@ -1,0 +1,30 @@
+#Estes valores devem também ser suportados no arquivo recurring.value
+recorrente
+recorrente 
+cada
+cada
+diariamente
+dias da semana
+final de semana
+segundas-feiras
+terças-feiras
+quartas-feiras
+quintas-feiras
+sextas-feiras
+sábados
+domingos
+dias úteis
+dias úteis
+#Sim, deveria também capturar 'cada' e 'todo', mas Adapt não tem eles
+todo dia
+todo dia útil
+toda manhã
+toda tarde
+toda noite
+toda noite
+cada dia
+cada dia útil
+cada manhã
+cada tarde
+cada noite
+cada noite

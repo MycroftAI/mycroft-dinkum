@@ -1,0 +1,13 @@
+vad kommer klockan vara om {offset} (timmar|timme|minuter|minut|sekunder|sekund) (från nu|)
+vad kommer klockan vara om {offset} (timme|timmar|minuter|minut|sekund|sekunder) (i|på) {location}
+vad är klockan om {offset} (timme|timmar|minut|minuter|sekund|sekunder)
+vad är klockan om {offset} (timme|timmar|minut|minuter|sekund|sekunder) (i|på) {location}
+(vad är klockan|berätta vad klockan är) om {offset} (timme|timmar|minut|minuter|sekund|sekunder)
+vad är klockan om {offset} (timme|timmar|minut|minuter|sekund|sekunder) (i|på) {location}
+om {offset} (timmar|minuter|sekunder) vad kommer klockan vara
+om {offset} (timmar|minuter|sekunder) vad kommer klockan vara (på|i) {location}
+vad är klockan om {offset} (timme|timmar|minut|minuter|sekund|sekunder)
+vad är klockan om {offset} (timme|timmar|minut|minuter|sekund|sekunder) (i|på) {location}
+(vad kommer klockan vara|vad är klockan) i {location} om {offset} (timme|timmar|minut|minuter|sekund|sekunder)
+(Vad är klockan|vad kommer klockan vara) i {location} om {offset} (timme|timmar|minut|minuter|sekund|sekunder)
+(på|i) {location} vad är klockan om {offset} (timmar|timme|minuter|minut|sekunder|sekund)

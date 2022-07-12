@@ -1,0 +1,10 @@
+# precise lite
+numpy
+sonopy~=0.1.0
+tflite_runtime>=2.5.0,<3.0
+
+# vad
+onnxruntime>=1.6,<2.0
+
+# service
+sdnotify~=0.3.0

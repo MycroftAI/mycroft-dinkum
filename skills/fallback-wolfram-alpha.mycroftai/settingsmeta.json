@@ -1,0 +1,17 @@
+{
+    "skillMetadata": {
+        "sections": [
+            {
+                "name": "Options",
+                "fields": [
+                    {
+                        "name": "autotranslate",
+                        "label": "Automatic translation",
+                        "type": "checkbox",
+                        "value": "true"
+                    }
+                ]
+            }
+        ]
+    }
+}

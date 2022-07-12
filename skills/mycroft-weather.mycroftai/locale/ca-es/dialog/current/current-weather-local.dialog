@@ -1,0 +1,3 @@
+Actualment fa {condition} i {temperature} graus {temperature_unit}.
+Actualment fa {condition} i {temperature} graus.
+Ara mateix fa {condition} i {temperature} graus.

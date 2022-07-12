@@ -1,0 +1,7 @@
+{
+  "utterance": "what was the date last tuesday",
+  "intent": {
+    "RelativeDay": "tuesday"
+  },
+  "expected_dialog": "date.relative.past"
+}

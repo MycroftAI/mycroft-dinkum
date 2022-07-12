@@ -1,0 +1,8 @@
+temporitzador|rellotge
+(un altre|una altra|un més|una més|segon|tercer|quart|cinquè|) temporitzador((durant|){duration}|)
+avisa'm en {duration}
+temporitzador per a {duration}
+temporitzador (durant|trucat|nom) {name}
+temporitzador (per a|anomenat|nom) {name} per a {duration}
+{duration} (segons|minuts|hores) temporitzador
+{duration} temporitzador (per a|anomenat|nom) {name}

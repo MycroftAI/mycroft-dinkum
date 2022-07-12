@@ -1,0 +1,4 @@
+\b^.*alarm.* (appelé|pour|nommé) (?P<Name>.*) (tous|pour|sur|à).*$
+\b^.*alarm.* (appelé|pour|nommé) (?P<Name>.*)$
+\b^.* alarm (?P<Name>.*) (chaque|tous|pour|sur|à).*$
+\b^.* (?P<Name>.*) alarm$

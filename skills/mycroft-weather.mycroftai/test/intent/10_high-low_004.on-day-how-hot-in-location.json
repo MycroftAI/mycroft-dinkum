@@ -1,0 +1,4 @@
+{
+    "utterance": "next saturday how hot will it be in auckland",
+    "expected_dialog": "forecast.high.temperature"
+}

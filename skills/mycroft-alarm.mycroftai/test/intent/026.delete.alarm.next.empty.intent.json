@@ -1,0 +1,5 @@
+{
+    "utterance": "clear the following alarm",
+    "intent_type": "handle_delete",	
+    "expected_dialog": "alarms.list.empty"
+}

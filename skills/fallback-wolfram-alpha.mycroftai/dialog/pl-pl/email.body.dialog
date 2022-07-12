@@ -1,0 +1,1 @@
+Zapytałeś <br/><ul><tt>'{{query}}'</tt></ul><br/> i otrzymałeś odpowiedź <br/><ul><tt>'{{answer}}'</tt></ul><P> W celu poznania szczegółów i użytego źródła informacji odwiedź:<br/><a href="http://www.wolframalpha.com/input/?i={{url_query}}">www.wolframalpha.com</a>

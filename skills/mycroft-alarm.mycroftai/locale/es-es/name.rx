@@ -1,0 +1,4 @@
+\b^.*alarm.* (para|de) (?P<Name>.*) (cada|el|los|a las).*$
+\b^.*alarm.* (llamada|que se llama) (?P<Name>.*)$
+\b^.* alarm (?P<Name>.*) (cada|para|la|a alas).*$
+\b^.* (?P<Name>.*) alarma$

@@ -1,0 +1,8 @@
+# A high of {high_temperature} degrees {temperature_unit} is expected in {location}. 
+En høj af {high_temperature} grader {temperature_unit} forventes i {location}.   
+# A high of {high_temperature} degrees can be expected in {location}.
+En høj af {high_temperature} grader kan forventes i {location}.  
+# Today a the temperature will reach {high_temperature} degrees in {location}.
+I dag når temperaturen {high_temperature} grader i {location}.  
+# 
+  

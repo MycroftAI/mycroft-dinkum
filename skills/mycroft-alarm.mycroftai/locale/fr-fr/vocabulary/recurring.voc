@@ -1,0 +1,30 @@
+# Ces valeurs doivent également être supportées dans le fichier recurring.value
+récurrent
+répéter
+chaque
+chaque
+jour
+jours de la semaine
+weekends
+les lundis
+les mardi
+les mercredi
+les jeudi
+les vendredi
+les samedi
+les dimanche
+jours de travail
+jours ouvrables
+# Oui, il devrait déjà capturer 'chacun' et 'chaque', mais Adapt les rate
+tous les jours
+tous les jours de la semaine
+tous les matins
+toutes les après-midi
+tous les soir
+toutes les nuits
+chaque jour
+chaque jour de la semaine
+chaque matin
+chaque après-midi
+chaque soirée
+chaque nuit

@@ -1,0 +1,28 @@
+# These values must also be supported in the recurring.value file
+recurring
+repeating
+each
+every
+daily
+weekdays
+weekends
+mondays
+tuesdays
+wednesdays
+thursdays
+fridays
+saturdays
+sundays
+# Yes, it should already catch 'each' and 'every', but Adapt is missing these
+every day
+every weekday
+every morning
+every afternoon
+every evening
+every night
+each day
+each weekday
+each morning
+each afternoon
+each evening
+each night

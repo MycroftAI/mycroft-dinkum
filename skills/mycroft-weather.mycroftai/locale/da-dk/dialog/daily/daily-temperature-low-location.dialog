@@ -1,0 +1,4 @@
+# {day} it will be as low as {low_temperature} degrees in {location}
+{day} det vil være så lavt som {low_temperature} grader i {location}  
+# {day}, {location} will be as low as {temperature} degrees
+{day}, {location} vil være så lav som {temperature} grader  

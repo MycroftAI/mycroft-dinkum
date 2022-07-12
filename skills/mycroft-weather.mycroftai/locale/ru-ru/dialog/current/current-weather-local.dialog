@@ -1,0 +1,3 @@
+Сейчас {condition} и {temperature} градусов {temperature_unit}.
+Сейчас {condition} и {temperature} градусов.
+На текущий момент {condition} и {temperature} градусов.

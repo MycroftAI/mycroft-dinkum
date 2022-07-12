@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Use default git install location
+source ${MYCROFT_CORE_DIR}/venv-activate.sh && mycroft_ptt_client

@@ -1,0 +1,7 @@
+{
+    "utterance": "how much is left on the timer",
+    "expected_dialog": "ask.which.timer",
+    "responses": ["lasagna"],
+    "expected_dialog": ["ask.which.timer", "time.remaining.named"],
+    "evaluation_timeout": 10
+}

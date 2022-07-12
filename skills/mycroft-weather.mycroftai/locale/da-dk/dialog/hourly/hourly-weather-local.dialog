@@ -1,0 +1,8 @@
+# It will be {condition}, with temperatures near {temperature}
+Det vil være {condition}, med temperaturer nær {temperature}  
+# Later it will be {condition} and around {temperature} degrees
+Senere bliver det {condition} og omkring {temperature} grader  
+# Later it will be {condition} and {temperature} degrees
+Senere bliver det {condition} og {temperature} grader  
+# Around {temperature} degrees with {condition}
+Rundt om {temperature} grader med {condition}  

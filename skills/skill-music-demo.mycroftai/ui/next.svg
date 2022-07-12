@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="63"
+   height="89"
+   viewBox="0 0 63 89"
+   fill="none"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="next.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <metadata
+     id="metadata10">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="874"
+     inkscape:window-height="480"
+     id="namedview6"
+     showgrid="false"
+     inkscape:zoom="2.299835"
+     inkscape:cx="25.644574"
+     inkscape:cy="17.131865"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg4" />
+  <path
+     d="M62.5 3.09375C62.5 2.50781 62.1094 1.92188 61.7188 1.53125C61.3281 1.14062 60.7422 0.75 60.1562 0.75H50.7812C50 0.75 49.4141 1.14062 49.0234 1.53125C48.6328 1.92188 48.4375 2.50781 48.4375 3.09375V37.2734L10.3516 2.11719C8.98438 1.14062 7.42188 0.75 5.85938 0.75C4.29688 0.945312 2.92969 1.53125 1.75781 2.70312C0.585938 3.875 0 5.4375 0 7V82C0 83.7578 0.585938 85.125 1.75781 86.2969C2.92969 87.4688 4.29688 88.25 5.85938 88.25C7.42188 88.4453 8.98438 88.0547 10.3516 86.8828L48.4375 51.5312V85.9062C48.4375 86.6875 48.6328 87.2734 49.0234 87.6641C49.4141 88.0547 50 88.25 50.7812 88.25H60.1562C60.7422 88.25 61.3281 88.0547 61.7188 87.6641C62.1094 87.2734 62.5 86.6875 62.5 85.9062V3.09375Z"
+     fill="white"
+     id="path2"
+     style="fill:#ffffff" />
+</svg>

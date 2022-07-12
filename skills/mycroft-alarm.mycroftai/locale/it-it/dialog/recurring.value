@@ -1,0 +1,36 @@
+# translated name, day(s) of week
+# list plural version first, resulting in "7pm on fridays" or "7pm every day"
+i lunedì,1
+lunedì,1
+i martedì,2
+martedì,2
+i mercoledì,3
+mercoledì,3
+i giovedì,4
+giovedì,4
+i venerdì,5
+venerdì,5
+i sabati,6
+sabato,6
+le domeniche,0
+domenica,0
+feriali,1 2 3 4 5
+feriale,1 2 3 4 5
+ogni giorno feriale, 1 2 3 4 5
+ogni giorno feriale, 1 2 3 4 5
+festivi,0 6
+ferstivo,0 6
+giornaliero,0 1 2 3 4 5 6
+ogni giorno,0 1 2 3 4 5 6
+quotidiano,0 1 2 3 4 5 6
+ogni mattino,0 1 2 3 4 5 6
+ogni pomeriggio,0 1 2 3 4 5 6
+ogni sera,0 1 2 3 4 5 6
+ogni notte,0 1 2 3 4 5 6
+ogni mattino,0 1 2 3 4 5 6
+ogni pomeriggio,0 1 2 3 4 5 6
+ogni sera,0 1 2 3 4 5 6
+ogni notte,0 1 2 3 4 5 6
+quotidiano,0 1 2 3 4 5 6
+feriali,1 2 3 4 5
+lavoro,1 2 3 4 5

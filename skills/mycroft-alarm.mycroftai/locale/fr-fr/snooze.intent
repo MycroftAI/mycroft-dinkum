@@ -1,0 +1,9 @@
+arrêt momentané
+rappel (du|) réveil
+répétition de l'alarme pendant {{time}} (seconde(|s)|minute(|s)|heure(|s))
+répéter pendant {{time}} (second(|s)|minute(|s)|heure(|s))
+mettre l'alarme en pause
+pas encore
+donne moi {{time}} (seconde(|s)|minute(|s)|heure(|s)) de plus
+Réveille-moi dans {{time}} (secondes(|s)|minute(|s)|heure(|s))
+laisse-moi dormir

@@ -1,0 +1,36 @@
+# nome traduzido, dia(s) da semana
+#lista primeiro a versão plural, resultando em "7pm às sextas" ou "7pm todo dia"
+segundas-feiras, 1
+segunda-feira,1
+terças-feiras,2
+terça-feira,2
+quartas-feiras,3
+quarta-feira,3
+quintas-feiras,4
+quinta-feira,4
+sextas-feiras,5
+sexta-feira,5
+sábados,6
+sábado,6
+domingos,0
+domingo,0
+dias úteis,1 2 3 4 5
+dia útil,1 2 3 4 5
+todo dia útil, 1 2 3 4 5
+cada dia útil, 1 2 3 4 5
+finais de semana,0 6
+final de semana, 0 6
+todo dia,0 1 2 3 4 5 6
+cada dia,0 1 2 3 4 5 6
+todo dia,0 1 2 3 4 5 6
+toda manhã,0 1 2 3 4 5 6
+toda tarde,0 1 2 3 4 5 6
+toda noite,1 2 3 4 5 6
+toda noite,0 1 2 3 4 5 6
+cada manhã,0 1 2 3 4 5 6
+cada tarde,0 1 2 3 4 5 6
+cada noite,0 1 2 3 4 5 6
+cada noite,0 1 2 3 4 5 6
+diariamente,0 1 2 3 4 5 6
+dias úteis,1 2 3 4 5
+trabalho,1 2 3 4 5

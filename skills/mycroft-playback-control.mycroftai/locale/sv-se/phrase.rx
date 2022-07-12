@@ -1,0 +1,3 @@
+spela (?P<Phrase>.*)
+starta (?P<Phrase>.*)
+bork (?P<Phrase>.*)

@@ -1,0 +1,9 @@
+(adiar|suspender)
+suspender (o|) alarme
+suspender (o|) alarme por {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+suspender por {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+pausar (o|) alarme
+ainda não
+me dê mais {{time}} (segundo(|s)|minuto(|s)|hora(|s))
+me acorde em{{time}} (segundo(|s)|minuto(|s)|hora(|s))
+me deixe dormir

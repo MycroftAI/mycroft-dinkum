@@ -1,0 +1,8 @@
+Timer
+(een nieuwe|een extra|de tweede|de derde|de vierde|de vijfde|) timer((voor|){duration}|)
+waarschuw me binnen {duration}
+Timer (voor|){duration}.
+
+
+
+{duration} timer (genaamd|met naam|voor) {name}.

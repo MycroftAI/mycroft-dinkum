@@ -1,0 +1,3 @@
+Na {{ device }} mój adres ajpi ma końcówkę {{ digits }}
+Na urządzeniu {{ device }} mój adres ajpi ma końcówkę {{ digits }}
+Na {{ device }} mam końcówkę {{ digits }}

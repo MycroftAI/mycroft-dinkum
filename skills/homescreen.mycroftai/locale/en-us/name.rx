@@ -1,0 +1,9 @@
+# Intended Matches:
+#   change wallpaper to space
+\bto.* (?P<Name>.*)
+
+# Intended Matches:
+#   change wallpaper to night
+#
+# STT mistakenly returns "tonight"
+\b(?P<Name>tonight)

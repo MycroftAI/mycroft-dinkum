@@ -1,0 +1,30 @@
+# Diese Werte müssen auch in der recurring.value Datei unterstützt werden
+sich wiederholend
+wiederholend
+jeden
+jeden
+täglich
+wochentags
+Wochenenden
+montags
+dienstags
+mittwochs
+donnerstags
+freitags
+samstags
+sonntags
+wochentags
+wochentags
+# Ja, es sollte bereits 'Jeder' und 'Jeder' fangen, aber Adapt fehlt diese
+jeden Tag
+jeden Wochentag
+jeden Morgen
+jeden Nachmittag
+jeden Abend
+jede Nacht
+jeden Tag
+jeden Wochentag
+jeden Morgen
+jeden Nachmittag
+jeden Abend
+jede Nacht

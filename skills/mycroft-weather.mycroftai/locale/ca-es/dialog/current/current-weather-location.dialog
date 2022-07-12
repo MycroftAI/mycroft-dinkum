@@ -1,0 +1,3 @@
+Actualment fa {condition} i {temperature} graus {temperature_unit} a {location}. La previsió d'avui és d'un màxim de {high_temperature} i un mínim de {low_temperature}.
+Ara mateix, fa {condition} i {temperature} graus, amb màximes de {high_temperature} i mínimes de {low_temperature} a {location}.
+Amb una màxima de {high_temperature} i una mínima de {low_temperature}, a {location} fa {condition} i ara mateix hi ha {temperature} graus.

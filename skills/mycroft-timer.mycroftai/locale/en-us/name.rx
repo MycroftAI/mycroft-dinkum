@@ -1,0 +1,41 @@
+# Intended Matches:
+#   set a timer for ten minutes called chicken
+#   create timer for five minutes for sauce
+#   start a timer for fifteen minutes named rice pilaf
+\bfor.* (called|for|named) (?P<Name>.*)
+
+# Intended Matches:
+#   set a timer named chicken for ten minutes
+#   create timer called sauce for five minutes
+#   start a timer for rice pilaf for ten minutes
+\b(called|for|named) (?P<Name>.*) for
+
+# Intended Matches:
+#   set a timer named chicken
+#   create timer called sauce
+#   start a timer for rice
+#   cancel timer named clam chowder
+\b(called|for|named) (?P<Name>.*)
+
+# Intended Matches:
+#   set a chicken timer
+#   create a sauce timer
+#   cancel the rice timer
+#   stop the clam chowder timer
+\b^.*(a|of|the) (?P<Name>.*) timer
+
+# Intended Matches:
+#   set a chicken timer
+#   cancel pasta timer
+# Intended Won't Match:
+#   set a timer
+#   set another timer
+#   cancel the timer
+^(start|set|create|begin|need|give|make) (?P<Name>.*)(?<!\ba)(?<!another)(?<!\bmy)(?<!one more)(?<!\bthe) timer$
+^(cancel|clear|delete|disable|end|kill|remove|stop) (?P<Name>.*)(?<!\ba)(?<!another)(?<!\bmy)(?<!one more)(?<!\bthe) timer$
+
+# Intended to match a cancel request for "timer X"
+^(cancel|clear|delete|disable|end|kill|remove|stop) timer (?P<Name>.*)$
+
+# Intended to match a reply to a "which timer" question when the answer is "timer 2"
+^timer (?P<Name>.*)$

@@ -1,0 +1,1 @@
+.*(wiki|per|a proposito di|wikipedia)(?! (per|a proposito di)) (?P<ArticleTitle>.+)

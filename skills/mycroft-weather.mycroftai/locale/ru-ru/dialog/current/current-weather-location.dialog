@@ -1,0 +1,3 @@
+С {high_temperature} и низкой температурой в {low_temperature} {location}  {condition} сейчас {temperature} градусов.
+В настоящий момент  {condition} и {temperature} градусов {temperature_unit} в {location}. Сегодняшний прогноз - это максимум {high_temperature} и минимум {low_temperature}.
+Сейчас {condition} и {temperature} градусов, с максимумом {high_temperature} и минимумом {low_temperature} в {location}.

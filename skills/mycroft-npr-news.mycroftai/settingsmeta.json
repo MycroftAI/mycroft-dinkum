@@ -1,0 +1,30 @@
+{
+ "skillMetadata": {
+        "sections": [
+            {
+                "name": "Configuration",
+                "fields": [
+                    {
+                        "type": "label",
+                        "label": "By default this skill reads the NPR hourly news broadcast. You can select alternate options from the menu to get built-in podcasts, or you can specify a particular URL to use for your news feed."
+                    },
+                    {
+                        "name": "station",
+                        "type": "select",
+                        "label": "Options",
+                        "options": "Other URL (please define below)|not_set;AP Hourly Radio News|AP;[AU] ABC News|ABC;[CA] CBC|CBC;[BE] VRT Nieuws|VRT;[DE] DLF|DLF;[DE] WDR|WDR;[ES] RNE National Spanish Radio|RNE;[FI] YLE|YLE;[NL] NOS Journaal|NOS;[PT] RDP Africa|RDP;[PT] TSF|TSF;[SE] Ekot|Ekot;[UK] BBC News|BBC;[US] FOX News|FOX;[US] Georgia Public Radio|GPB;[US] NPR|NPR;[US] PBS NewsHour Daily|PBS",
+                        "value": "not_set"
+                    },
+                    {
+                        "name": "custom_url",
+                        "type": "text",
+                        "label": "Custom News Feed url:",
+                        "value": ""
+                    }
+
+                ]
+            }
+        ]
+    }
+
+}

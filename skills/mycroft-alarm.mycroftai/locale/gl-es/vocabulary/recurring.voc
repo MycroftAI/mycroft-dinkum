@@ -1,0 +1,30 @@
+#Estes valores deben tamén ser soportados no ficheiro recurring.value
+recorrente
+repetindo
+cada
+a cada
+diariamente
+días da semana
+fins de semana
+os luns
+os martes
+os mércores
+os xoves
+os venres
+os sábados
+os domingos
+días laborais
+días laborais
+#Si, debería tamén capturar 'cada' e 'todo', mais Adapt non os ten
+cada día
+cada día laboral
+cada mañá
+cada tarde
+cada noitiña
+cada noite
+cada día
+cada día laboral
+cada mañá
+cada tarde
+cada noitiña
+cada noite

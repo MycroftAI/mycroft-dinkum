@@ -1,0 +1,4 @@
+numpy
+pysdl2==0.9.11
+sdnotify~=0.3.0
+pysbd~=0.3.0

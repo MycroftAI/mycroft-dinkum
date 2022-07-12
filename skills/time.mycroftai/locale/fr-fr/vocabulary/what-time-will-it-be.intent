@@ -1,0 +1,13 @@
+quelle (heure sera-t-il|sera l'heure) dans {offset} (heures|minutes|secondes) (à partir de maintenant|)
+quelle (heure sera-t-il|sera l'heure) dans {offset} (heures|minutes|secondes) (à partir de maintenant|) (en|au) {location}
+(Quelle est|quelle sera) l'heure dans {offset} (heures|minutes|secondes) (à partir de maintenant|)
+(Quelle est|quelle sera) l'heure dans {offset} (heures|minutes|secondes) (à partir de maintenant|) (en|au) {location}
+(donnez|donnes|dis|dîtes)-moi l'heure dans {offset} (heures|minutes|secondes) (à partir de maintenant|)
+(donnez|donnes|dis|dîtes)-moi l'heure dans {offset} (heures|minutes|secondes) (à partir de maintenant|) (en|au) {location}
+(dans|) {offset} (heures|minutes|secondes) quelle (heure sera t-il |sera l'heure)
+(dans|) {offset} (heures|minutes|secondes) (à partir de maintenant|) quelle (heure sera t il |sera l heure) (à|pour|en) {location}
+quand sera-t-il {offset} (heures|minutes|secondes) (à partir de maintenant|)
+quand sera-t-il {offset} (heures|minutes|secondes) (à partir de maintenant|) à {location}
+quelle heure (sera-t-il|il sera|est-il) (en|au) {location} (dans|) {offset} (heures|minutes|secondes) (à partir de maintenant|)
+(Quelle est|quelle sera) l'heure (en|au) {location} (dans|) {offset} (heures|minutes|secondes) (à partir de maintenant|)
+(à|en|pour) {location} quelle (heure sera-t-il|sera l'heure) (dans|) {offset} (hours|minutes|seconds)

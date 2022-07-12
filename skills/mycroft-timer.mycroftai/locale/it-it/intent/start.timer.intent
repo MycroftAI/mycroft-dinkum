@@ -1,0 +1,8 @@
+timer
+(un altro|ancora|secondo|terzo|quarto|quinto|) timer ((per |){duration}|)
+svegliami in {duration}
+Timer di {duration}.
+timer chiamato {name}
+timer chiamato {name} di {duration}
+Timer di {duration} (secondi|minuti|ore)
+Timer di {duration} chiamato {name}.

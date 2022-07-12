@@ -1,0 +1,7 @@
+*.pyc
+settings.json
+mycroft
+
+# Pycharm project files
+.idea/
+.wh.*

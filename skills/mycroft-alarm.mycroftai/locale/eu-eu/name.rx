@@ -1,0 +1,4 @@
+\b^.*alarma.* (?P<Name>.*) (izenarekin|izena|) (guztietan|an|).*$
+\b^.*alarma.* (izenarekin|izena|) (?P<Name>.*)$
+\b^.* alarma (?P<Name>.*) (guztietan|an|).*$
+\b^.* (?P<Name>.*) alarma$

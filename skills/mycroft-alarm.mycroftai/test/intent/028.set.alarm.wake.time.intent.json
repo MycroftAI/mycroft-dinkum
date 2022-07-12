@@ -1,0 +1,5 @@
+{
+    "utterance": "let me know if it's 8 a.m.",
+    "intent_type": "handle_wake_me",
+    "expected_dialog": "alarm.scheduled.for.time"
+}

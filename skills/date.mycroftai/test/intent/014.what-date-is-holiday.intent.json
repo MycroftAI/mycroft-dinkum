@@ -1,0 +1,5 @@
+{
+  "utterance": "what date is christmas",
+  "intent_type": "handle_query_date_simple",
+  "expected_dialog": "date"
+}

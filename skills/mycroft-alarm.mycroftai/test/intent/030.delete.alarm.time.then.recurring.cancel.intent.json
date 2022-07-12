@@ -1,0 +1,8 @@
+{
+    "utterance": "erase the 8 a.m. alarm",
+    "intent_type": "handle_delete",	
+    "responses": ["the daily alarm", "no"],
+    "expected_dialog": ["ask.which.alarm.delete",
+                        "ask.cancel.desc.alarm.recurring",
+                        "alarm.delete.cancelled"]
+}

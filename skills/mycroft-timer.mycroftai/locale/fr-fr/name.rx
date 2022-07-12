@@ -1,0 +1,5 @@
+\bfor.* (appelé|pour|nom) (?P<Name>.*)
+\b(appelé|pour|nom) (?P<Name>.*) pour
+\b(appelé|pour|nom) (?P<Name>.*)
+\b^.*(un,de,le) (?P<Name>.*) minuteur
+\b^.* (?P<Name>.*)(?<!a)(?<!un)(?<!un autre)(?<!tout)(?<!mon)(?<!un de plus)(?<!notre)(?<!le) minuteur$

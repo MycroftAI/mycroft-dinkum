@@ -1,0 +1,7 @@
+{
+    "utterance": "what day is my 11 a.m. alarm",
+    "intent_type": "handle_status",
+    "responses": ["the third one"],
+    "expected_dialog": ["ask.which.alarm",
+                        "alarms.list.single"]
+}

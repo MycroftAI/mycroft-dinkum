@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="rotation" type="String">
+      <default>NORMAL</default>
+      <label>
+          Software rotation of the graphics. Allowed values are
+          NORMAL: 0 degrees (default)
+          CW: Clockwise 90 degrees
+          CCW: CounterClockWise 90 degrees
+          UD: upside down 180 degrees
+      </label>
+    </entry>
+    <entry name="fakeBrightness" type="Double">
+      <default>1.0</default>
+      <label>
+          On devices that don't support hardware screen brightness this just dims the QML scene in software.
+      </label>
+    </entry>
+    <entry name="showRotationButton" type="Bool">
+      <default>false</default>
+      <label>
+          Show a screen rotation button on the top panel slider
+      </label>
+    </entry>
+    <entry name="showMuteButton" type="Bool">
+      <default>false</default>
+      <label>
+          Show a mute button on the top panel slider
+      </label>
+    </entry>
+  </group>
+
+</kcfg>

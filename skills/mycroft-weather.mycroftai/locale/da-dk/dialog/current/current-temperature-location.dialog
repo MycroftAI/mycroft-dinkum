@@ -1,0 +1,8 @@
+# It's currently {temperature} degrees {temperature_unit} in {location}. 
+Det er i øjeblikket {temperature} grader {temperature_unit} i {location}.   
+# It's currently {temperature} degrees in {location}.
+Det er i øjeblikket {temperature} grader i {location}.  
+# Right now, it's {temperature} degrees in {location}.
+Lige nu, det er {temperature} grader i {location}.  
+# 
+  
