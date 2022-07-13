@@ -60,12 +60,12 @@ class DateSkill(MycroftSkill):
         self.add_event("mycroft.ready", self._cache_current_date_tts)
 
         # Check if date has changed once a minute
-        self.schedule_repeating_event(
-            handler=self._cache_current_date_tts,
-            when=None,
-            frequency=60,
-            name="CacheTTS",
-        )
+        # self.schedule_repeating_event(
+        #     handler=self._cache_current_date_tts,
+        #     when=None,
+        #     frequency=60,
+        #     name="CacheTTS",
+        # )
 
     @intent_handler(AdaptIntent().require("query").require("date").optionally("today"))
     def handle_current_date_request(self, message):

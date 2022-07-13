@@ -1173,6 +1173,7 @@ class MycroftSkill:
         # registers the skill as being active
         meta = meta or {}
         meta["skill"] = self.name
+        meta["skill_id"] = self.skill_id
         self.enclosure.register(self.name)
         data = {
             "session_id": self._tts_session_id,
@@ -1323,16 +1324,16 @@ class MycroftSkill:
         require a verbal response. This is intended to provide simple feedback
         to the user that their request was handled successfully.
         """
-        audio_file = resolve_resource_file(
-            self.config_core.get("sounds").get("acknowledge")
-        )
+        acknowledge = self.config_core.get("sounds").get("acknowledge")
+        if acknowledge:
+            audio_file = resolve_resource_file(acknowledge)
 
-        if not audio_file:
-            LOG.warning("Could not find 'acknowledge' audio file!")
-            return
+            if audio_file:
+                LOG.warning("Could not find 'acknowledge' audio file!")
+                return
 
-        uri = f"file://{audio_file}"
-        self.play_sound_uri(uri)
+            uri = f"file://{audio_file}"
+            self.play_sound_uri(uri)
 
     def load_data_files(self):
         """Called by the skill loader to load intents, dialogs, etc."""

@@ -1,0 +1,3 @@
+behave@git+https://github.com/behave/behave@v1.2.7.dev2
+mycroft-messagebus-client==0.9.4
+PyYAML==5.4

@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
+import os
 import queue
-import shlex
-import subprocess
-import tempfile
 import threading
 import time
 import typing
 from collections import deque
 from dataclasses import dataclass
 from enum import IntEnum
-from pathlib import Path
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
@@ -127,11 +124,7 @@ class AudioUserInterface:
             self.config["sounds"]["start_listening"]
         )
 
-        self._acknowledge_uri = "file://" + resolve_resource_file(
-            self.config["sounds"]["acknowledge"]
-        )
-
-        self._ignore_session_ids: typing.Deque[str] = deque(maxlen=100)
+        # self._ignore_session_ids: typing.Deque[str] = deque(maxlen=100)
 
         self._bg_position_timer = RepeatingTimer(1.0, self.send_stream_position)
 
@@ -214,8 +207,8 @@ class AudioUserInterface:
     def _stop_tts(self):
         LOG.info("Stopping TTS")
 
-        if self._tts_session_id:
-            self._ignore_session_ids.append(self._tts_session_id)
+        # if self._tts_session_id:
+        #     self._ignore_session_ids.append(self._tts_session_id)
 
         self._tts_session_id = None
 
@@ -292,10 +285,10 @@ class AudioUserInterface:
         num_chunks = message.data.get("num_chunks", 1)
         listen = message.data.get("listen", False)
 
-        if session_id in self._ignore_session_ids:
-            # Drop chunks from previously stopped session
-            LOG.info("Ignoring TTS chunk from session: %s", session_id)
-            return
+        # if session_id in self._ignore_session_ids:
+        #     # Drop chunks from previously stopped session
+        #     LOG.info("Ignoring TTS chunk from session: %s", session_id)
+        #     return
 
         request = TTSRequest(
             uri=uri,
@@ -339,18 +332,19 @@ class AudioUserInterface:
                 if request is None:
                     break
 
-                if request.session_id not in self._ignore_session_ids:
-                    self._tts_session_id = request.session_id
+                # if request.session_id not in self._ignore_session_ids:
+                self._tts_session_id = request.session_id
 
-                    if request.is_first_chunk:
-                        self.bus.emit(Message("recognizer_loop:audio_output_start"))
+                if request.is_first_chunk:
+                    self.bus.emit(Message("recognizer_loop:audio_output_start"))
 
-                    # TODO: Support other URI types
-                    assert request.uri.startswith("file://")
-                    file_path = request.uri[len("file://") :]
+                # TODO: Support other URI types
+                assert request.uri.startswith("file://")
+                file_path = request.uri[len("file://") :]
 
-                    # Play TTS chunk
-                    self._speech_finished.clear()
+                # Play TTS chunk
+                self._speech_finished.clear()
+                if os.path.isfile(file_path):
                     duration_sec = self._ahal.play_foreground(
                         ForegroundChannel.SPEECH,
                         file_path,

@@ -4,7 +4,7 @@ Feature: Current date
   Scenario Outline: what's the date
     Given an english speaking user
      When the user says "<current date request>"
-     Then "date" should reply with dialog from "date.dialog"
+     Then "date.mycroftai" should reply with dialog from "date.dialog"
 
   Examples:
     | current date request |

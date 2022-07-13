@@ -4,7 +4,7 @@ Feature: Next Leap Year
   Scenario Outline: when is the next leap year
     Given an english speaking user
      When the user says "<leap year request>"
-     Then "date" should reply with dialog from "next-leap-year.dialog"
+     Then "date.mycroftai" should reply with dialog from "next-leap-year.dialog"
 
   Examples:
     | leap year request |

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pysbd
 from mycroft.tts import TTS
+from mycroft.tts.dummy_tts import DummyTTS
 from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import Message, MessageBusClient
 
@@ -34,7 +35,6 @@ class SpeakHandler:
             session_id = message.data.get("session_id") or str(uuid4())
             for i, sentence in enumerate(segments):
                 cache_path = self._synthesize(sentence)
-
                 audio_uri = "file://" + str(cache_path)
                 self.bus.emit(
                     Message(
@@ -92,6 +92,10 @@ def register_tts(config: dict[str, Any], bus: MessageBusClient, tts: TTS):
 
 def load_tts_module(config: dict[str, Any]) -> TTS:
     module_name = config["tts"]["module"]
+    if module_name == "dummy":
+        LOG.debug("Using dummy TTS")
+        return DummyTTS("", {})
+
     tts_config = config["tts"].get(module_name, {})
     lang = config.get("lang", "en-us")
     tts_lang = tts_config.get("lang", lang)

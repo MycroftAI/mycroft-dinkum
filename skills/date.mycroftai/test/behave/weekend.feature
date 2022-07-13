@@ -5,7 +5,7 @@ Feature: Respond to user requests for weekend dates
   Scenario Outline: what is the date next weekend
     Given an english speaking user
      When the user says "<upcoming weekend request>"
-     Then "date" should reply with dialog from "date-future-weekend.dialog"
+     Then "date.mycroftai" should reply with dialog from "date-future-weekend.dialog"
 
   Examples: what is the date next weekend
      | upcoming weekend request |
@@ -16,7 +16,7 @@ Feature: Respond to user requests for weekend dates
   Scenario Outline: what was the date last weekend
     Given an english speaking user
      When the user says "<prior weekend request>"
-     Then "date" should reply with dialog from "date-last-weekend.dialog"
+     Then "date.mycroftai" should reply with dialog from "date-last-weekend.dialog"
 
   Examples: what was the date last weekend
     | prior weekend request |

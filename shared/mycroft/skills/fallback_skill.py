@@ -62,9 +62,10 @@ class FallbackSkill(MycroftSkill):
     def _handle_fallback(self, message):
         name = message.data["name"]
         handler = self._handlers.get(name)
-        if handler is not None:
-            if handler(message):
-                self.bus.emit(message.response(data={"skill_id": self.skill_id}))
+        handled = (handler is not None) and handler(message)
+        self.bus.emit(
+            message.response(data={"handled": handled, "skill_id": self.skill_id})
+        )
 
     def register_fallback(self, handler: FallbackHandler, priority: int):
         """Register a fallback with the list of fallback handlers and with the

@@ -3,7 +3,6 @@ Feature: Wikipedia Skill
   Scenario Outline: user asks a question about a person
     Given an english speaking user
      When the user says "<tell me about a person>"
-     Then there will be a short delay
      And mycroft reply should contain "<person>"
      Then dialog is stopped
 
@@ -22,7 +21,6 @@ Feature: Wikipedia Skill
   Scenario Outline: trigger a disambiguate response
     Given an english speaking user
      When the user says "<tell me about a person>"
-     Then there will be a short delay
      And mycroft reply should contain "<person>"
      Then dialog is stopped
 
@@ -33,7 +31,6 @@ Feature: Wikipedia Skill
   Scenario Outline: user asks a question about a place
     Given an english speaking user
      When the user says "<tell me about a place>"
-     Then there will be a short delay
      And mycroft reply should contain "<place>"
      Then dialog is stopped
 
@@ -48,7 +45,6 @@ Feature: Wikipedia Skill
   Scenario Outline: user asks a question about something
     Given an english speaking user
      When the user says "<tell me about a thing>"
-     Then there will be a short delay
      And mycroft reply should contain "<thing>"
      Then dialog is stopped
 
@@ -63,7 +59,6 @@ Feature: Wikipedia Skill
   Scenario Outline: user asks a question about an idea
     Given an english speaking user
      When the user says "<tell me about an idea>"
-     Then there will be a short delay
      And mycroft reply should contain "<idea>"
      Then dialog is stopped
 

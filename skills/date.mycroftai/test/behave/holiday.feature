@@ -5,7 +5,7 @@ Feature: User requests information about a past or future holiday.
   Scenario Outline: when is a holiday
     Given an english speaking user
      When the user says "<when is new year's day>"
-     Then "date" should reply with dialog from "date.dialog"
+     Then "date.mycroftai" should reply with dialog from "date.dialog"
 
   Examples: when is a holiday
     | when is new year's day |

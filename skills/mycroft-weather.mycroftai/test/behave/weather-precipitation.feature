@@ -5,7 +5,7 @@
     Given an english speaking user
      And there is rain predicted for today
      When the user says "<rain locally today when expected>"
-     Then "mycroft-weather" should reply with "rain is expected today."
+     Then "mycroft-weather.mycroftai" should reply with "rain is expected today."
 
   Examples: will it rain locally today when expected
 
@@ -22,7 +22,7 @@
     Given an english speaking user
      And there is no rain predicted for today
      When the user says "<rain locally today when not expected>"
-     Then "mycroft-weather" should reply with "no rain is expected today."
+     Then "mycroft-weather.mycroftai" should reply with "no rain is expected today."
 
   Examples: will it rain locally today when not expected
 
@@ -39,7 +39,7 @@
     Given an english speaking user
      And there is snow predicted for today
      When the user says "<snow locally today when expected>"
-     Then "mycroft-weather" should reply with "snow is expected today."
+     Then "mycroft-weather.mycroftai" should reply with "snow is expected today."
 
   Examples: will it snow locally today when expected
 
@@ -52,7 +52,7 @@
     Given an english speaking user
      And there is no snow predicted for today
      When the user says "<snow locally today when not expected>"
-     Then "mycroft-weather" should reply with "no snow is expected today."
+     Then "mycroft-weather.mycroftai" should reply with "no snow is expected today."
 
   Examples: will it snow locally today when not expected
 
@@ -65,7 +65,7 @@
     Given an english speaking user
      And there is rain predicted for today in a location
      When the user says "<rain in a location today when expected>"
-     Then "mycroft-weather" should reply with "yes, expect rain in Kansas City Missouri today"
+     Then "mycroft-weather.mycroftai" should reply with "yes, expect rain in Kansas City Missouri today"
 
   Examples: will it rain in a location today when expected
 
@@ -78,7 +78,7 @@
     Given an english speaking user
      And there is rain predicted for the future in a location
      When the user says "<rain in a location in the future when expected>"
-     Then "mycroft-weather" should reply with "yes, the forecast calls for light rain in charleston south carolina tomorrow"
+     Then "mycroft-weather.mycroftai" should reply with "yes, the forecast calls for light rain in charleston south carolina tomorrow"
 
   Examples: will it rain in a location in the future when expected
 

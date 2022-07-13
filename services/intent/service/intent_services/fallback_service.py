@@ -88,7 +88,7 @@ class FallbackService:
                 )
             )
 
-            if reply:
+            if reply and reply.data.get("handled", False):
                 skill_id = reply.data["skill_id"]
                 return IntentMatch("Fallback", None, {}, skill_id)
 
