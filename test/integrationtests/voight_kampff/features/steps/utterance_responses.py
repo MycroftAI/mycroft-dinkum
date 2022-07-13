@@ -272,16 +272,11 @@ def then_contains(context, text: str):
 #     )
 
 
-# @then('mycroft should send the message "{message_type}"')
-# def then_messagebus_message(context, message_type):
-#     """Verify a specific message is sent."""
-
-#     def check_dummy(message):
-#         """We are just interested in the message data, just the type."""
-#         return True, ""
-
-#     message_found, _ = then_wait(message_type, check_dummy, context)
-#     assert message_found, "No matching message received."
+@then('mycroft should send the message "{message_type}"')
+def then_messagebus_message(context, message_type: str):
+    """Verify a specific message is sent."""
+    maybe_message = context.client.wait_for_message(message_type)
+    assert maybe_message is not None, "No matching message received."
 
 
 @then("dialog is stopped")

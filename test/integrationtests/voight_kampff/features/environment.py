@@ -13,10 +13,11 @@
 # limitations under the License.
 #
 import logging
+from collections import defaultdict
 from threading import Event, Lock, Thread
 from time import sleep, monotonic
 from queue import Empty, Queue
-from typing import Optional, Set
+from typing import Dict, List, Optional, Set
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import MessageBusClient
@@ -37,9 +38,24 @@ def create_voight_kampff_logger():
 LOG = create_voight_kampff_logger()
 
 
+class InterceptAllBusClient(MessageBusClient):
+    """Bus Client storing all messages received.
+
+    This allows read back of older messages and non-event-driven operation.
+    """
+
+    def __init__(self, message_callback):
+        super().__init__()
+        self._message_callback = message_callback
+
+    def on_message(self, _, message):
+        self._message_callback(Message.deserialize(message))
+        super().on_message(_, message)
+
+
 class VoightKampffClient:
     def __init__(self):
-        self.bus = MessageBusClient()
+        self.bus = InterceptAllBusClient(self._on_message)
 
         self._activity_ids: Set[str] = set()
         self._tts_session_ids: Set[str] = set()
@@ -47,7 +63,17 @@ class VoightKampffClient:
         self._speaking_finished = Event()
         self._speak_queue: "Queue[Message]" = Queue(maxsize=1)
 
+        # event type -> [messages]
+        self.messages: Dict[str, List[Message]] = defaultdict(list)
+        self._message_queues: Dict[str, "Queue[Message]"] = defaultdict(
+            lambda: Queue(maxsize=1)
+        )
+
         self._connect_to_bus()
+
+    def _on_message(self, message: Message):
+        self.messages[message.msg_type].append(message)
+        self._message_queues[message.msg_type].put_nowait(message)
 
     def _connect_to_bus(self):
         self.bus.run_in_thread()
@@ -78,6 +104,15 @@ class VoightKampffClient:
         if self._activity_ids:
             self._activities_ended.wait(timeout=10)
 
+    def wait_for_message(self, message_type: str, timeout=5) -> Optional[Message]:
+        maybe_message: Optional[Message] = None
+        try:
+            maybe_message = self._message_queues[message_type].get(timeout=timeout)
+        except Empty:
+            pass
+
+        return maybe_message
+
     def get_next_speak(self, timeout=10) -> Optional[Message]:
         message: Optional[Message] = None
         try:
@@ -88,6 +123,9 @@ class VoightKampffClient:
         return message
 
     def reset_state(self):
+        self.messages.clear()
+        self._message_queues.clear()
+
         self._activity_ids.clear()
         self._activities_ended.clear()
         self._tts_session_ids.clear()
@@ -132,74 +170,6 @@ class VoightKampffClient:
         self._activities_ended.set()
         self._speaking_finished.set()
         self.reset_state()
-
-
-class InterceptAllBusClient(MessageBusClient):
-    """Bus Client storing all messages received.
-
-    This allows read back of older messages and non-event-driven operation.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.messages = []
-        self.message_lock = Lock()
-        self.new_message_available = Event()
-        self._processed_messages = 0
-
-    def on_message(self, _, message):
-        """Extends normal operation by storing the received message.
-
-        Args:
-            message (Message): message from the Mycroft bus
-        """
-        with self.message_lock:
-            self.messages.append(Message.deserialize(message))
-        self.new_message_available.set()
-        super().on_message(_, message)
-
-    def get_messages(self, msg_type):
-        """Get messages from received list of messages.
-
-        Args:
-            msg_type (None,str): string filter for the message type to extract.
-                                 if None all messages will be returned.
-        """
-        with self.message_lock:
-            self._processed_messages = len(self.messages)
-            if msg_type is None:
-                return [m for m in self.messages]
-            else:
-                return [m for m in self.messages if m.msg_type == msg_type]
-
-    def remove_message(self, msg):
-        """Remove a specific message from the list of messages.
-
-        Args:
-            msg (Message): message to remove from the list
-        """
-        with self.message_lock:
-            if msg not in self.messages:
-                raise ValueError(
-                    f"{msg.msg_type} was not found in " "the list of messages."
-                )
-            # Update processed message count if a read message was removed
-            if self.messages.index(msg) < self._processed_messages:
-                self._processed_messages -= 1
-
-            self.messages.remove(msg)
-
-    def clear_messages(self):
-        """Clear all messages that has been fetched at least once."""
-        with self.message_lock:
-            self.messages = self.messages[self._processed_messages :]
-            self._processed_messages = 0
-
-    def clear_all_messages(self):
-        """Clear all messages."""
-        with self.message_lock:
-            self.messages = []
-            self._processed_messages = 0
 
 
 def before_all(context):

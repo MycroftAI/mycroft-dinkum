@@ -3,11 +3,6 @@ Feature: mycroft-stop
     Scenario: stop
     Given an english speaking user
       When the user says "stop"
-      Then mycroft should send the message "mycroft.stop" 
-
-    Scenario: shut up
-    Given an english speaking user
-      When the user says "stop"
       Then mycroft should send the message "mycroft.stop"
 
     # DISABLED SO WE DONT CAUSE UNINTENDED CONSEQUENCES ON USER SYSTEMS
