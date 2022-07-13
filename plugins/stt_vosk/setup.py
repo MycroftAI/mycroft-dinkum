@@ -25,9 +25,12 @@ version_path = module_dir / "VERSION"
 with open(version_path, "r", encoding="utf-8") as version_file:
     version = version_file.read().strip()
 
+model_dir = module_dir / "models" / "small-en-us-0.15"
+model_files = [str(p.relative_to(module_dir)) for p in model_dir.rglob("*")]
+
 # -----------------------------------------------------------------------------
 
-PLUGIN_ENTRY_POINT = "vosk = mycroft_vosk:VoskStreamingSTT"
+PLUGIN_ENTRY_POINT = "vosk_stt_plug = mycroft_vosk:VoskStreamingSTT"
 
 setup(
     name="mycroft_vosk",
@@ -39,9 +42,7 @@ setup(
     long_description_content_type="text/markdown",
     license="Apache-2.0",
     packages=setuptools.find_packages(),
-    package_data={
-        "mycroft_vosk": ["models/small-en-us-0.15", "VERSION", "py.typed"]
-    },
+    package_data={"mycroft_vosk": ["VERSION", "py.typed"] + model_files},
     entry_points={"mycroft.plugin.stt": PLUGIN_ENTRY_POINT},
     keywords=["mycroft", "vosk", "stt"],
     classifiers=[

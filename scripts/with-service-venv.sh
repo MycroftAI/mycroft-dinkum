@@ -16,7 +16,7 @@
 #
 # -----------------------------------------------------------------------------
 #
-# Installs a plugin into a service's virtual environment
+# Runs a command in a service's virtual environment
 #
 # Expects a virtual environment at:
 # ${XDG_CONFIG_HOME}/mycroft/services/<service_id>
@@ -24,7 +24,7 @@
 set -eo pipefail
 
 function usage {
-    echo "Usage: $(basename "$0") service_id plugin ..."
+    echo "Usage: $(basename "$0") service_dir ..."
 }
 
 if [ -z "$2" ]; then
@@ -32,9 +32,10 @@ if [ -z "$2" ]; then
     exit 1;
 fi
 
-service_id="$1"
+service_dir="$1"
+service_id="$(basename "${service_dir}")"
 
-# Remaining arguments are passed to pip
+# Remaining arguments are command
 shift 1
 
 : "${XDG_CONFIG_HOME:=${HOME}/.config}"
@@ -51,5 +52,5 @@ fi
 
 source "${venv_dir}/bin/activate"
 
-# Install plugin
-pip3 install "$@"
+# Run command
+"$@"

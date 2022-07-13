@@ -156,6 +156,7 @@ def load_stt_module(config: dict[str, Any], bus: MessageBusClient) -> StreamingS
     stt_config = config["stt"]
     module_name = stt_config["module"]
     if module_name == "mycroft":
+        LOG.debug("Using Mycroft STT")
         return MycroftSTT(bus, config)
 
     LOG.debug("Loading speech to text module: %s", module_name)
