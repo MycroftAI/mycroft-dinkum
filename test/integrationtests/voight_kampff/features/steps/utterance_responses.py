@@ -144,11 +144,17 @@ def when_user_says(context, text: str):
 
 @then('"{skill}" should reply with dialog from "{dialog}"')
 def then_dialog(context, skill: str, dialog: str):
+    then_dialog_list(context, skill, dialog)
+
+
+@then('"{skill}" should reply with dialog from list "{dialog}"')
+def then_dialog_list(context, skill: str, dialog: str):
+    """Handle list of possible dialogs, separated by semi-colon (;)"""
     passed = False
     assert_message = "Mycroft didn't respond"
 
     # Strip '.dialog'
-    dialog = Path(dialog).stem
+    dialogs = {Path(d.strip()).stem for d in dialog.split(";")}
 
     maybe_message = context.client.get_next_speak()
     if maybe_message is not None:
@@ -159,27 +165,12 @@ def then_dialog(context, skill: str, dialog: str):
             assert_message = f"Expected skill '{skill}', got '{actual_skill}'"
         else:
             actual_dialog = meta.get("dialog", "")
-            if dialog != actual_dialog:
-                assert_message = f"Expected dialog '{dialog}', got '{actual_dialog}'"
+            if actual_dialog not in dialogs:
+                assert_message = f"Expected dialog '{dialogs}', got '{actual_dialog}' from '{actual_skill}'"
             else:
                 passed = True
 
     assert passed, assert_message
-
-    # def check_dialog(message):
-    #     utt_dialog = message.data.get("meta", {}).get("dialog")
-    #     skill_id = message.data.get("meta", {}).get("skill_id", "")
-    #     return (
-    #         utt_dialog == dialog.replace(".dialog", "") and (skill_id == skill),
-    #         f"Expected skill {skill}, got {skill_id}\n",
-    #     )
-
-    # passed, debug = then_wait("speak", check_dialog, context)
-    # if not passed:
-    #     assert_msg = debug
-    #     assert_msg += mycroft_responses(context)
-
-    # assert passed, assert_msg or "Mycroft didn't respond"
 
 
 # @then('"{skill}" should not reply')

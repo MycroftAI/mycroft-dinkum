@@ -195,8 +195,10 @@ class IPSkill(MycroftSkill):
         ip_end = ip.split(".")[-1]
         self.enclosure.mouth_text(ip_end)
         self.speak_dialog("last digits", data={"digits": ip_end}, wait=True)
-        time.sleep(3)  # Show for at least 3 seconds
+
         self.wait_while_speaking()
+        if self.gui.connected:
+            time.sleep(3)  # Show for at least 3 seconds
 
     def speak_multiple_last_digits(self, addr):
         for key in addr:
@@ -206,8 +208,10 @@ class IPSkill(MycroftSkill):
             )
             self.gui_show(addr)
             self.enclosure.mouth_text(ip_end)
-            time.sleep(3)  # Show for at least 3 seconds
             self.wait_while_speaking()
+
+            if self.gui.connected:
+                time.sleep(3)  # Show for at least 3 seconds
 
     # def _cache_single_ip(self, _message=None):
     #     addr = get_ifaces()
