@@ -36,6 +36,7 @@ class UnknownSkill(FallbackSkill):
         self.add_event("complete_intent_failure", self.handle_unknown_recognition)
         self.add_event("recognizer_loop:utterance", self.handle_utterance)
         self.load_question_vocab()
+        super().initialize()
 
     def load_question_vocab(self):
         """Load question marker vocabulary to provide more specific response."""
@@ -49,11 +50,6 @@ class UnknownSkill(FallbackSkill):
             self.gui_show(self.last_utterances)
 
             utterance = message.data["utterance"].lower()
-            try:
-                self.report_metric("failed-intent", {"utterance": utterance})
-            except Exception:
-                self.log.exception("Error reporting metric")
-
             for key, vocab in self.question_vocab.items():
                 for line in vocab:
                     if utterance.startswith(line):
@@ -65,8 +61,10 @@ class UnknownSkill(FallbackSkill):
 
             self.log.info(utterance)
             self.speak_dialog("unknown", wait=True)
-            time.sleep(5)
-            self.gui.release()
+
+            if self.gui.connected:
+                time.sleep(5)
+                self.gui.release()
 
             return True
 

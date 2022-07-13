@@ -75,7 +75,11 @@ class FallbackService:
         handlers = [
             f[1] for f in sorted_handlers if fb_range.start <= f[0] < fb_range.stop
         ]
-        for handler in itertools.chain.from_iterable(handlers):
+        handler_names = list(itertools.chain.from_iterable(handlers))
+        if handler_names:
+            LOG.debug("Trying %s fallback handler(s)", len(handler_names))
+
+        for handler in handler_names:
             reply = self.bus.wait_for_response(
                 Message(
                     "mycroft.skills.handle-fallback",
