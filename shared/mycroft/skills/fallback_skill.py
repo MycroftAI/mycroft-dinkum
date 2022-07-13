@@ -15,7 +15,7 @@
 """The fallback skill implements a special type of skill handling
 utterances not handled by the intent system.
 """
-from typing import Dict, Callable
+from typing import Callable, Dict
 from uuid import uuid4
 
 from mycroft.messagebus.message import Message

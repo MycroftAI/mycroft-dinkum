@@ -22,10 +22,10 @@ from mycroft.configuration import Configuration
 from mycroft_bus_client import Message, MessageBusClient
 
 from .voice_loop import (
-    load_vad_detector,
-    voice_loop,
     load_hotword_module,
     load_stt_module,
+    load_vad_detector,
+    voice_loop,
 )
 
 SERVICE_ID = "voice"

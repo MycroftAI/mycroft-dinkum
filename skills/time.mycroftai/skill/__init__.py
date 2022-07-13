@@ -15,4 +15,4 @@
 
 from .faceplate import FaceplateRenderer
 from .response import Response
-from .util import get_display_time, LocationNotFoundError
+from .util import LocationNotFoundError, get_display_time

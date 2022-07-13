@@ -26,15 +26,20 @@ use in Mycroft Skills.
 """
 import datetime
 import warnings
-
 from calendar import leapdays
 from enum import Enum
 
 # These are the main functions we are using lingua franca to provide
 from lingua_franca import get_default_loc
-
+# TODO 21.08 - remove import of private method _translate_word
+# Consider whether the remaining items here are necessary.
 # TODO 21.08 - move nice_duration methods to Lingua Franca.
 from lingua_franca.format import (
+    NUMBER_TUPLE,
+    DateTimeFormat,
+    _translate_word,
+    date_time_format,
+    expand_options,
     join_list,
     nice_date,
     nice_date_time,
@@ -42,16 +47,6 @@ from lingua_franca.format import (
     nice_time,
     nice_year,
     pronounce_number,
-)
-
-# TODO 21.08 - remove import of private method _translate_word
-# Consider whether the remaining items here are necessary.
-from lingua_franca.format import (
-    NUMBER_TUPLE,
-    DateTimeFormat,
-    date_time_format,
-    expand_options,
-    _translate_word,
 )
 
 

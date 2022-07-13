@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import time
 import os
 import re
-from ifaddr import get_adapters
+import time
+from subprocess import CalledProcessError, check_output
 
 from adapt.intent import IntentBuilder
+from ifaddr import get_adapters
 from mycroft.skills import MycroftSkill, intent_handler
-from subprocess import check_output, CalledProcessError
 
 
 def speakable_name(iface_name: str):
@@ -36,7 +36,7 @@ def speakable_name(iface_name: str):
 
 
 def get_ifaces(ignore_list=None):
-    """ Build a dict with device names and their associated ip address.
+    """Build a dict with device names and their associated ip address.
 
     Arguments:
         ignore_list(list): list of devices to ignore. Defaults to "lo"
@@ -196,9 +196,7 @@ class IPSkill(MycroftSkill):
         self.enclosure.mouth_text(ip_end)
         self.speak_dialog("last digits", data={"digits": ip_end}, wait=True)
         time.sleep(3)  # Show for at least 3 seconds
-
-        # TODO
-        # mycroft.audio.wait_while_speaking()
+        self.wait_while_speaking()
 
     def speak_multiple_last_digits(self, addr):
         for key in addr:
@@ -209,8 +207,7 @@ class IPSkill(MycroftSkill):
             self.gui_show(addr)
             self.enclosure.mouth_text(ip_end)
             time.sleep(3)  # Show for at least 3 seconds
-            # TODO
-            # mycroft.audio.wait_while_speaking()
+            self.wait_while_speaking()
 
     # def _cache_single_ip(self, _message=None):
     #     addr = get_ifaces()

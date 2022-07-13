@@ -16,10 +16,10 @@
 Intent Service. Including both adapt and padatious.
 """
 from os.path import exists, isfile
-from adapt.intent import Intent
 
-from mycroft.messagebus.message import Message
+from adapt.intent import Intent
 from mycroft.messagebus.client import MessageBusClient
+from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
 
 

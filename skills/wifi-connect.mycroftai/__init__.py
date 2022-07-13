@@ -22,7 +22,6 @@ from mycroft.messagebus import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.util.network_utils import check_captive_portal
 
-
 MARK_II = "mycroft_mark_2"
 
 
@@ -57,22 +56,26 @@ class WifiConnect(MycroftSkill):
 
         # 2. Mycroft access point is ready
         self.add_event(
-            "hardware.awconnect.ap-activated", self._handle_ap_activated,
+            "hardware.awconnect.ap-activated",
+            self._handle_ap_activated,
         )
 
         # 3. User has connected to captive portal page
         self.add_event(
-            "hardware.awconnect.portal-viewed", self._handle_portal_viewed,
+            "hardware.awconnect.portal-viewed",
+            self._handle_portal_viewed,
         )
 
         # 4. User has entered wifi credentials
         self.add_event(
-            "hardware.awconnect.credentials-entered", self._handle_credentials_entered,
+            "hardware.awconnect.credentials-entered",
+            self._handle_credentials_entered,
         )
 
         # 5. Access point is deactivated, network detection is attempted again
         self.add_event(
-            "hardware.awconnect.ap-deactivated", self._handle_ap_deactivated,
+            "hardware.awconnect.ap-deactivated",
+            self._handle_ap_deactivated,
         )
 
         # 6. Network detection succeeds
@@ -208,7 +211,9 @@ class WifiConnect(MycroftSkill):
         """
         self.log.info("Showing browser for captive portal login")
         self.cancel_scheduled_event("CheckPortal")
-        self.gui.show_url("http://start.mycroft.ai/portal-check.html", override_idle=True)
+        self.gui.show_url(
+            "http://start.mycroft.ai/portal-check.html", override_idle=True
+        )
         self.schedule_repeating_event(
             self._check_portal, when=3, frequency=2, name="CheckPortal"
         )

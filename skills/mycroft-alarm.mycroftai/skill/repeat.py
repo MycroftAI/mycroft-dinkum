@@ -13,8 +13,8 @@
 # limitations under the License.
 """Repeat functions for the Mycroft Alarm Skill."""
 from datetime import datetime, timedelta
-from dateutil.rrule import rrulestr
 
+from dateutil.rrule import rrulestr
 from mycroft.util.format import join_list
 from mycroft.util.log import LOG
 from mycroft.util.time import now_local

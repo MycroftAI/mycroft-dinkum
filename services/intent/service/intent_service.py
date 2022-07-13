@@ -13,24 +13,25 @@
 # limitations under the License.
 #
 """Mycroft's intent service, providing intent parsing since forever!"""
-from copy import copy
 import time
+from copy import copy
 
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
 from mycroft.messagebus.message import Message
+from mycroft.skills.intent_service_interface import open_intent_envelope
 from mycroft.util.log import LOG
 from mycroft.util.parse import normalize
+
 from .intent_services import (
-    AdaptService,
     AdaptIntent,
+    AdaptService,
     FallbackService,
-    PadatiousService,
-    PadatiousMatcher,
     IntentMatch,
+    PadatiousMatcher,
+    PadatiousService,
     RegexService,
 )
-from mycroft.skills.intent_service_interface import open_intent_envelope
 
 
 def _get_message_lang(message):

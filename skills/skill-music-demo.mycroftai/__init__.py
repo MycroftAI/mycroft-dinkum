@@ -21,11 +21,10 @@ import typing
 from enum import Enum
 from pathlib import Path
 
-from mycroft import intent_handler, AdaptIntent
-from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
+from mycroft import AdaptIntent, intent_handler
 from mycroft.messagebus import Message
+from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft.util.log import LOG
-
 from pytube import Search
 
 from .skill import MpdClient, Song
@@ -157,8 +156,7 @@ class DemoMusicSkill(CommonPlaySkill):
         self._go_inactive()
 
     def CPS_match_query_phrase(self, phrase: str) -> tuple((str, float, dict)):
-        """Respond to Common Play Service query requests.
-        """
+        """Respond to Common Play Service query requests."""
         phrase = phrase.strip()
 
         if not phrase:

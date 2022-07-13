@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import requests
 import unittest
 
+import requests
 from stations.abc import abc
+
 
 class ABCAustralia(unittest.TestCase):
     def test_matches(self):
@@ -26,4 +27,3 @@ class ABCAustralia(unittest.TestCase):
         self.assertEqual(url[-4:], ".mp3")
         response = requests.get(url)
         self.assertEqual(response.status_code, 200)
-    

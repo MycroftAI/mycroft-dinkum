@@ -14,42 +14,40 @@
 #
 """Common functionality relating to the implementation of mycroft skills."""
 import logging
-from copy import deepcopy
-import sys
 import re
+import sys
 import traceback
 import typing
+from contextlib import contextmanager
+from copy import deepcopy
 from datetime import datetime
 from itertools import chain
 from os import walk
-from os.path import join, abspath, dirname, basename, exists
+from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from threading import Event, Timer
-from contextlib import contextmanager
-from uuid import uuid4
 from unittest.mock import MagicMock
-
-from xdg import BaseDirectory
+from uuid import uuid4
 
 from adapt.intent import Intent, IntentBuilder
-
 from mycroft import dialog
 from mycroft.api import DeviceApi
-from mycroft.enclosure.gui import SkillGUI
 from mycroft.configuration import Configuration
 from mycroft.dialog import load_dialogs
+from mycroft.enclosure.gui import SkillGUI
 from mycroft.filesystem import FileSystemAccess
 from mycroft.messagebus.message import Message
-from mycroft.util import resolve_resource_file, camel_case_split
-from mycroft.util.format import pronounce_number, join_list
-from mycroft.util.parse import match_one, extract_number
+from mycroft.util import camel_case_split, resolve_resource_file
+from mycroft.util.format import join_list, pronounce_number
 from mycroft.util.log import LOG
+from mycroft.util.parse import extract_number, match_one
+from xdg import BaseDirectory
 
-from .event_container import EventContainer, create_wrapper, get_handler_name
 from ..event_scheduler import EventSchedulerInterface
 from ..intent_service_interface import IntentServiceInterface
 from ..settings import get_local_settings, save_settings
-from ..skill_data import munge_regex, munge_intent_parser, ResourceFile, SkillResources
+from ..skill_data import ResourceFile, SkillResources, munge_intent_parser, munge_regex
+from .event_container import EventContainer, create_wrapper, get_handler_name
 from .skill_control import SkillControl
 
 
@@ -162,6 +160,10 @@ class MycroftSkill:
 
         # Unique id generated for every started/ended
         self._activity_id: str = ""
+
+        # Session id from last speak()
+        self._tts_session_id: typing.Optional[str] = None
+        self._tts_speak_finished = Event()
 
     def change_state(self, new_state):
         """change skill state to new value.
@@ -325,6 +327,11 @@ class MycroftSkill:
             self.gui.setup_default_handlers()
 
             self._register_public_api()
+
+            # Unblock wait_while_speaking
+            self._bus.on(
+                "mycroft.tts.speaking-finished", self._handle_speaking_finished
+            )
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -1158,11 +1165,17 @@ class MycroftSkill:
             cache_key (str):        key from cache_speech or cache_dialog
             cache_keep (bool):      True if cache_key can be reused
         """
+        # Flush any previous wait_while_speaking()
+        self._tts_speak_finished.set()
+        self._tts_speak_finished.clear()
+        self._tts_session_id = str(uuid4())
+
         # registers the skill as being active
         meta = meta or {}
         meta["skill"] = self.name
         self.enclosure.register(self.name)
         data = {
+            "session_id": self._tts_session_id,
             "utterance": utterance,
             "expect_response": expect_response,
             "meta": meta,
@@ -1175,9 +1188,7 @@ class MycroftSkill:
         self.bus.emit(m)
 
         if wait:
-            # TODO
-            # wait_while_speaking()
-            pass
+            self.wait_while_speaking()
 
     def speak_dialog(
         self,
@@ -1225,85 +1236,85 @@ class MycroftSkill:
                 cache_keep=cache_keep,
             )
 
-    def cache_speech(
-        self,
-        utterance,
-        meta=None,
-        cache_key: typing.Optional[str] = None,
-        expire: typing.Optional[datetime] = None,
-        timeout=60,
-    ) -> typing.Optional[str]:
-        """Synthesize a sentence and store it in cache.
+    # def cache_speech(
+    #     self,
+    #     utterance,
+    #     meta=None,
+    #     cache_key: typing.Optional[str] = None,
+    #     expire: typing.Optional[datetime] = None,
+    #     timeout=60,
+    # ) -> typing.Optional[str]:
+    #     """Synthesize a sentence and store it in cache.
 
-        Args:
-            utterance (str):        sentence mycroft should speak
-            meta:                   Information of what built the sentence.
-            cache_key:              Optional key to use for cache (generated if None)
-            expire:                 Optional datetime when the cache will expire
+    #     Args:
+    #         utterance (str):        sentence mycroft should speak
+    #         meta:                   Information of what built the sentence.
+    #         cache_key:              Optional key to use for cache (generated if None)
+    #         expire:                 Optional datetime when the cache will expire
 
-        Returns:
-            key (str):              cache key to be used later with speak_from_cache
-        """
-        meta = meta or {}
-        meta["skill"] = self.name
-        data = {
-            "utterance": utterance,
-            "cache_only": True,
-            "meta": meta,
-            "skill_id": self.skill_id,
-        }
+    #     Returns:
+    #         key (str):              cache key to be used later with speak_from_cache
+    #     """
+    #     meta = meta or {}
+    #     meta["skill"] = self.name
+    #     data = {
+    #         "utterance": utterance,
+    #         "cache_only": True,
+    #         "meta": meta,
+    #         "skill_id": self.skill_id,
+    #     }
 
-        if cache_key is not None:
-            data["cache_key"] = cache_key
+    #     if cache_key is not None:
+    #         data["cache_key"] = cache_key
 
-        if expire is not None:
-            data["cache_expire"] = expire.isoformat()
+    #     if expire is not None:
+    #         data["cache_expire"] = expire.isoformat()
 
-        m = Message("speak.cache", data)
-        reply = self.bus.wait_for_response(m, "speak.cache.reply", timeout=timeout)
+    #     m = Message("speak.cache", data)
+    #     reply = self.bus.wait_for_response(m, "speak.cache.reply", timeout=timeout)
 
-        if reply:
-            return reply.data["key"]
+    #     if reply:
+    #         return reply.data["key"]
 
-        return None
+    #     return None
 
-    def cache_dialog(
-        self,
-        key,
-        data=None,
-        cache_key: typing.Optional[str] = None,
-        expire: typing.Optional[datetime] = None,
-        timeout=60,
-    ) -> typing.Optional[str]:
-        """Synthesize a random sentence from a dialog file and store it in cache.
+    # def cache_dialog(
+    #     self,
+    #     key,
+    #     data=None,
+    #     cache_key: typing.Optional[str] = None,
+    #     expire: typing.Optional[datetime] = None,
+    #     timeout=60,
+    # ) -> typing.Optional[str]:
+    #     """Synthesize a random sentence from a dialog file and store it in cache.
 
-        Args:
-            key (str):              dialog file key (e.g. "hello" to speak from the file
-                                        "locale/en-us/hello.dialog")
-            data (dict):            information used to populate sentence
-            cache_key:              Optional key to use for cache (generated if None)
-            expire:                 Optional datetime when the cache will expire
+    #     Args:
+    #         key (str):              dialog file key (e.g. "hello" to speak from the file
+    #                                     "locale/en-us/hello.dialog")
+    #         data (dict):            information used to populate sentence
+    #         cache_key:              Optional key to use for cache (generated if None)
+    #         expire:                 Optional datetime when the cache will expire
 
-        Returns:
-            key (str):              cache key to be used later with speak_from_cache
-        """
+    #     Returns:
+    #         key (str):              cache key to be used later with speak_from_cache
+    #     """
 
-        if self.dialog_renderer:
-            data = data or {}
-            cache_key = self.cache_speech(
-                self.dialog_renderer.render(key, data),
-                meta={"dialog": key, "data": data},
-                cache_key=cache_key,
-                expire=expire,
-                timeout=timeout,
-            )
-        else:
-            self.log.warning(
-                "dialog_render is None, does the locale/dialog folder exist?"
-            )
-            cache_key = self.cache_speech(key, timeout=timeout)
+    #     if self.dialog_renderer:
+    #         data = data or {}
+    #         cache_key = self.cache_speech(
+    #             self.dialog_renderer.render(key, data),
+    #             meta={"dialog": key, "data": data},
+    #             cache_key=cache_key,
+    #             expire=expire,
+    #             timeout=timeout,
+    #         )
+    #     else:
+    #         self.log.warning(
+    #             "dialog_render is None, does the locale/dialog folder exist?"
+    #         )
+    #         cache_key = self.cache_speech(key, timeout=timeout)
 
-        return cache_key
+    #     return cache_key
 
     def acknowledge(self):
         """Acknowledge a successful request.
@@ -1579,3 +1590,13 @@ class MycroftSkill:
 
     def play_sound_uri(self, uri: str):
         self.bus.emit(Message("mycroft.audio.play-sound", data={"uri": uri}))
+
+    def wait_while_speaking(self, timeout=60):
+        if self._tts_session_id:
+            self._tts_speak_finished.wait(timeout=timeout)
+
+    def _handle_speaking_finished(self, message: Message):
+        session_id = message.data.get("session_id")
+        if session_id == self._tts_session_id:
+            self._tts_session_id = None
+            self._tts_speak_finished.set()

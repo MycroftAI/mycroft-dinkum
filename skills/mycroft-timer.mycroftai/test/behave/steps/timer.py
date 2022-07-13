@@ -1,13 +1,12 @@
 import time
-from typing import List
-
-from behave import given, then
-
 from test.integrationtests.voight_kampff import (
     emit_utterance,
     format_dialog_match_error,
     wait_for_dialog_match,
 )
+from typing import List
+
+from behave import given, then
 
 CANCEL_RESPONSES = (
     "no-active-timer",
@@ -100,7 +99,7 @@ def _cancel_all_timers(context):
     assert match_found, format_dialog_match_error(CANCEL_RESPONSES, speak_messages)
 
 
-@then('the expired timer should stop beeping')
+@then("the expired timer should stop beeping")
 def then_stop_beeping(context):
     # TODO: Better check!
     import psutil

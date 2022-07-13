@@ -17,12 +17,11 @@ import typing
 from copy import copy, deepcopy
 
 import requests
-from requests import HTTPError
-
 from mycroft.configuration import Configuration
 from mycroft.identity import IdentityManager
-from mycroft.version import VersionManager
 from mycroft.util import get_arch
+from mycroft.version import VersionManager
+from requests import HTTPError
 
 LOG = logging.getLogger(__package__)
 UUID = "{MYCROFT_UUID}"

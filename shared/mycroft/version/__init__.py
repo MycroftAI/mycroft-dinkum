@@ -17,7 +17,6 @@ import logging
 from os.path import expanduser, join
 
 from genericpath import exists, isfile
-
 from mycroft.configuration import Configuration
 
 LOG = logging.getLogger(__package__)
@@ -49,11 +48,11 @@ class VersionManager:
 
 def check_version(version_string):
     """
-        Check if current version is equal or higher than the
-        version string provided to the function
+    Check if current version is equal or higher than the
+    version string provided to the function
 
-        Args:
-            version_string (string): version string ('Major.Minor.Build')
+    Args:
+        version_string (string): version string ('Major.Minor.Build')
     """
     version_tuple = tuple(map(int, version_string.split(".")))
     return CORE_VERSION_TUPLE >= version_tuple

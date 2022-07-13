@@ -17,18 +17,19 @@ import re
 import feedparser
 import requests
 
+
 def get_gpb_url():
     """Custom news fetcher for GPB news.
-    
-    Uses an RSS feed with a mixture of content. This fetches the latest 
+
+    Uses an RSS feed with a mixture of content. This fetches the latest
     headlines episode."""
-    feed = 'http://feeds.feedburner.com/gpbnews/GeorgiaRSS?format=xml'
+    feed = "http://feeds.feedburner.com/gpbnews/GeorgiaRSS?format=xml"
     data = feedparser.parse(feed)
     next_link = None
-    for entry in data['entries']:
+    for entry in data["entries"]:
         # Find the first mp3 link with "GPB {time} Headlines" in title
-        if 'GPB' in entry['title'] and 'Headlines' in entry['title']:
-            next_link = entry['links'][0]['href']
+        if "GPB" in entry["title"] and "Headlines" in entry["title"]:
+            next_link = entry["links"][0]["href"]
             break
     html = requests.get(next_link)
     # Find the first mp3 link
@@ -37,5 +38,5 @@ def get_gpb_url():
     mp3_find = re.search(r'href="(?P<mp3>.+\.mp3)"'.encode(), html.content)
     if mp3_find is None:
         return None
-    url = mp3_find.group('mp3').decode('utf-8')
+    url = mp3_find.group("mp3").decode("utf-8")
     return url

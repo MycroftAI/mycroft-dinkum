@@ -18,9 +18,9 @@ This provides any "enclosure" specific functionality, for example GUI or
 control over the Mark-1 Faceplate.
 """
 from mycroft.configuration import Configuration
-from mycroft.util.log import LOG
-from mycroft.util import wait_for_exit_signal, reset_sigint_handler
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 from mycroft.util.hardware_capabilities import EnclosureCapabilities
+from mycroft.util.log import LOG
 
 
 def on_ready():
@@ -28,11 +28,11 @@ def on_ready():
 
 
 def on_stopping():
-    LOG.info('Enclosure is shutting down...')
+    LOG.info("Enclosure is shutting down...")
 
 
-def on_error(e='Unknown'):
-    LOG.error('Enclosure failed: {}'.format(repr(e)))
+def on_error(e="Unknown"):
+    LOG.error("Enclosure failed: {}".format(repr(e)))
 
 
 def create_enclosure(platform):
@@ -47,16 +47,19 @@ def create_enclosure(platform):
     if platform == "mycroft_mark_1":
         LOG.info("Initializing Mark I enclosure...")
         from mycroft.client.enclosure.mark1 import EnclosureMark1
+
         enclosure = EnclosureMark1()
     elif platform == "mycroft_mark_2":
         LOG.info("Initializing Mark II enclosure...")
         from mycroft.client.enclosure.mark2 import EnclosureMark2
+
         enclosure = EnclosureMark2()
     else:
         LOG.info(f"Initializing generic enclosure, platform='{platform}'")
         # TODO: Mechanism to load from elsewhere.  E.g. read a script path from
         # the mycroft.conf, then load/launch that script.
         from mycroft.client.enclosure.generic import EnclosureGeneric
+
         enclosure = EnclosureGeneric()
 
     LOG.info("Enclosure initialized")
@@ -82,14 +85,16 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping):
     enclosure.default_caps = EnclosureCapabilities()
     LOG.info(f"Enclosure capabilities ===> {enclosure.default_caps.caps}")
     if platform == "mycroft_mark_2":
-        LOG.info(f"Mark II detected [{enclosure.hardware.board_type}]\n"
-                 f"additional capabilities ===> "
-                 f"{enclosure.hardware.capabilities}\n"
-                 f"LEDs ===> {enclosure.hardware.leds.capabilities}\n"
-                 f"Volume ===> "
-                 f"{enclosure.hardware.hardware_volume.capabilities}\n"
-                 f"Switches ===> "
-                 f"{enclosure.hardware.switches.capabilities}")
+        LOG.info(
+            f"Mark II detected [{enclosure.hardware.board_type}]\n"
+            f"additional capabilities ===> "
+            f"{enclosure.hardware.capabilities}\n"
+            f"LEDs ===> {enclosure.hardware.leds.capabilities}\n"
+            f"Volume ===> "
+            f"{enclosure.hardware.hardware_volume.capabilities}\n"
+            f"Switches ===> "
+            f"{enclosure.hardware.switches.capabilities}"
+        )
 
     try:
         reset_sigint_handler()

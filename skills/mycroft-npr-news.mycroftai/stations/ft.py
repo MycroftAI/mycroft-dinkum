@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from bs4 import BeautifulSoup
 from urllib.request import urlopen
+
+from bs4 import BeautifulSoup
 
 
 def get_ft_url():
     """Custom news fetcher for Financial Times daily news briefing.
-    
+
     Fetches latest episode link from FT website."""
-    url = 'https://www.ft.com/newsbriefing'
+    url = "https://www.ft.com/newsbriefing"
     page = urlopen(url)
 
     # Use bs4 to parse website and get mp3 link
-    soup = BeautifulSoup(page, features='html.parser')
-    result = soup.find('time')
-    target_div = result.parent.find_next('div')
-    target_url = 'http://www.ft.com' + target_div.a['href']
+    soup = BeautifulSoup(page, features="html.parser")
+    result = soup.find("time")
+    target_div = result.parent.find_next("div")
+    target_url = "http://www.ft.com" + target_div.a["href"]
     mp3_page = urlopen(target_url)
-    mp3_soup = BeautifulSoup(mp3_page, features='html.parser')
-    mp3_url = mp3_soup.find('source')['src']
+    mp3_soup = BeautifulSoup(mp3_page, features="html.parser")
+    mp3_url = mp3_soup.find("source")["src"]
 
     return mp3_url

@@ -25,17 +25,17 @@ def clean_text(input: str) -> str:
     # 1. REMOVE ARTIFACTS
     cleaned_text = remove_nested_parentheses(input)
     # Remove section headings
-    cleaned_text = re.sub(r'={2,}.*?={2,}', '', cleaned_text)
+    cleaned_text = re.sub(r"={2,}.*?={2,}", "", cleaned_text)
 
     # 2. REFORMAT REMAINING TEXT
     # Remove duplicate white spaces
     cleaned_text = " ".join(cleaned_text.split()).strip()
     # Remove white space before comma - left by removal of other content
-    cleaned_text = cleaned_text.replace(' , ', ', ')
+    cleaned_text = cleaned_text.replace(" , ", ", ")
     # Separate joined sentences eg "end of one.Start of another"
     # Only perform this when a new sentence starts with a capitalized word
     # will not catch sentences starting with single letters.
-    cleaned_text = re.sub(r'\.([A-Z][a-z]+)', r'. \1', cleaned_text)
+    cleaned_text = re.sub(r"\.([A-Z][a-z]+)", r". \1", cleaned_text)
 
     return cleaned_text
 
@@ -46,12 +46,12 @@ def remove_nested_parentheses(input: str) -> str:
     This includes content that is nested within multiple sets, eg:
     Lemurs (/ˈliːmər/ (listen) LEE-mər)
     """
-    ret = ''
+    ret = ""
     nest_depth = 0
     for char in input:
-        if char == '(':
+        if char == "(":
             nest_depth += 1
-        elif (char == ')') and nest_depth:
+        elif (char == ")") and nest_depth:
             nest_depth -= 1
         elif not nest_depth:
             ret += char

@@ -14,15 +14,13 @@
 
 import typing
 from collections import namedtuple
-from urllib3.exceptions import HTTPError
-
-from requests.exceptions import ConnectionError, ReadTimeout
 
 from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
+from requests.exceptions import ConnectionError, ReadTimeout
+from urllib3.exceptions import HTTPError
 
-from .wiki import Wiki, DisambiguationError, MediaWikiPage
-
+from .wiki import DisambiguationError, MediaWikiPage, Wiki
 
 CONNECTION_ERRORS = (ConnectionError, HTTPError, ReadTimeout)
 
@@ -124,7 +122,7 @@ class WikipediaSkill(CommonQuerySkill):
 
     @intent_handler("Random.intent")
     def handle_random_intent(self, _):
-        """ Get a random wiki page.
+        """Get a random wiki page.
 
         Uses the Special:Random page of wikipedia
         """
@@ -379,8 +377,7 @@ class WikipediaSkill(CommonQuerySkill):
         article = article._replace(image=image)
         self.update_display_data(article)
         # Wait for the summary to finish, then remove skill from GUI
-        # TODO
-        # wait_while_speaking()
+        self.wait_while_speaking()
         self.gui.release()
         # Remember context and speak results
         self._match = article

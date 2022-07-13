@@ -16,6 +16,7 @@
 import re
 
 from mycroft.util.log import LOG
+
 from .base import IntentMatch
 
 

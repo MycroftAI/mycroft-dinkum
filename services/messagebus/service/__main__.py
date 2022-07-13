@@ -25,7 +25,7 @@ from threading import Thread
 
 import sdnotify
 import tornado.options
-from tornado import web, ioloop
+from tornado import ioloop, web
 
 from .event_handler import MessageBusEventHandler
 from .load_config import load_message_bus_config

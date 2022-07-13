@@ -18,11 +18,11 @@ from pathlib import Path
 from typing import Optional
 
 from git import Git
-
 from mycroft.messagebus.message import Message
 from mycroft.skills import AdaptIntent, IdleDisplaySkill, intent_handler
-from mycroft.util.format import nice_time, nice_date
+from mycroft.util.format import nice_date, nice_time
 from mycroft.util.time import now_local
+
 from .skill import Wallpaper, WallpaperError
 
 FIFTEEN_MINUTES = 900

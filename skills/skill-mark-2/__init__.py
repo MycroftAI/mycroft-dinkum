@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import subprocess
 import time
 from datetime import datetime
-import subprocess
 
-from pytz import timezone
 import arrow
 import astral
-
+from mycroft import MycroftSkill, intent_handler
 from mycroft.api import get_pantacor_device_id
-from mycroft.configuration.config import LocalConf, USER_CONFIG, Configuration
+from mycroft.configuration.config import USER_CONFIG, Configuration, LocalConf
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
 from mycroft.util.parse import normalize
-from mycroft import MycroftSkill, intent_handler
+from pytz import timezone
 
 from .skill.device_id import get_device_name, get_mycroft_uuid
 from .skill.versions import (

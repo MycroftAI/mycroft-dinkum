@@ -12,23 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from os import chdir
-
 import shutil
+import wave
 from glob import glob
-from tempfile import mkstemp, mkdtemp
-from threading import Thread, Event
-
-from os.path import dirname, join, isfile
-import requests
-from zipfile import ZipFile, ZIP_DEFLATED
+from os import chdir
+from os.path import dirname, isfile, join
+from tempfile import mkdtemp, mkstemp
+from threading import Event, Thread
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import mycroft
+import pyaudio
+import requests
 from mycroft import MycroftSkill, intent_handler
 from mycroft.api import DeviceApi
-
-import pyaudio
-import wave
 
 
 class AudioRecorder:

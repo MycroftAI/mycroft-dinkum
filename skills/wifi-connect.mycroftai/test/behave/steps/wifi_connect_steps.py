@@ -1,8 +1,7 @@
-from behave import  when
-
+from behave import when
 from mycroft.messagebus import Message
 
 
-@when('no network is detected')
+@when("no network is detected")
 def emit_message(context):
-    context.bus.emit(Message('hardware.network-not-detected'))
+    context.bus.emit(Message("hardware.network-not-detected"))

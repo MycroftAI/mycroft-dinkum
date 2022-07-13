@@ -19,14 +19,13 @@ from mycroft.util.parse import fuzzy_match
 
 from .station import stations
 
-
 # Minimum confidence levels
 CONF_EXACT_MATCH = 0.9
 CONF_HIGH_MATCH = 0.8
 CONF_LIKELY_MATCH = 0.7
 CONF_GENERIC_MATCH = 0.6
 
-Match = namedtuple('Match', 'station confidence')
+Match = namedtuple("Match", "station confidence")
 
 
 def match_station_name(phrase, station, aliases, news_keyword):
@@ -71,7 +70,7 @@ def match_station_name(phrase, station, aliases, news_keyword):
 
 def match_station_from_utterance(skill, utterance):
     """Get the expected station from a user utterance.
-    
+
     Returns:
         Station or None if news not requested.
     """
@@ -79,10 +78,10 @@ def match_station_from_utterance(skill, utterance):
 
     utterance = utterance.lower().strip()
     # Remove articles like "the" as it matches too well with "other"
-    word_list = utterance.split(' ')
-    if 'the' in word_list:
-        word_list.remove('the')
-    utterance = ' '.join(word_list)
+    word_list = utterance.split(" ")
+    if "the" in word_list:
+        word_list.remove("the")
+    utterance = " ".join(word_list)
 
     # If news vocab does exist, provide a minimum default confidence
     default_station = skill.get_default_station()
@@ -95,7 +94,7 @@ def match_station_from_utterance(skill, utterance):
         return Match(default_station, 1.0)
 
     # Test against each station to find the best match.
-    news_keyword = skill.translate('OnlyNews').lower()
+    news_keyword = skill.translate("OnlyNews").lower()
     LOG.debug("Matching against specific stations")
     for station in stations.values():
         aliases = skill.alternate_station_names.get(station.acronym)

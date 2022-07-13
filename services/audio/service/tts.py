@@ -1,5 +1,5 @@
-import logging
 import hashlib
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Optional
@@ -31,7 +31,7 @@ class SpeakHandler:
             listen = message.data.get("expect_response", False)
 
             segments = self._segment(utterance)
-            session_id = str(uuid4())
+            session_id = message.data.get("session_id") or str(uuid4())
             for i, sentence in enumerate(segments):
                 cache_path = self._synthesize(sentence)
 

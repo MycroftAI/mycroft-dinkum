@@ -1,9 +1,8 @@
+import json
+import re
 from typing import Optional
 
 import requests
-import re
-import json
-
 from mycroft.util.log import LOG
 
 from .util import save_image

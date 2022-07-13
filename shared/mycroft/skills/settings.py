@@ -59,7 +59,6 @@ import json
 import re
 from pathlib import Path
 
-
 from mycroft.util import camel_case_split
 from mycroft.util.log import LOG
 

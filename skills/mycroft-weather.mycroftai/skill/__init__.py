@@ -22,5 +22,5 @@ from .dialog import (
     get_dialog_for_timeframe,
 )
 from .intent import WeatherIntent
-from .weather import CURRENT, DAILY, DailyWeather, HOURLY, WeatherReport
 from .util import LocationNotFoundError
+from .weather import CURRENT, DAILY, HOURLY, DailyWeather, WeatherReport

@@ -27,7 +27,6 @@ from pathlib import Path
 import numpy as np
 import sdl2
 import sdl2.sdlmixer as mixer
-
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.util.log import LOG
@@ -158,10 +157,10 @@ class AudioHAL:
         LOG.debug("Initializing SDL mixer")
 
         ret = mixer.Mix_Init(
-            mixer.MIX_INIT_MP3 |
-            mixer.MIX_INIT_FLAC |
-            mixer.MIX_INIT_OGG |
-            mixer.MIX_INIT_OPUS
+            mixer.MIX_INIT_MP3
+            | mixer.MIX_INIT_FLAC
+            | mixer.MIX_INIT_OGG
+            | mixer.MIX_INIT_OPUS
         )
         self._check_sdl(ret)
 

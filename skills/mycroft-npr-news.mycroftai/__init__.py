@@ -15,18 +15,22 @@
 import os
 import subprocess
 import time
-from urllib.parse import quote
 from typing import Tuple
+from urllib.parse import quote
 
-from mycroft.skills import intent_handler, AdaptIntent
 from mycroft.messagebus import Message
+from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft.util import get_cache_directory
 
-from .stations.match import match_station_from_utterance, Match
-from .stations.station import create_custom_station, BaseStation, country_defaults, stations
+from .stations.match import Match, match_station_from_utterance
+from .stations.station import (
+    BaseStation,
+    country_defaults,
+    create_custom_station,
+    stations,
+)
 from .stations.util import contains_html, find_mime_type
-
 
 # Minimum confidence levels
 CONF_EXACT_MATCH = 0.9
@@ -43,8 +47,8 @@ class NewsSkill(CommonPlaySkill):
 
     def initialize(self):
         time.sleep(1)
-        self.log.debug('Disabling restart intent')
-        self.disable_intent('restart_playback')
+        self.log.debug("Disabling restart intent")
+        self.disable_intent("restart_playback")
         # Longer titles or alternative common names of feeds for searching
         self.alternate_station_names = self.load_alternate_station_names()
         self.register_gui_handlers()
@@ -63,7 +67,7 @@ class NewsSkill(CommonPlaySkill):
                 Keys: station acronym
                 Values: list of alternative names
         """
-        loaded_list = self.translate_namedvalues('alt.feed.name')
+        loaded_list = self.translate_namedvalues("alt.feed.name")
         alternate_station_names = {}
         for name in loaded_list:
             acronym = loaded_list[name]
@@ -74,42 +78,46 @@ class NewsSkill(CommonPlaySkill):
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
-        self.bus.on('mycroft.audio.service.pause', self.handle_audioservice_status_change)
-        self.bus.on('mycroft.audio.service.resume', self.handle_audioservice_status_change)
-        self.bus.on('mycroft.audio.queue_end', self.handle_media_finished)
-        self.gui.register_handler('cps.gui.pause', self.handle_gui_status_change)
-        self.gui.register_handler('cps.gui.play', self.handle_gui_status_change)
-        self.gui.register_handler('cps.gui.restart', self.handle_gui_restart)
+        self.bus.on(
+            "mycroft.audio.service.pause", self.handle_audioservice_status_change
+        )
+        self.bus.on(
+            "mycroft.audio.service.resume", self.handle_audioservice_status_change
+        )
+        self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
+        self.gui.register_handler("cps.gui.pause", self.handle_gui_status_change)
+        self.gui.register_handler("cps.gui.play", self.handle_gui_status_change)
+        self.gui.register_handler("cps.gui.restart", self.handle_gui_restart)
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
-        
+
         Eg when someone verbally asks to pause.
         """
         if not self.now_playing:
             return
-        command = message.msg_type.split('.')[-1]
+        command = message.msg_type.split(".")[-1]
         if command == "resume":
             new_status = "Playing"
         elif command == "pause":
             new_status = "Paused"
-        self.gui['status'] = new_status
+        self.gui["status"] = new_status
 
     def handle_gui_status_change(self, message):
         """Handle play and pause status changes from the GUI.
-        
+
         This notifies the audioservice. The GUI state only changes once the
         audioservice emits the relevant messages to say the state has changed.
         """
         if not self.now_playing:
             return
-        command = message.msg_type.split('.')[-1]
+        command = message.msg_type.split(".")[-1]
         if command == "play":
             self.log.info("Audio resumed by GUI.")
-            self.bus.emit(Message('mycroft.audio.service.resume'))
+            self.bus.emit(Message("mycroft.audio.service.resume"))
         elif command == "pause":
             self.log.info("Audio paused by GUI.")
-            self.bus.emit(Message('mycroft.audio.service.pause'))
+            self.bus.emit(Message("mycroft.audio.service.pause"))
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
@@ -133,7 +141,7 @@ class NewsSkill(CommonPlaySkill):
     def handle_latest_news(self, message):
         """Adapt intent handler to capture general queries for the latest news."""
         with self.activity():
-            match = match_station_from_utterance(self, message.data['utterance'])
+            match = match_station_from_utterance(self, message.data["utterance"])
             if match and match.station:
                 station = match.station
             else:
@@ -144,25 +152,27 @@ class NewsSkill(CommonPlaySkill):
     def handle_latest_news_alt(self, message):
         """Padatious intent handler to capture short distinct utterances."""
         with self.activity():
-            match = match_station_from_utterance(self, message.data['utterance'])
+            match = match_station_from_utterance(self, message.data["utterance"])
             if match and match.station:
                 station = match.station
             else:
                 station = self.get_default_station()
             self.handle_play_request(station)
 
-    @intent_handler(AdaptIntent('').require('Play').require('News'))
+    @intent_handler(AdaptIntent("").require("Play").require("News"))
     def handle_play_news(self, message):
         self.handle_latest_news(message)
 
-    @intent_handler(AdaptIntent('').require('Restart'))
+    @intent_handler(AdaptIntent("").require("Restart"))
     def restart_playback(self, _):
         with self.activity():
-            self.log.info(f'Restarting last station to be played: {self.last_station_played.acronym}')
+            self.log.info(
+                f"Restarting last station to be played: {self.last_station_played.acronym}"
+            )
             if self.last_station_played:
                 self.handle_play_request(self.last_station_played)
 
-    @intent_handler(AdaptIntent('').require('Show').require("News"))
+    @intent_handler(AdaptIntent("").require("Show").require("News"))
     def handle_show_news(self, _):
         with self.activity():
             if self.now_playing is not None:
@@ -172,28 +182,28 @@ class NewsSkill(CommonPlaySkill):
 
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
-        if data and data.get('acronym'):
+        if data and data.get("acronym"):
             # Play the requested news service
-            selected_station = stations[data['acronym']]
+            selected_station = stations[data["acronym"]]
         else:
             # Just use the default news feed
             selected_station = self.get_default_station()
         self.handle_play_request(selected_station)
-        
+
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
         """Respond to Common Play Service query requests.
-        
+
         Args:
             phrase: utterance request to parse
 
         Returns:
             Tuple(Name of station, confidence, Station information)
         """
-        if not self.voc_match(phrase.lower(), 'News'):
+        if not self.voc_match(phrase.lower(), "News"):
             # The utterance does not contain news vocab. Do not match.
             return None
         match = match_station_from_utterance(self, phrase)
-        
+
         # If no match but utterance contains news, return low confidence level
         if match.confidence < CONF_GENERIC_MATCH:
             match = Match(self.get_default_station(), CONF_GENERIC_MATCH)
@@ -207,12 +217,12 @@ class NewsSkill(CommonPlaySkill):
             match_level = CPSMatchLevel.CATEGORY
         else:
             return None
-            
+
         return match.station.full_name, match_level, match.station.as_dict()
 
     def download_media_file(self, url: str) -> str:
         """Download a media file and return path to the stream.
-        
+
         Args:
             url (str): media file to download
 
@@ -222,17 +232,17 @@ class NewsSkill(CommonPlaySkill):
         Raises:
             ValueError if url does not provide a valid audio file
         """
-        stream = '{}/stream'.format(get_cache_directory('NewsSkill'))
+        stream = "{}/stream".format(get_cache_directory("NewsSkill"))
         # (Re)create Fifo
         if os.path.exists(stream):
             os.remove(stream)
         os.mkfifo(stream)
-        self.log.debug('Running curl {}'.format(url))
-        args = ['curl', '-L', quote(url, safe=":/"), '-o', stream]
+        self.log.debug("Running curl {}".format(url))
+        args = ["curl", "-L", quote(url, safe=":/"), "-o", stream]
         self.curl = subprocess.Popen(args)
         # Check if downloaded file is actually an error page
         if contains_html(stream):
-            raise ValueError('Could not fetch valid audio file.')
+            raise ValueError("Could not fetch valid audio file.")
         return stream
 
     def get_default_station(self) -> BaseStation:
@@ -244,21 +254,21 @@ class NewsSkill(CommonPlaySkill):
         3. NPR News as global default
         """
         station = None
-        station_code = self.settings.get('station', 'not_set')
-        custom_url = self.settings.get('custom_url', '')
-        if station_code != 'not_set':
+        station_code = self.settings.get("station", "not_set")
+        custom_url = self.settings.get("custom_url", "")
+        if station_code != "not_set":
             station = stations[station_code]
         elif len(custom_url) > 0:
-            station = stations.get('custom')
+            station = stations.get("custom")
         if station is None:
             station = self.get_default_station_by_country()
         if station is None:
-            station = stations['NPR']
+            station = stations["NPR"]
         return station
 
     def get_default_station_by_country(self) -> BaseStation:
         """Get the default station based on the devices location."""
-        country_code = self.location['city']['state']['country']['code']
+        country_code = self.location["city"]["state"]["country"]["code"]
         station_code = country_defaults.get(country_code)
         return stations.get(station_code)
 
@@ -269,33 +279,32 @@ class NewsSkill(CommonPlaySkill):
             station: Instance of a Station to be played
         """
         # Speak intro while downloading in background
-        self.speak_dialog('news', data={"from": station.full_name})
+        self.speak_dialog("news", data={"from": station.full_name})
         self._play_station(station)
         self.last_station_played = station
-        self.enable_intent('restart_playback')
+        self.enable_intent("restart_playback")
 
     @property
     def is_https_supported(self) -> bool:
         """Check if any available audioservice backend supports https."""
         for service in self.audioservice.available_backends().values():
-            if 'https' in service['supported_uris']:
+            if "https" in service["supported_uris"]:
                 return True
         return False
 
     def _play_station(self, station: BaseStation):
         """Play the given station using the most appropriate service.
-        
-        Args: 
+
+        Args:
             station (Station): Instance of a Station to be played
         """
         try:
-            self.log.info(f'Playing News feed: {station.full_name}')
+            self.log.info(f"Playing News feed: {station.full_name}")
             media_url = station.media_uri
-            self.log.info(f'News media url: {media_url}')
+            self.log.info(f"News media url: {media_url}")
             mime = find_mime_type(media_url)
             # Ensure announcement of station has finished before playing
-            # TODO
-            # wait_while_speaking()
+            self.wait_while_speaking()
 
             # We support streaming
             self.CPS_play((media_url, mime))
@@ -307,27 +316,27 @@ class NewsSkill(CommonPlaySkill):
             # else:
             #     self.CPS_play((media_url, mime))
 
-            self.gui['media'] = {
+            self.gui["media"] = {
                 "image": str(station.image_path),
                 "artist": station.acronym,
                 "track": station.full_name,
                 "album": "",
                 "skill": self.skill_id,
-                "streaming": True
+                "streaming": True,
             }
-            self.gui['status'] = "Playing"
-            self.gui['theme'] = dict(fgColor="white", bgColor=station.color)
+            self.gui["status"] = "Playing"
+            self.gui["theme"] = dict(fgColor="white", bgColor=station.color)
             self._show_gui_page("AudioPlayer")
             self.CPS_send_status(
                 # cast to str for json serialization
                 image=str(station.image_path),
-                artist=station.full_name
+                artist=station.full_name,
             )
             self.now_playing = station.full_name
         except ValueError as e:
             self.speak_dialog("could.not.start.the.news.feed")
             self.log.exception(e)
-    
+
     def _show_gui_page(self, page):
         """Show a page variation depending on platform."""
         if self.gui.connected:
@@ -349,9 +358,9 @@ class NewsSkill(CommonPlaySkill):
                     # Process must still be running...
                     self.curl.kill()
                 else:
-                    self.log.debug(f'Curl return code: {return_code}')
+                    self.log.debug(f"Curl return code: {return_code}")
             except subprocess.SubprocessError as e:
-                self.log.exception(f'Could not stop curl: {repr(e)}')
+                self.log.exception(f"Could not stop curl: {repr(e)}")
             finally:
                 self.curl = None
 
@@ -362,7 +371,7 @@ class NewsSkill(CommonPlaySkill):
         self.now_playing = None
         # Disable restarting when stopped
         if self.last_station_played:
-            self.disable_intent('restart_playback')
+            self.disable_intent("restart_playback")
             self.last_station_played = None
 
         # Stop download process if it's running.

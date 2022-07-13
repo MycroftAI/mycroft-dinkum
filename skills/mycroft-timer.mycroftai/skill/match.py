@@ -16,6 +16,7 @@ from copy import copy
 from typing import List
 
 from mycroft.util.log import LOG
+
 from .timer import CountdownTimer
 from .util import extract_ordinal, extract_timer_duration, extract_timer_name
 

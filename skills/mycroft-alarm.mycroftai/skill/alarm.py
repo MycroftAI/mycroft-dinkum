@@ -14,6 +14,7 @@
 """Definition of an alarm."""
 from mycroft.util.format import nice_date_time, nice_time
 from mycroft.util.time import now_local
+
 from .repeat import build_repeat_rule_description, determine_next_occurrence
 
 BACKGROUND_COLORS = ("#22A7F0", "#40DBB0", "#BDC3C7", "#4DE0FF")

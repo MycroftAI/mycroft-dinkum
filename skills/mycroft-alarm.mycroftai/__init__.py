@@ -14,15 +14,15 @@
 """Defines a skill for setting one-time or repeating alarms."""
 import pickle
 from collections import namedtuple
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from time import sleep
 from typing import List, Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import AdaptIntent, intent_handler, MycroftSkill, skill_api_method
+from mycroft.skills import AdaptIntent, MycroftSkill, intent_handler, skill_api_method
 from mycroft.skills.skill_data import RegexExtractor
-from mycroft.util.format import nice_time, join_list, date_time_format
+from mycroft.util.format import date_time_format, join_list, nice_time
 from mycroft.util.parse import extract_datetime, extract_number
 from mycroft.util.time import now_local, to_system
 
@@ -884,8 +884,7 @@ class AlarmSkill(MycroftSkill):
     def _clear_display_after_speaking(self):
         """Clears the GUI displaying on the screen after the dialog has been spoken."""
         if self.gui.connected:
-            # TODO
-            # wait_while_speaking()
+            self.wait_while_speaking()
             self.gui.release()
 
     def _show_on_faceplate(self, alarm):

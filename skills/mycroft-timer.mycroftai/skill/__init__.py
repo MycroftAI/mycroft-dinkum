@@ -16,10 +16,10 @@ from .faceplate import FaceplateRenderer
 from .match import TimerMatcher
 from .timer import CountdownTimer
 from .util import (
+    extract_ordinal,
     extract_timer_duration,
     extract_timer_name,
-    extract_ordinal,
     format_timedelta,
     get_speakable_ordinal,
-    remove_conjunction
+    remove_conjunction,
 )

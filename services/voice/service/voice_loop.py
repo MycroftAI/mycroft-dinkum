@@ -1,15 +1,14 @@
 import asyncio
-import logging
 import json
+import logging
 import subprocess
 from collections import deque
 from pathlib import Path
-from threading import Event, Thread
 from queue import Queue
+from threading import Event, Thread
 from typing import Any
 
 import numpy as np
-
 # import websockets
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT

@@ -34,7 +34,6 @@ import subprocess
 import threading
 import typing
 
-
 DEFAULT_SOCKET = "/tmp/mycroft_socket"
 
 SSID = "Mycroft"
@@ -146,9 +145,7 @@ def _client_thread(connection):
                             )
                         elif "received connection request" in hs_line:
                             _LOGGER.info("User has entered credentials")
-                            print(
-                                EVENT_ENTERED_CREDS, file=conn_file, flush=True
-                            )
+                            print(EVENT_ENTERED_CREDS, file=conn_file, flush=True)
                         elif "stopping" in hs_line:
                             _LOGGER.info("Access point destroyed")
                             print(EVENT_DESTROYED, file=conn_file, flush=True)

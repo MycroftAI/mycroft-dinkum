@@ -58,21 +58,13 @@ class AccessPointActivity(Activity):
 
                 if line == EVENT_CREATED:
                     LOG.info("Access point created")
-                    self.bus.emit(
-                        Message("hardware.awconnect.ap-activated")
-                    )
+                    self.bus.emit(Message("hardware.awconnect.ap-activated"))
                 elif line == EVENT_VISITED_PORTAL:
                     LOG.info("User viewed captive portal page")
-                    self.bus.emit(
-                        Message("hardware.awconnect.portal-viewed")
-                    )
+                    self.bus.emit(Message("hardware.awconnect.portal-viewed"))
                 elif line == EVENT_ENTERED_CREDS:
                     LOG.info("User entered wifi credentials")
-                    self.bus.emit(
-                        Message("hardware.awconnect.credentials-entered")
-                    )
+                    self.bus.emit(Message("hardware.awconnect.credentials-entered"))
                 elif line == EVENT_DESTROYED:
                     LOG.info("Access point destroyed")
-                    self.bus.emit(
-                        Message("hardware.awconnect.ap-deactivated")
-                    )
+                    self.bus.emit(Message("hardware.awconnect.ap-deactivated"))

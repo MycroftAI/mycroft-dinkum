@@ -23,6 +23,7 @@ provided, precluding us from having to do the conversions.
 
 """
 from mycroft.api import Api
+
 from .weather import WeatherReport
 
 OPEN_WEATHER_MAP_LANGUAGES = (
@@ -73,7 +74,7 @@ OPEN_WEATHER_MAP_LANGUAGES = (
     "vi",
     "zh_cn",
     "zh_tw",
-    "zu"
+    "zu",
 )
 
 
@@ -87,9 +88,9 @@ def owm_language(lang: str):
         language_config: The Mycroft language code.
     """
     special_cases = {"cs": "cz", "ko": "kr", "lv": "la"}
-    lang_primary, lang_subtag = lang.split('-')
-    if lang.replace('-', '_') in OPEN_WEATHER_MAP_LANGUAGES:
-        return lang.replace('-', '_')
+    lang_primary, lang_subtag = lang.split("-")
+    if lang.replace("-", "_") in OPEN_WEATHER_MAP_LANGUAGES:
+        return lang.replace("-", "_")
     if lang_primary in OPEN_WEATHER_MAP_LANGUAGES:
         return lang_primary
     if lang_subtag in OPEN_WEATHER_MAP_LANGUAGES:
@@ -106,8 +107,7 @@ class OpenWeatherMapApi(Api):
         super().__init__(path="owm")
 
     def get_weather_for_coordinates(
-        self, measurement_system: str, latitude: float,
-        longitude: float, lang: str
+        self, measurement_system: str, latitude: float, longitude: float, lang: str
     ) -> WeatherReport:
         """Issue an API call and map the return value into a weather report
 
@@ -121,7 +121,7 @@ class OpenWeatherMapApi(Api):
             lang=owm_language(lang),
             lat=latitude,
             lon=longitude,
-            units=measurement_system
+            units=measurement_system,
         )
         api_request = dict(path="/onecall", query=query_parameters)
         response = self.request(api_request)

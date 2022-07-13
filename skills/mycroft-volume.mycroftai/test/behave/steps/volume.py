@@ -1,13 +1,12 @@
+from test.integrationtests.voight_kampff import emit_utterance, then_wait
 from time import sleep
-from behave import given, then
 
-from mycroft.audio import wait_while_speaking
+from behave import given, then
 from mycroft.messagebus import Message
 from mycroft.skills.api import SkillApi
 
-from test.integrationtests.voight_kampff import emit_utterance, then_wait
-
 DEFAULT_DELAY = 1.0
+
 
 def connect_to_skill(bus):
     """Setup Skill API connection"""
@@ -40,9 +39,7 @@ def given_muted(context):
     skill._mute_volume()
     sleep(DEFAULT_DELAY)
     is_volume_correct, actual_volume = check_volume_is(0.0, context.bus)
-    assert (
-        is_volume_correct
-    ), f"Volume is not muted. Current volume is: {actual_volume}"
+    assert is_volume_correct, f"Volume is not muted. Current volume is: {actual_volume}"
 
 
 @given("the volume is set to {level}")

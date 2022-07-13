@@ -18,10 +18,8 @@ from xml.etree import ElementTree
 
 import ddg3 as ddg
 import requests
-
 from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
-
 
 Answer = namedtuple("Answer", ["query", "response", "text", "image"])
 # Set default values to None.

@@ -15,8 +15,8 @@ import time
 import typing
 from collections import deque
 
-from mycroft.skills.fallback_skill import FallbackSkill
 from mycroft.skills import AdaptIntent, intent_handler
+from mycroft.skills.fallback_skill import FallbackSkill
 from mycroft.util.log import LOG
 
 MAX_DISPLAY_UTTERANCES = 4

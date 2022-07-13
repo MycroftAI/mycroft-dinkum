@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from websocket import create_connection
-
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.messagebus.message import Message
+from websocket import create_connection
 
 
 def send(message_to_send, data_to_send=None):
@@ -33,10 +32,7 @@ def send(message_to_send, data_to_send=None):
     config = Configuration.get()
     config = config.get("websocket")
     url = MessageBusClient.build_url(
-        config.get("host"),
-        config.get("port"),
-        config.get("route"),
-        config.get("ssl")
+        config.get("host"), config.get("port"), config.get("route"), config.get("ssl")
     )
 
     # Send the provided message/data

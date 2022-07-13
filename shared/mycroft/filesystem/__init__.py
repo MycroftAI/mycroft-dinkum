@@ -14,7 +14,8 @@
 #
 import os
 import shutil
-from os.path import join, expanduser, isdir
+from os.path import expanduser, isdir, join
+
 import xdg.BaseDirectory
 
 
@@ -34,8 +35,8 @@ class FileSystemAccess:
         if not isinstance(path, str) or len(path) == 0:
             raise ValueError("path must be initialized as a non empty string")
 
-        old_path = join(expanduser('~'), '.mycroft', path)
-        path = join(xdg.BaseDirectory.save_config_path('mycroft'), path)
+        old_path = join(expanduser("~"), ".mycroft", path)
+        path = join(xdg.BaseDirectory.save_config_path("mycroft"), path)
 
         # Migrate from the old location if it still exists
         # TODO: remove in 22.02

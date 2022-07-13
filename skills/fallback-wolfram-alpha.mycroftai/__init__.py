@@ -14,19 +14,18 @@
 #
 
 from collections import namedtuple
-from mtranslate import translate
-from requests import HTTPError
 
-from mycroft.skills import AdaptIntent, intent_handler
+from mtranslate import translate
 from mycroft.messagebus.message import Message
+from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from mycroft.util import get_cache_directory
 from mycroft.util.parse import normalize
+from requests import HTTPError
 
-from .skill.wolfram_client import WolframAlphaClient
 from .skill.parse import EnglishQuestionParser
 from .skill.util import clear_cache, process_wolfram_string
-
+from .skill.wolfram_client import WolframAlphaClient
 
 Query = namedtuple("Query", ["query", "spoken_answer", "display_text", "image"])
 # Set default values to None.

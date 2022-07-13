@@ -40,7 +40,8 @@ from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import date_time_format
 from mycroft.util.time import now_local
-from .skill import get_display_time, LocationNotFoundError, Response
+
+from .skill import LocationNotFoundError, Response, get_display_time
 
 TEN_SECONDS = 10
 

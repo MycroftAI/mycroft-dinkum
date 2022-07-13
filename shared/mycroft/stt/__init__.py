@@ -4,9 +4,8 @@ import tempfile
 import typing
 from abc import ABCMeta, abstractmethod
 
-from mycroft_bus_client import MessageBusClient
-
 from mycroft.api import STTApi
+from mycroft_bus_client import MessageBusClient
 
 LOG = logging.getLogger(__package__)
 

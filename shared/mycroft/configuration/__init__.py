@@ -17,7 +17,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Union, cast, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, Union, cast
 
 import xdg.BaseDirectory
 

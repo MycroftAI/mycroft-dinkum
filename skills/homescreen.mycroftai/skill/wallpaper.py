@@ -18,7 +18,6 @@ import typing
 from pathlib import Path
 
 import requests
-
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.log import LOG
 

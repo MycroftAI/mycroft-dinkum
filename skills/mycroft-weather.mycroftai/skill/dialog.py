@@ -36,17 +36,12 @@ from typing import List, Tuple
 
 from mycroft.util.format import join_list, nice_number, nice_time
 from mycroft.util.time import now_local
+
 from .config import WeatherConfig
 from .intent import WeatherIntent
 from .util import get_speakable_day_of_week, get_time_period
-from .weather import (
-    CURRENT,
-    CurrentWeather,
-    DAILY,
-    DailyWeather,
-    HOURLY,
-    HourlyWeather,
-)
+from .weather import CURRENT, DAILY, HOURLY, CurrentWeather, DailyWeather, HourlyWeather
+
 
 # TODO: MISSING DIALOGS
 #   - current.clear.alternative.local
@@ -359,7 +354,8 @@ class DailyDialog(WeatherDialog):
     def build_humidity_dialog(self):
         """Build the components necessary to speak the percentage humidity."""
         self.data = dict(
-            percent=self.weather.humidity, day=get_speakable_day_of_week(self.weather.date_time)
+            percent=self.weather.humidity,
+            day=get_speakable_day_of_week(self.weather.date_time),
         )
         self.name += "-humidity"
         self._add_location()

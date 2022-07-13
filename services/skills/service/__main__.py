@@ -19,11 +19,11 @@ import time
 from threading import Event, Thread
 
 import sdnotify
+from lingua_franca import load_languages
 from mycroft.configuration import Configuration
 from mycroft_bus_client import Message, MessageBusClient
-from lingua_franca import load_languages
 
-from .load import load_skill_source, create_skill_instance
+from .load import create_skill_instance, load_skill_source
 
 SERVICE_ID = "skills"
 LOG = logging.getLogger(SERVICE_ID)

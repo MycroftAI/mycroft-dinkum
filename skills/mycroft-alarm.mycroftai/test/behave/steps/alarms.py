@@ -1,11 +1,9 @@
 import time
-
-from behave import given, then
-
-from mycroft.messagebus.message import Message
-from mycroft.skills.api import SkillApi
 from test.integrationtests.voight_kampff import emit_utterance
 
+from behave import given, then
+from mycroft.messagebus.message import Message
+from mycroft.skills.api import SkillApi
 
 CANCEL_RESPONSES = (
     "cancelled-multiple",

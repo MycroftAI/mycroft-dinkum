@@ -13,46 +13,50 @@
 # limitations under the License.
 #
 import time
+from test.integrationtests.voight_kampff import (
+    emit_utterance,
+    mycroft_responses,
+    then_wait,
+)
 
 from behave import given, then
-
-from mycroft.skills.audioservice import AudioService
 from mycroft.messagebus import Message
-from test.integrationtests.voight_kampff import emit_utterance, mycroft_responses, then_wait
+from mycroft.skills.audioservice import AudioService
 
 
 def wait_for_service_message(context, message_type):
     """Common method for detecting audio play, stop, or pause messages"""
-    msg_type = 'mycroft.audio.service.{}'.format(message_type)
+    msg_type = "mycroft.audio.service.{}".format(message_type)
+
     def check_for_msg(message):
-        return (message.msg_type == msg_type, '')
+        return (message.msg_type == msg_type, "")
 
     passed, debug = then_wait(msg_type, check_for_msg, context)
 
     if not passed:
         debug += mycroft_responses(context)
     if not debug:
-        if message_type == 'play':
-            message_type = 'start'
+        if message_type == "play":
+            message_type = "start"
         debug = "Mycroft didn't {} playback".format(message_type)
 
     assert passed, debug
 
 
-@given('news is playing')
+@given("news is playing")
 def given_news_playing(context):
-    emit_utterance(context.bus, 'what is the news')
-    wait_for_service_message(context, 'play')
+    emit_utterance(context.bus, "what is the news")
+    wait_for_service_message(context, "play")
     time.sleep(3)
     context.bus.clear_messages()
 
 
-@given('nothing is playing')
+@given("nothing is playing")
 def given_nothing_playing(context):
     # TODO simplify this when the Common Play service is updated
     # First sleep to give any previous calls to play enough time to start
     time.sleep(2)
-    context.bus.emit(Message('mycroft.stop'))
+    context.bus.emit(Message("mycroft.stop"))
     context.audio_service = AudioService(context.bus)
     time.sleep(3)
     for i in range(5):
@@ -70,8 +74,9 @@ def then_playback_stop(context):
     # Note - currently only checking for mycroft.stop being emitted.
     # We do not check that the audioservice has actually stopped playing.
     expected_msg_type = "mycroft.stop"
+
     def check_for_msg(message):
-        return (message.msg_type == expected_msg_type, '')
+        return (message.msg_type == expected_msg_type, "")
 
     passed, debug = then_wait(expected_msg_type, check_for_msg, context)
 
@@ -86,11 +91,12 @@ def then_playback_stop(context):
 
 @then('"mycroft-news" should pause playing')
 def then_playback_pause(context):
-    wait_for_service_message(context, 'pause')
+    wait_for_service_message(context, "pause")
+
 
 @then('"{station}" should play')
 def then_station_playback_started(context, station):
-    wait_for_service_message(context, 'play')
+    wait_for_service_message(context, "play")
     context.audio_service = AudioService(context.bus)
     for i in range(5):
         if context.audio_service.is_playing:
@@ -100,8 +106,8 @@ def then_station_playback_started(context, station):
     assert context.audio_service.is_playing
     track_info = context.audio_service.track_info()
     # If track info isn't supported by audio backend artist will be blank
-    if track_info.get('artist'):
-        assert track_info['artist'] in ['', station]
-    elif track_info.get('artists'):
+    if track_info.get("artist"):
+        assert track_info["artist"] in ["", station]
+    elif track_info.get("artists"):
         # The VLC backend does not currently report 'artist'
-        assert track_info['artists'] == [None]
+        assert track_info["artists"] == [None]

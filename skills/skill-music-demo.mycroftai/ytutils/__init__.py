@@ -11,23 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os, re, glob, time, json
-from threading import Thread, Event
+import glob
+import json
+import os
+import re
+import time
+from threading import Event, Thread
+
 from pytube import YouTube
 
-# this is a hack to try to filter 
+# this is a hack to try to filter
 # out streams and videos that are
 # too long to download while a user
-# is waiting. 
+# is waiting.
 MAX_SONG_LEN_IN_SECONDS = 3000
+
 
 class FileLoaderThread(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self.url = ''
-        self.img_url = ''
-        self.img_filename = ''
-        self.mp3_filename = ''
+        self.url = ""
+        self.img_url = ""
+        self.img_filename = ""
+        self.mp3_filename = ""
         self.img_ctr = 0
         self.request = False
         self.finished = False
@@ -39,10 +45,10 @@ class FileLoaderThread(Thread):
                 self.finished = False
 
                 # clean up after yourself
-                if self.mp3_filename != '':
-                    os.system("rm -f %s" % (self.mp3_filename,))  
-                if self.img_filename != '':
-                    os.system("rm -f %s" % (self.img_filename,)) 
+                if self.mp3_filename != "":
+                    os.system("rm -f %s" % (self.mp3_filename,))
+                if self.img_filename != "":
+                    os.system("rm -f %s" % (self.img_filename,))
 
                 # grab image
                 self.img_ctr += 1
@@ -67,12 +73,16 @@ class FileLoaderThread(Thread):
                 os.rename(yt.streams.first().default_filename, mp4_filename)
 
                 # convert to mp3
-                cmd = "ffmpeg -i %s -q:a 0 -map a %s" % (mp4_filename, self.mp3_filename)
+                cmd = "ffmpeg -i %s -q:a 0 -map a %s" % (
+                    mp4_filename,
+                    self.mp3_filename,
+                )
                 os.system(cmd)
                 os.system("rm -f %s" % (mp4_filename,))  # clean up
 
                 self.finished = True
             time.sleep(1)
+
 
 def get_seconds(duration):
     # note - we do not error check
@@ -82,23 +92,23 @@ def get_seconds(duration):
     da = duration.split(":")
 
     if len(da) == 3:
-        hrs = int( da[0] ) * 3600
-        mins = int( da[1] ) * 60
-        secs = int( da[2] )
+        hrs = int(da[0]) * 3600
+        mins = int(da[1]) * 60
+        secs = int(da[2])
 
     if len(da) == 2:
-        mins = int( da[0] ) * 60
-        secs = int( da[1] )
+        mins = int(da[0]) * 60
+        secs = int(da[1])
 
     if len(da) == 1:
-        secs = int( da[0] ) 
+        secs = int(da[0])
 
     return hrs + mins + secs
 
 
 def get_json():
     fh = open("/tmp/search_results.html")
-    tag = 'var ytInitialData ='
+    tag = "var ytInitialData ="
     for line in fh:
         if line.find(tag) != -1:
             la = line.split("</script>")
@@ -110,110 +120,116 @@ def get_json():
                     fh.close()
                     return l[start_indx:-1]
     fh.close()
-    return ''
+    return ""
+
 
 def process_vr(rend):
     # TODO replace try/except with gets
-    thumb = ''
+    thumb = ""
 
     try:
-        thumb = rend['thumbnails'][0]['thumbnails']
-        thumb = thumb[len(thumb)-1]       # the last is usually the largest
+        thumb = rend["thumbnails"][0]["thumbnails"]
+        thumb = thumb[len(thumb) - 1]  # the last is usually the largest
     except:
         pass
 
-    thumb = rend['thumbnail']['thumbnails'][0]
-    if thumb == '':
+    thumb = rend["thumbnail"]["thumbnails"][0]
+    if thumb == "":
         try:
-            thumb = rend['thumbnail']['thumbnails'][0]
+            thumb = rend["thumbnail"]["thumbnails"][0]
         except:
             pass
 
-    title = ''
+    title = ""
     try:
-        title = rend['title']['simpleText']
+        title = rend["title"]["simpleText"]
     except:
         pass
 
-    if title == '':
+    if title == "":
         try:
-            title = rend['title']['runs'][0]['text']
+            title = rend["title"]["runs"][0]["text"]
         except:
             pass
 
     song_len = 0
     try:
-        song_len = get_seconds( rend['videos'][0]['childVideoRenderer']['lengthText']['simpleText'] )
+        song_len = get_seconds(
+            rend["videos"][0]["childVideoRenderer"]["lengthText"]["simpleText"]
+        )
     except:
         pass
 
     if song_len == 0:
         try:
-            song_len = get_seconds( rend['lengthText']['simpleText'] )
+            song_len = get_seconds(rend["lengthText"]["simpleText"])
         except:
             pass
 
-    video_id = ''
+    video_id = ""
     try:
-        video_id = rend['videos'][0]['childVideoRenderer']['videoId']
+        video_id = rend["videos"][0]["childVideoRenderer"]["videoId"]
     except:
         pass
 
-    if video_id == '':
+    if video_id == "":
         try:
-            video_id = rend['videoId']
+            video_id = rend["videoId"]
         except:
             pass
 
-    img_url = thumb['url']
+    img_url = thumb["url"]
     ia = img_url.split("?")
     img_url = ia[0]
 
     return video_id, title, img_url, song_len
 
+
 def get_url():
     play_list = []
     # the caller might want to try/catch calls to this method
-    vid_json = json.loads( get_json() )
-    contents = vid_json['contents']
-    rend = contents['twoColumnSearchResultsRenderer']
-    rend = rend['primaryContents']
-    rend = rend['sectionListRenderer']
-    rend = rend['contents']
+    vid_json = json.loads(get_json())
+    contents = vid_json["contents"]
+    rend = contents["twoColumnSearchResultsRenderer"]
+    rend = rend["primaryContents"]
+    rend = rend["sectionListRenderer"]
+    rend = rend["contents"]
     rend = rend[0]
-    rend = rend['itemSectionRenderer']
-    rend = rend['contents']
+    rend = rend["itemSectionRenderer"]
+    rend = rend["contents"]
 
     # could be videoRenderer or a playListRenderer
     # or a channelRenderer ... so many renderers
-    video_id = ''
-    thumb = ''
-    title = ''
-    img_url = ''
+    video_id = ""
+    thumb = ""
+    title = ""
+    img_url = ""
     song_len = 0
 
     for thing in rend:
-        if thing.get('videoRenderer', '') != '':
-            video_id, title, img_url, song_len = process_vr( thing['videoRenderer'] )
+        if thing.get("videoRenderer", "") != "":
+            video_id, title, img_url, song_len = process_vr(thing["videoRenderer"])
             # could just break here
             if song_len > 0 and song_len < MAX_SONG_LEN_IN_SECONDS:
-                play_list.append({
-                    'video_id':video_id,
-                    'title':title, 
-                    'img_url':img_url, 
-                    'song_len':song_len
-                    })
+                play_list.append(
+                    {
+                        "video_id": video_id,
+                        "title": title,
+                        "img_url": img_url,
+                        "song_len": song_len,
+                    }
+                )
 
     if len(play_list) == 0:
         # could not find a suitable video
-        return '', '', '', '', 0
+        return "", "", "", "", 0
 
-    # we could create a playlist but for 
+    # we could create a playlist but for
     # now we just take the first song
-    video_id = play_list[0]['video_id']
-    title = play_list[0]['title']
-    img_url = play_list[0]['img_url']
-    song_len = play_list[0]['song_len']
+    video_id = play_list[0]["video_id"]
+    title = play_list[0]["title"]
+    img_url = play_list[0]["img_url"]
+    song_len = play_list[0]["song_len"]
 
     # sometimes we have artist and song
     ta = title.split(" - ")
@@ -233,13 +249,12 @@ def get_url():
 
     # remove everything in parens
     # might be a bit harsh
-    artist = re.sub(r'\([^)]*\)', '', artist)
-    song = re.sub(r'\([^)]*\)', '', song)
+    artist = re.sub(r"\([^)]*\)", "", artist)
+    song = re.sub(r"\([^)]*\)", "", song)
 
     # finally, decide what to ultimately show
     # this should probably be done by the caller
     if artist == song:
-        artist = ''
+        artist = ""
 
     return video_id, img_url, artist, song, song_len
-

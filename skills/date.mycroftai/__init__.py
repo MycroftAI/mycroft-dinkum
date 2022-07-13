@@ -21,7 +21,8 @@ from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import date_time_format
 from mycroft.util.time import now_local
-from .skill import get_speakable_weekend_date, is_leap_year, Response
+
+from .skill import Response, get_speakable_weekend_date, is_leap_year
 from .skill.util import extract_datetime_from_utterance
 
 MARK_I = "mycroft_mark_1"

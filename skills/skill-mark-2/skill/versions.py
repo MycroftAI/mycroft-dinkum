@@ -17,7 +17,6 @@ from datetime import datetime
 from pathlib import Path
 
 from git import Git
-
 from mycroft import MYCROFT_ROOT_PATH
 from mycroft.version import CORE_VERSION_STR
 

@@ -24,20 +24,19 @@ from pathlib import Path
 from time import sleep
 from typing import List, Tuple
 
-from requests import HTTPError
-
+from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
-from mycroft.messagebus.message import Message
 from mycroft.util.parse import extract_number
+from requests import HTTPError
+
 from .skill import (
-    CurrentDialog,
     DAILY,
+    HOURLY,
+    CurrentDialog,
     DailyDialog,
     DailyWeather,
-    HOURLY,
     HourlyDialog,
-    get_dialog_for_timeframe,
     LocationNotFoundError,
     OpenWeatherMapApi,
     WeatherConfig,
@@ -45,6 +44,7 @@ from .skill import (
     WeatherIntent,
     WeatherReport,
     WeeklyDialog,
+    get_dialog_for_timeframe,
 )
 
 # TODO: VK Failures
@@ -699,14 +699,18 @@ class WeatherSkill(MycroftSkill):
             dialog_files = list()
             weather_location = self._build_display_location(intent_data)
             self._display_current_conditions(weather, weather_location)
-            weather_dialog = CurrentDialog(intent_data, self.weather_config, weather.current)
+            weather_dialog = CurrentDialog(
+                intent_data, self.weather_config, weather.current
+            )
             weather_dialog.build_weather_dialog()
             # self._speak_weather(weather_dialog)
             # Single page for MVP
             # if self.gui.connected and self.platform != MARK_II:
             #     self._display_more_current_conditions(weather, weather_location)
 
-            high_low_dialog = CurrentDialog(intent_data, self.weather_config, weather.current)
+            high_low_dialog = CurrentDialog(
+                intent_data, self.weather_config, weather.current
+            )
             high_low_dialog.build_high_low_temperature_dialog()
             # self._speak_weather(high_low_dialog)
             # if self.gui.connected:
@@ -719,7 +723,6 @@ class WeatherSkill(MycroftSkill):
             #         self._display_multi_day_forecast(four_day_forecast, intent_data)
 
             self._speak_multiple_dialogs([weather_dialog, high_low_dialog])
-
 
     def _display_current_conditions(
         self, weather: WeatherReport, weather_location: str

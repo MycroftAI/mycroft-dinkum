@@ -14,10 +14,9 @@
 #
 
 import requests
-from requests import HTTPError
-
 from mycroft.api import Api
 from mycroft.util.log import LOG
+from requests import HTTPError
 
 from .ddg_image_search import search_ddg_images
 from .util import (
@@ -99,7 +98,7 @@ class WolframAlphaClient:
         Returns:
             File path of image.
         """
-        # the image fetch is causing issues so for now 
+        # the image fetch is causing issues so for now
         # we disable it and force the wolfram alpha png
         image = "/opt/mycroft/skills/fallback-wolfram-alpha.mycroftai/ui/wolfy.png"
         return image

@@ -12,29 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import requests
+from mediawiki import DisambiguationError, MediaWiki, MediaWikiPage, PageError
+from mycroft.util.log import LOG
 from urllib3.exceptions import HTTPError
 
-import requests
-from mediawiki import (
-    MediaWiki,
-    MediaWikiPage,
-    PageError,
-    DisambiguationError
-)
-
-from mycroft.util.log import LOG
 from .util import clean_text
 
-
-DEFAULT_IMAGE = 'ui/default-images/wikipedia-logo.svg'
+DEFAULT_IMAGE = "ui/default-images/wikipedia-logo.svg"
 EXCLUDED_IMAGES = [
-    'Blue_pencil.svg',
-    'OOjs_UI_icon_edit-ltr-progressive.svg',
-    'Edit-clear.svg'
+    "Blue_pencil.svg",
+    "OOjs_UI_icon_edit-ltr-progressive.svg",
+    "Edit-clear.svg",
 ]
 
 
-class Wiki():
+class Wiki:
     """Interface to Wikipedia using pymediawiki."""
 
     def __init__(self, lang, auto_more) -> None:
@@ -72,10 +65,9 @@ class Wiki():
         )
         response = requests.get(api_url)
         if response.status_code < 300:
-            page_image_data = response.json().get(
-                'query', {}).get('pages', [False])[0]
+            page_image_data = response.json().get("query", {}).get("pages", [False])[0]
             if page_image_data:
-                image = page_image_data.get('thumbnail', {}).get('source')
+                image = page_image_data.get("thumbnail", {}).get("source")
 
         # Else fallback to pymediawiki page scraping
         if image is None:
@@ -86,17 +78,19 @@ class Wiki():
                 # This translates image urls between the following two formats
                 # https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Sialyl_lewis_a.svg/200px-Sialyl_lewis_a.svg.png
                 # https://upload.wikimedia.org/wikipedia/commons/d/d4/Sialyl_lewis_a.svg
-                full_image = '/'.join(thumbnail.replace('/thumb/',
-                                                        '/').split('/')[:-1])
+                full_image = "/".join(thumbnail.replace("/thumb/", "/").split("/")[:-1])
                 image = full_image if full_image in page.images else thumbnail
             elif len(page.images) > 0:
                 try:
-                    image = next(img for img in page.images if img.split(
-                        '/')[-1] not in EXCLUDED_IMAGES)
+                    image = next(
+                        img
+                        for img in page.images
+                        if img.split("/")[-1] not in EXCLUDED_IMAGES
+                    )
                 except StopIteration:
-                    LOG.warning('Could not find an image for %s', page.title)
+                    LOG.warning("Could not find an image for %s", page.title)
 
-        LOG.debug('Image selected: %s', image)
+        LOG.debug("Image selected: %s", image)
         return image or DEFAULT_IMAGE
 
     @staticmethod
@@ -113,8 +107,7 @@ class Wiki():
             disambiguation page title or None
         """
         try:
-            page_title = next(
-                page for page in results if "(disambiguation)" in page)
+            page_title = next(page for page in results if "(disambiguation)" in page)
         except StopIteration:
             page_title = None
         return page_title
@@ -127,12 +120,12 @@ class Wiki():
             page = None
         return page
 
-    def get_random_page(self, lang: str = 'en') -> MediaWikiPage:
+    def get_random_page(self, lang: str = "en") -> MediaWikiPage:
         """Get a random wikipedia page.
 
         Uses the Special:Random page of Wikipedia
         """
-        self.set_language('en')
+        self.set_language("en")
         random_page = self.wiki.random(pages=1)
         return self.get_page(random_page)
 
@@ -156,7 +149,9 @@ class Wiki():
             answer = self.summarize_page(page, sentences=length)
         return answer, length
 
-    def get_summary_next_lines(self, page: MediaWikiPage, previous_lines: int = 2, num_lines: int = 5) -> tuple([str, int]):
+    def get_summary_next_lines(
+        self, page: MediaWikiPage, previous_lines: int = 2, num_lines: int = 5
+    ) -> tuple([str, int]):
         """Get the next summary lines to be read.
 
         Args:
@@ -170,10 +165,13 @@ class Wiki():
         total_summary_read = previous_lines + num_lines
         previously_read = self.summarize_page(page, sentences=previous_lines)
         next_summary_section = self.summarize_page(
-            page, sentences=total_summary_read).replace(previously_read, '')
+            page, sentences=total_summary_read
+        ).replace(previously_read, "")
         return next_summary_section, total_summary_read
 
-    def handle_disambiguation_error(self, search_results: list, prev_disambiguation_title: str = None) -> list([MediaWikiPage, str]):
+    def handle_disambiguation_error(
+        self, search_results: list, prev_disambiguation_title: str = None
+    ) -> list([MediaWikiPage, str]):
         """Attempt to get valid MediaWikiPage from a DisambiguationError.
 
         This is a recursive method because a Disambiguation Page may refer to
@@ -196,15 +194,13 @@ class Wiki():
         try:
             wiki_page = self.get_page(search_results[1])
         except DisambiguationError:
-            _, wiki_page = self.handle_disambiguation_error([
-                disambiguation_title,
-                *search_results[2:]
-            ])
-        
+            _, wiki_page = self.handle_disambiguation_error(
+                [disambiguation_title, *search_results[2:]]
+            )
+
         return disambiguation_title, wiki_page
 
-
-    def search(self, query: str, lang: str = 'en') -> list([str]):
+    def search(self, query: str, lang: str = "en") -> list([str]):
         """Search wikipedia for the given query.
 
         Args:

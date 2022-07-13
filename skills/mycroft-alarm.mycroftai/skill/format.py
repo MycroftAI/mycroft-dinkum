@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mycroft.util.time import to_local, now_local
+from mycroft.util.time import now_local, to_local
+
 
 ##########################################################################
 # TODO: Move to mycroft.util.format and support translation

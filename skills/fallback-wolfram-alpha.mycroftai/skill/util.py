@@ -20,7 +20,6 @@ import time
 from typing import Any, Optional
 
 import requests
-
 from mycroft.util.log import LOG
 
 

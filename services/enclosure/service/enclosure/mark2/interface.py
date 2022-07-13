@@ -18,16 +18,17 @@ import subprocess
 import threading
 import time
 import typing
-from typing import Any
 from queue import Queue
+from typing import Any
 
-from ..base import Enclosure
 from mycroft.enclosure.hardware.display import NamespaceManager
 from mycroft.enclosure.hardware_enclosure import HardwareEnclosure
 from mycroft.messagebus.message import Message
 from mycroft.skills.event_scheduler import EventSchedulerInterface
 from mycroft.util.hardware_capabilities import EnclosureCapabilities
 from mycroft.util.network_utils import check_captive_portal
+
+from ..base import Enclosure
 
 LOG = logging.getLogger("enclosure")
 

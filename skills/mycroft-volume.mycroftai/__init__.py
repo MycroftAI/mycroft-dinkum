@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from alsaaudio import Mixer, mixers as alsa_mixers
 from os.path import dirname, join
 
 from adapt.intent import IntentBuilder
+from alsaaudio import Mixer
+from alsaaudio import mixers as alsa_mixers
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler, skill_api_method
 from mycroft.util.parse import extract_number
-
 
 ALSA_PLATFORMS = ["mycroft_mark_1", "picroft", "unknown"]
 ALSA_MIXER_NAMES = ["Master", "PCM", "Digital", "Playback"]
@@ -145,7 +145,9 @@ class VolumeSkill(MycroftSkill):
         if emit:
             volume_percentage = vol / 100.0
             # Notify non-ALSA systems of volume change
-            self.bus.emit(Message("mycroft.volume.set", data={"percent": volume_percentage}))
+            self.bus.emit(
+                Message("mycroft.volume.set", data={"percent": volume_percentage})
+            )
 
     # Change Volume to X (Number 0 to) Intent Handlers
     @intent_handler(

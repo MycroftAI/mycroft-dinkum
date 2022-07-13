@@ -15,9 +15,9 @@ import re
 import threading
 import time
 import typing
+
 from mycroft.messagebus.message import Message
 from mycroft.skills.fallback_skill import FallbackSkill
-
 
 EXTENSION_TIME = 10
 

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
-
-from enum import IntEnum
 from abc import ABC, abstractmethod
-from .mycroft_skill import MycroftSkill
+from enum import IntEnum
 
 from mycroft.configuration import Configuration
-from mycroft.util.file_utils import resolve_resource_file
 from mycroft.messagebus.message import Message
+from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.log import LOG
+
+from .mycroft_skill import MycroftSkill
 
 
 class CQSMatchLevel(IntEnum):

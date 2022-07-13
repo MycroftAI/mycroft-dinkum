@@ -17,6 +17,7 @@ from typing import List, Optional
 
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.log import LOG
+
 from .alarm import Alarm
 from .parse import extract_alarm_datetime
 from .repeat import build_day_of_week_repeat_rule

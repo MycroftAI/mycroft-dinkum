@@ -17,7 +17,6 @@ import tempfile
 import typing
 
 import xdg
-
 from mycroft.configuration import Configuration
 from mycroft.util.log import LOG
 

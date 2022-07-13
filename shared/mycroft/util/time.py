@@ -18,6 +18,7 @@ system. This time is based on the setting in the Mycroft config and may or
 may not match the system locale.
 """
 from datetime import datetime
+
 from dateutil.tz import gettz, tzlocal
 
 
@@ -36,6 +37,7 @@ def default_timezone():
         #   location.timezone.name (e.g. "Central Standard Time")
         #   location.timezone.offset (e.g. -21600000)
         from mycroft.configuration import Configuration
+
         config = Configuration.get()
         code = config["location"]["timezone"]["code"]
 

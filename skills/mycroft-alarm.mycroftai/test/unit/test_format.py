@@ -16,7 +16,6 @@ import unittest
 from datetime import timedelta
 
 from mycroft.util.time import now_local
-
 from skill.format import nice_relative_time
 
 
@@ -25,16 +24,13 @@ class TestNiceRelativeTime(unittest.TestCase):
         now = now_local()
         two_hours_from_now = now + timedelta(hours=2)
         self.assertEqual(
-            nice_relative_time(when=two_hours_from_now, relative_to=now),
-            "2 hours"
+            nice_relative_time(when=two_hours_from_now, relative_to=now), "2 hours"
         )
         seconds_from_now = now + timedelta(seconds=47)
         self.assertEqual(
-            nice_relative_time(when=seconds_from_now, relative_to=now),
-            "47 seconds"
+            nice_relative_time(when=seconds_from_now, relative_to=now), "47 seconds"
         )
         days_from_now = now + timedelta(days=3)
         self.assertEqual(
-            nice_relative_time(when=days_from_now, relative_to=now),
-            "3 days"
+            nice_relative_time(when=days_from_now, relative_to=now), "3 days"
         )

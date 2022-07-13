@@ -1,8 +1,0 @@
-{
-  "utterance": "update configuration",
-  "intent_type": "UpdateConfigurationIntent",
-  "intent": {
-    "Config": "configuration",
-    "Update": "update"
-  }
-}

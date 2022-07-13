@@ -13,6 +13,7 @@
 # limitations under the License.
 """Determine what the spoken response to a users timer request should be."""
 from mycroft.util.format import nice_duration
+
 from .util import get_speakable_ordinal
 
 SINGLE_UNNAMED_TIMER_NAME = "Timer"

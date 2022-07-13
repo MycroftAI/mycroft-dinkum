@@ -22,23 +22,24 @@ SEVEN_COLUMN_BLANK = "HIAAAAAAAAAAAAAA"
 
 class FaceplateRenderer:
     """Display data on a Mark I or device with similar faceplate."""
+
     def __init__(self, enclosure, display_time: str):
         self.enclosure = enclosure
         self.display_time = display_time
         # Map characters to the display encoding for a Mark 1
         # (4x8 except colon, which is 2x8)
         self.character_codes = {
-            ':': 'CIICAA',
-            '0': 'EIMHEEMHAA',
-            '1': 'EIIEMHAEAA',
-            '2': 'EIEHEFMFAA',
-            '3': 'EIEFEFMHAA',
-            '4': 'EIMBABMHAA',
-            '5': 'EIMFEFEHAA',
-            '6': 'EIMHEFEHAA',
-            '7': 'EIEAEAMHAA',
-            '8': 'EIMHEFMHAA',
-            '9': 'EIMBEBMHAA',
+            ":": "CIICAA",
+            "0": "EIMHEEMHAA",
+            "1": "EIIEMHAEAA",
+            "2": "EIEHEFMFAA",
+            "3": "EIEFEFMHAA",
+            "4": "EIMBABMHAA",
+            "5": "EIMFEFEHAA",
+            "6": "EIMHEFEHAA",
+            "7": "EIEAEAMHAA",
+            "8": "EIMHEFMHAA",
+            "9": "EIMBEBMHAA",
         }
 
     def render_time(self, alarm_is_set: bool):

@@ -16,11 +16,13 @@ from datetime import timedelta
 
 from mycroft.util.format import nice_date, nice_duration
 from mycroft.util.time import now_local
+
 from .util import extract_datetime_from_utterance
 
 
 class Response:
     """Logic to generate response data for a date request."""
+
     def __init__(self):
         self.date_time = None
         self.dialog_name = None

@@ -15,12 +15,11 @@
 from datetime import datetime
 
 import pytz
-
-from mycroft.util.format import nice_time
+from mycroft.util.format import nice_duration, nice_time
 from mycroft.util.log import LOG
-from mycroft.util.format import nice_duration
 from mycroft.util.parse import normalize
 from mycroft.util.time import now_local
+
 from .regex import find_in_utterance
 from .util import (
     get_datetime_from_utterance,

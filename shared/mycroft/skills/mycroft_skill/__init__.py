@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .mycroft_skill import MycroftSkill
+from .decorators import (
+    intent_file_handler,
+    intent_handler,
+    resting_screen_handler,
+    skill_api_method,
+)
 from .event_container import get_handler_name
-from .decorators import (intent_handler, intent_file_handler,
-                         resting_screen_handler, skill_api_method)
+from .mycroft_skill import MycroftSkill

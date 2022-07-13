@@ -16,12 +16,11 @@ import unittest
 
 from lingua_franca import set_default_lang
 from mycroft.util.parse import extract_datetime
-
 from skill.repeat import (
-    determine_repeat_days,
+    build_repeat_rule_description,
     create_recurrence_rule,
     describe_recurrence,
-    build_repeat_rule_description,
+    determine_repeat_days,
 )
 
 set_default_lang("en-us")
@@ -78,5 +77,7 @@ class TestDescribeRepeatRule(unittest.TestCase):
             daily_description,
             "sundays, mondays, tuesdays, wednesdays, thursdays, fridays and saturdays",
         )
-        weekday_description = build_repeat_rule_description(RRULE_WEEKDAYS, RECURRENCE_DICT)
+        weekday_description = build_repeat_rule_description(
+            RRULE_WEEKDAYS, RECURRENCE_DICT
+        )
         self.assertEqual(weekday_description, "weekdays")

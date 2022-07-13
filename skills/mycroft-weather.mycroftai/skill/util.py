@@ -16,7 +16,6 @@ from datetime import datetime, timedelta, tzinfo
 from time import time
 
 import pytz
-
 from mycroft.api import GeolocationApi
 from mycroft.util.format import nice_date
 from mycroft.util.parse import extract_datetime

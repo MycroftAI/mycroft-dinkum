@@ -26,6 +26,7 @@ implementation details defined within the skill that uses this as a base class.
 from datetime import datetime, timedelta
 
 from mycroft.messagebus import Message
+
 from .mycroft_skill import MycroftSkill
 
 
@@ -35,6 +36,7 @@ class IdleDisplaySkill(MycroftSkill):
     An idle display is what shows on a device's screen when it is not in use
     by other skills.  For example, Mycroft's Home Screen Skill.
     """
+
     def initialize(self):
         """Tasks to complete during skill load but after bus initialization."""
         self._define_message_bus_handlers()
@@ -50,6 +52,4 @@ class IdleDisplaySkill(MycroftSkill):
 
     def _show_idle_screen(self):
         """Override this method to display the idle screen."""
-        raise NotImplementedError(
-            "Subclass must override the _show_idle_screen method"
-        )
+        raise NotImplementedError("Subclass must override the _show_idle_screen method")

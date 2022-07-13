@@ -14,13 +14,12 @@
 #
 """Step functions for the Home Screen Skill behave tests."""
 from pathlib import Path
-
-from behave import then
-
 from test.integrationtests.voight_kampff import (
     VoightKampffCriteriaMatcher,
     VoightKampffMessageMatcher,
 )
+
+from behave import then
 
 
 @then("the wallpaper should be changed")

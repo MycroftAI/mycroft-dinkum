@@ -16,19 +16,21 @@ from urllib.request import urlopen
 
 from bs4 import BeautifulSoup
 
+
 def get_abc_url():
     """Custom news scraper for ABC News Australia briefing.
-    
+
     Scrapes the News Briefings overview page to find the latest episode."""
     domain = "https://www.abc.net.au"
     latest_briefings_url = f"{domain}/radio/newsradio/news-briefings/"
-    soup = BeautifulSoup(urlopen(latest_briefings_url), features='html.parser')
+    soup = BeautifulSoup(urlopen(latest_briefings_url), features="html.parser")
     # The collection-grid3 element contains a list of the latest episodes
     result = soup.find(id="collection-grid3")
     # Get the href value of the first link tag from within this list
-    episode_page_link = result.find_all('a')[0]['href']
+    episode_page_link = result.find_all("a")[0]["href"]
     episode_page = urlopen(domain + episode_page_link)
-    episode_soup = BeautifulSoup(episode_page, features='html.parser')
-    mp3_url = episode_soup.find_all(attrs={"data-component": "DownloadButton"})[0]['href']
+    episode_soup = BeautifulSoup(episode_page, features="html.parser")
+    mp3_url = episode_soup.find_all(attrs={"data-component": "DownloadButton"})[0][
+        "href"
+    ]
     return mp3_url
-

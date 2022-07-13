@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 
 from mycroft.api import GeolocationApi
 from mycroft.util.format import nice_time
-from mycroft.util.parse import extract_duration, extract_datetime
+from mycroft.util.parse import extract_datetime, extract_duration
 
 
 class LocationNotFoundError(Exception):

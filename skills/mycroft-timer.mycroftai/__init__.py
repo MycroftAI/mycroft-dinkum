@@ -12,27 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A skill to set one or more timers for things like a kitchen timer."""
-import time
 import pickle
+import time
 from collections import namedtuple
 from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
 
+from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
-from mycroft.messagebus.message import Message
-from mycroft.util.format import pronounce_number, nice_duration, join_list
+from mycroft.util.format import join_list, nice_duration, pronounce_number
 from mycroft.util.parse import extract_duration
-from mycroft.util.time import now_utc, now_local
+from mycroft.util.time import now_local, now_utc
+
 from .skill import (
     CountdownTimer,
-    extract_timer_duration,
-    extract_timer_name,
     FaceplateRenderer,
-    remove_conjunction,
     TimerDialog,
     TimerMatcher,
+    extract_timer_duration,
+    extract_timer_name,
+    remove_conjunction,
 )
 
 ONE_DAY = 86400
@@ -976,8 +977,7 @@ class TimerSkill(MycroftSkill):
         The Mark I needs to wait for two seconds after the speaking is done to display
         the active timer(s) because there is an automatic display reset at that time.
         """
-        # TODO
-        # wait_while_speaking()
+        self.wait_while_speaking()
         self._start_expiration_check()
 
     def _start_display_update(self):

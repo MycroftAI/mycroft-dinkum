@@ -17,6 +17,7 @@ from typing import Optional
 
 from mycroft.util.format import nice_duration
 from mycroft.util.time import now_utc
+
 from .util import format_timedelta
 
 BACKGROUND_COLORS = ("#22A7F0", "#40DBB0", "#BDC3C7", "#4DE0FF")

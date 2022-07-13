@@ -16,18 +16,16 @@
 import time
 from datetime import datetime
 from http import HTTPStatus
-from threading import Timer, Lock
+from threading import Lock, Timer
 from uuid import uuid4
-
-from requests import HTTPError
 
 import mycroft.audio
 from mycroft.api import DeviceApi, get_pantacor_device_id
 from mycroft.identity import IdentityManager
 from mycroft.messagebus.message import Message
-from mycroft.skills import intent_handler, MycroftSkill
+from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
-
+from requests import HTTPError
 
 MARK_II = "mycroft_mark_2"
 ACTION_BUTTON_PLATFORMS = ("mycroft_mark_1", MARK_II)

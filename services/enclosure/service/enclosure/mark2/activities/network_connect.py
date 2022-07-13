@@ -20,11 +20,7 @@ from enum import Enum
 from mycroft.activity import Activity
 from mycroft.messagebus import Message
 from mycroft.util.log import LOG
-from mycroft.util.network_utils import (
-    get_dbus,
-    get_network_manager,
-    NM_NAMESPACE,
-)
+from mycroft.util.network_utils import NM_NAMESPACE, get_dbus, get_network_manager
 
 # Network manager state
 # https://developer-old.gnome.org/NetworkManager/stable/nm-dbus-types.html#NMDeviceState
@@ -244,7 +240,9 @@ class NetworkConnectActivity(Activity):
                 NM_NAMESPACE, device_path, dev_introspect
             )
 
-            dev_interface = dev_object.get_interface(f"{NM_NAMESPACE}.Device",)
+            dev_interface = dev_object.get_interface(
+                f"{NM_NAMESPACE}.Device",
+            )
 
             dev_type = await dev_interface.get_device_type()
 

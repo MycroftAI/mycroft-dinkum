@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import unittest
 from datetime import datetime, timezone
 
+import pytest
+from lingua_franca import set_default_lang
 from mycroft.util.parse import extract_datetime
 from mycroft.util.time import now_local, now_utc, to_local, to_utc
-from lingua_franca import set_default_lang
-
 from skill.alarm import (
     alarm_log_dump,
     curate_alarms,

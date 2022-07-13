@@ -15,11 +15,12 @@
 from datetime import timedelta
 
 from mycroft.util.time import now_local
+
 from .util import (
-    get_utterance_datetime,
+    LocationNotFoundError,
     get_geolocation,
     get_tz_info,
-    LocationNotFoundError,
+    get_utterance_datetime,
 )
 from .weather import CURRENT
 
