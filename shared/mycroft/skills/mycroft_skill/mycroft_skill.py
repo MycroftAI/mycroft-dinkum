@@ -1600,3 +1600,6 @@ class MycroftSkill:
         if session_id == self._tts_session_id:
             self._tts_session_id = None
             self._tts_speak_finished.set()
+
+    def stop_speaking(self):
+        self.bus.emit(Message("mycroft.tts.stop"))

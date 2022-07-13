@@ -21,14 +21,15 @@ import typing
 from queue import Queue
 from typing import Any
 
-from mycroft.enclosure.hardware.display import NamespaceManager
-from mycroft.enclosure.hardware_enclosure import HardwareEnclosure
 from mycroft.messagebus.message import Message
+from mycroft.messagebus.client import MessageBusClient
 from mycroft.skills.event_scheduler import EventSchedulerInterface
-from mycroft.util.hardware_capabilities import EnclosureCapabilities
 from mycroft.util.network_utils import check_captive_portal
 
 from ..base import Enclosure
+from ..hardware.display import NamespaceManager
+from ..hardware_enclosure import HardwareEnclosure
+from ..util.hardware_capabilities import EnclosureCapabilities
 
 LOG = logging.getLogger("enclosure")
 
@@ -147,8 +148,8 @@ class LedThread(threading.Thread):
 class EnclosureMark2(Enclosure):
     force_system_clock_update = True
 
-    def __init__(self, config: dict[str, Any]):
-        super().__init__()
+    def __init__(self, bus: MessageBusClient, config: dict[str, Any]):
+        super().__init__(bus)
         self.display_bus_client = None
         self.finished_loading = False
         self.active_screen = "loading"

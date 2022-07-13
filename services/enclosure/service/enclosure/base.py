@@ -19,7 +19,6 @@ from mycroft.api import BackendDown, DeviceApi, is_paired
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.messagebus.message import Message
-from mycroft.util import start_message_bus_client
 from mycroft.util.log import LOG
 
 write_lock = Lock()
@@ -28,15 +27,14 @@ write_lock = Lock()
 class Enclosure:
     is_raspberry_pi_platform = False
 
-    def __init__(self):
+    def __init__(self, bus: MessageBusClient):
         # Load full config
         config = Configuration.get()
         self.lang = config["lang"]
         self.config = config.get("enclosure")
         self.global_config = config
 
-        # Create Message Bus Client
-        self.bus = MessageBusClient()
+        self.bus = bus
         self.is_authenticated = False
         self.server_unavailable = False
         self.bus.on("mycroft.internet.connected", self.handle_internet_connected)
@@ -45,7 +43,7 @@ class Enclosure:
         """Start the Enclosure after it has been constructed."""
         # Allow exceptions to be raised to the Enclosure Service
         # if they may cause the Service to fail.
-        start_message_bus_client("ENCLOSURE", self.bus)
+        pass
 
     def stop(self):
         """Perform any enclosure shutdown processes."""

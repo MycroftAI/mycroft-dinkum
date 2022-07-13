@@ -44,7 +44,7 @@ def main():
         bus = _connect_to_bus()
         config = Configuration.get()
 
-        enclosure = EnclosureMark2(config)
+        enclosure = EnclosureMark2(bus, config)
         enclosure.run()
 
         # Start watchdog thread

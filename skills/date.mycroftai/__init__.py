@@ -249,11 +249,11 @@ class DateSkill(MycroftSkill):
                 response = Response()
                 response.build_current_date_response()
 
-                self.cache_dialog(
-                    response.dialog_name,
-                    response.dialog_data,
-                    cache_key=self._current_date_cache_key,
-                )
+                # self.cache_dialog(
+                #     response.dialog_name,
+                #     response.dialog_data,
+                #     cache_key=self._current_date_cache_key,
+                # )
         except Exception:
             self.log.exception("Error while caching TTS")
 

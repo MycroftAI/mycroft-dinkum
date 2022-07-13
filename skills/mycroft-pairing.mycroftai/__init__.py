@@ -19,7 +19,6 @@ from http import HTTPStatus
 from threading import Lock, Timer
 from uuid import uuid4
 
-import mycroft.audio
 from mycroft.api import DeviceApi, get_pantacor_device_id
 from mycroft.identity import IdentityManager
 from mycroft.messagebus.message import Message
@@ -32,12 +31,6 @@ ACTION_BUTTON_PLATFORMS = ("mycroft_mark_1", MARK_II)
 MAX_PAIRING_CODE_RETRIES = 30
 ACTIVATION_POLL_FREQUENCY = 10  # secs between checking server for activation
 ONE_MINUTE = 60
-
-
-def _stop_speaking():
-    """Stop speaking the pairing code if it is still being spoken."""
-    if mycroft.audio.is_speaking():
-        mycroft.audio.stop_speaking()
 
 
 class PairingSkill(MycroftSkill):
@@ -312,7 +305,7 @@ class PairingSkill(MycroftSkill):
             login: credentials for the device to log into the backend.
         """
         self._save_identity(login)
-        _stop_speaking()
+        self.stop_speaking()
         self._display_pairing_success()
         self.bus.emit(Message("mycroft.paired", login))
         self.pairing_performed = True

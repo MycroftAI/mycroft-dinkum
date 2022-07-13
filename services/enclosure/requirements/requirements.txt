@@ -1,0 +1,7 @@
+adapt-parser@https://github.com/MycroftAI/adapt/tarball/feature/exclude_and_exactly
+beautifulsoup4~=4.10.0
+dbus-next==0.2.3
+lingua-franca==0.4.2
+sdnotify~=0.3.0
+tornado~=6.1
+

@@ -22,7 +22,7 @@ import socket
 
 from mycroft.activity import Activity
 from mycroft.messagebus import Message
-from mycroft.util import LOG
+from mycroft.util.log import LOG
 
 SOCKET_PATH = "/awconnect/tmp/mycroft_socket"
 

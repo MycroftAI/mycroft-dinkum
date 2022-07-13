@@ -70,6 +70,7 @@ class IdentityManager:
 
         IdentityManager._update(login)
         identity_path = IdentityManager.get_identity_path()
+        Path(identity_path).parent.mkdir(parents=True, exist_ok=True)
         with open(identity_path, "w", encoding="utf-8") as f:
             json.dump(IdentityManager.__identity.__dict__, f)
             f.flush()

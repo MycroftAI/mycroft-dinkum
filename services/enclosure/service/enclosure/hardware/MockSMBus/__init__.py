@@ -1,4 +1,4 @@
-# Copyright 2017 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Mycroft skills module, collection of tools for building skills.
+from mycroft.util import LOG
 
-These classes, decorators and functions are used to build skills for Mycroft.
-"""
-from .intent_service import AdaptIntent
-from .mycroft_skill import (
-    MycroftSkill,
-    intent_file_handler,
-    intent_handler,
-    resting_screen_handler,
-    skill_api_method,
-)
+
+class MockSMBus:
+    """A mock SMBus for use in dummy hardware components."""
+
+    def __init__(self):
+        LOG.info("Mock SMBus initialized.")
+
+    def close(self):
+        LOG.info("Mock SMBus closed.")
+
+    def write_byte_data(*arg, **kwargs):
+        LOG.debug("Writing byte data via mocked SMBus")
+
+    def write_i2c_block_data(*arg, **kwargs):
+        LOG.debug("Writing i2c block data via mocked SMBus")

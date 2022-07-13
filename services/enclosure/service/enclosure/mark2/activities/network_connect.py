@@ -20,7 +20,8 @@ from enum import Enum
 from mycroft.activity import Activity
 from mycroft.messagebus import Message
 from mycroft.util.log import LOG
-from mycroft.util.network_utils import NM_NAMESPACE, get_dbus, get_network_manager
+
+from .network_utils import NM_NAMESPACE, get_dbus, get_network_manager
 
 # Network manager state
 # https://developer-old.gnome.org/NetworkManager/stable/nm-dbus-types.html#NMDeviceState

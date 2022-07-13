@@ -11,16 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-""" Mycroft skills module, collection of tools for building skills.
-
-These classes, decorators and functions are used to build skills for Mycroft.
-"""
-from .intent_service import AdaptIntent
-from .mycroft_skill import (
-    MycroftSkill,
-    intent_file_handler,
-    intent_handler,
-    resting_screen_handler,
-    skill_api_method,
-)
+#

@@ -60,7 +60,7 @@ mkdir -p "${service_config_dir}"
 venv_dir="${service_config_dir}/.venv"
 if [ ! -d "${venv_dir}" ]; then
     echo "Creating virtual environment in ${venv_dir}"
-    python3 -m venv "${venv_dir}"
+    python3 -m venv "${venv_dir}" "$@"
 
     # Upgrade default packages
     source "${venv_dir}/bin/activate"

@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 import logging
+import subprocess
 import typing
 from copy import copy, deepcopy
 
@@ -21,10 +22,24 @@ from mycroft.configuration import Configuration
 from mycroft.identity import IdentityManager
 from mycroft.util import get_arch
 from mycroft.version import VersionManager
-from requests import HTTPError
+from requests import HTTPError, RequestException
 
 LOG = logging.getLogger(__package__)
 UUID = "{MYCROFT_UUID}"
+
+
+class BackendDown(RequestException):
+    pass
+
+
+def get_pantacor_device_id():
+    """Quick hack to read a file owned by root on a pantacor device."""
+    # TODO: replace this with reading a file accessible by the mycroft user
+    cmd = ["sudo", "cat", "/pantavisor/device-id"]
+    result = subprocess.check_output(cmd)
+    pantacor_device_id = result.decode().strip()
+
+    return pantacor_device_id
 
 
 class Api:
@@ -462,3 +477,55 @@ class GeolocationApi(Api):
         )
 
         return response["data"]
+
+
+def is_paired(ignore_errors=True):
+    """Determine if this device is actively paired with a web backend
+
+    Determines if the installation of Mycroft has been paired by the user
+    with the backend system, and if that pairing is still active.
+
+    Returns:
+        bool: True if paired with backend
+    """
+    global _paired_cache
+    if _paired_cache:
+        # NOTE: This assumes once paired, the unit remains paired.  So
+        # un-pairing must restart the system (or clear this value).
+        # The Mark 1 does perform a restart on RESET.
+        return True
+
+    api = DeviceApi()
+    _paired_cache = api.identity.uuid and check_remote_pairing(ignore_errors)
+
+    return _paired_cache
+
+
+def check_remote_pairing(ignore_errors):
+    """Check that a basic backend endpoint accepts our pairing.
+
+    Args:
+        ignore_errors (bool): True if errors should be ignored when
+
+    Returns:
+        True if pairing checks out, otherwise False.
+    """
+    try:
+        DeviceApi().get()
+        return True
+    except HTTPError as e:
+        if e.response.status_code == 401:
+            return False
+        error = e
+    except Exception as e:
+        error = e
+
+    LOG.warning("Could not get device info: {}".format(repr(error)))
+
+    if ignore_errors:
+        return False
+
+    if isinstance(error, HTTPError):
+        raise BackendDown from error
+    else:
+        raise error
