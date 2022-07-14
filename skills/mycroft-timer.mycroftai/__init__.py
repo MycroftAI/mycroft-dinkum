@@ -403,7 +403,7 @@ class TimerSkill(MycroftSkill):
         dialog_data = dict(
             name=duplicate_timer.name, duration=nice_duration(time_remaining)
         )
-        self.speak_dialog("timer-duplicate-name", data=dialog_data)
+        self.speak_dialog("timer-duplicate-name", data=dialog_data, wait=True)
         raise TimerValidationException("Requested timer name already exists")
 
     def _convert_to_alarm(self, duration: timedelta):
@@ -601,7 +601,7 @@ class TimerSkill(MycroftSkill):
                 self._cancel_expired_timers()
             elif len(self.active_timers) == 1:
                 self.active_timers = list()
-                self.speak_dialog("cancelled-single-timer")
+                self.speak_dialog("cancelled-single-timer", wait=True)
             else:
                 matches = self._disambiguate_request(question="ask-which-timer-cancel")
         elif matcher.requested_all:
@@ -618,7 +618,7 @@ class TimerSkill(MycroftSkill):
         """Cancels all expired timers if a user says "cancel timers"."""
         self.log.info("Cancelling expired timers")
         if len(self.expired_timers) == 1:
-            self.speak_dialog("cancelled-single-timer")
+            self.speak_dialog("cancelled-single-timer", wait=True)
             self.active_timers.remove(self.expired_timers[0])
         else:
             self.speak_dialog("cancel-all", data=dict(count=len(self.expired_timers)))
@@ -636,7 +636,7 @@ class TimerSkill(MycroftSkill):
         if reply is not None:
             matcher = TimerMatcher(reply, self.active_timers, self.static_resources)
             if matcher.no_match_criteria:
-                self.speak_dialog("timer-not-found")
+                self.speak_dialog("timer-not-found", wait=True)
             elif matcher.requested_all:
                 self._cancel_all(reply)
             else:
@@ -666,7 +666,9 @@ class TimerSkill(MycroftSkill):
         for timer in timers:
             self.active_timers.remove(timer)
         speakable_duration = self._build_speakable_duration(duration)
-        self.speak_dialog("cancel-all-duration", data=dict(duration=speakable_duration))
+        self.speak_dialog(
+            "cancel-all-duration", data=dict(duration=speakable_duration), wait=True
+        )
 
     def _build_speakable_duration(self, duration: timedelta) -> str:
         """Builds a string representing the timer duration that can be passed to TTS.
@@ -701,11 +703,11 @@ class TimerSkill(MycroftSkill):
         if len(matches) == 1:
             timer = matches[0]
             dialog = "cancelled-timer-named"
-            self.speak_dialog(dialog, data=dict(name=timer.spoken_name))
+            self.speak_dialog(dialog, data=dict(name=timer.spoken_name), wait=True)
             self.log.info(f"Cancelling timer {timer.name}")
             self.active_timers.remove(timer)
         else:
-            self.speak_dialog("timer-not-found")
+            self.speak_dialog("timer-not-found", wait=True)
 
     def _ask_which_timer(
         self, timers: List[CountdownTimer], question: str
@@ -922,7 +924,7 @@ class TimerSkill(MycroftSkill):
     def _cancel_each_and_every_one(self):
         """Cancels every active timer."""
         if len(self.active_timers) == 1:
-            self.speak_dialog("cancelled-single-timer")
+            self.speak_dialog("cancelled-single-timer", wait=True)
         else:
             self.speak_dialog(
                 "cancel-all", data=dict(count=len(self.active_timers)), wait=True

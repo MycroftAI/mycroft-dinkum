@@ -48,7 +48,12 @@ from ..event_scheduler import EventSchedulerInterface
 from ..intent_service_interface import IntentServiceInterface
 from ..settings import get_local_settings, save_settings
 from ..skill_data import ResourceFile, SkillResources, munge_intent_parser, munge_regex
-from .event_container import EventContainer, create_wrapper, get_handler_name
+from .event_container import (
+    EventContainer,
+    create_wrapper,
+    get_handler_name,
+    unmunge_message,
+)
 from .skill_control import SkillControl
 
 
@@ -914,6 +919,7 @@ class MycroftSkill:
         def _handle_intent(message: Message):
             self._session_id = message.data.get("mycroft_session_id")
             try:
+                message = unmunge_message(message, self.skill_id)
                 handler(message)
             except Exception:
                 LOG.exception("Error in intent handler: %s", name)
@@ -1183,7 +1189,7 @@ class MycroftSkill:
         self,
         utterance,
         expect_response=False,
-        wait=False,
+        wait=True,
         meta=None,
         cache_key=None,
         cache_keep=False,
@@ -1209,7 +1215,6 @@ class MycroftSkill:
 
         # registers the skill as being active
         meta = meta or {}
-        assert meta.get("dialog")
         meta["skill"] = self.name
         meta["skill_id"] = self.skill_id
         self.enclosure.register(self.name)
@@ -1236,7 +1241,7 @@ class MycroftSkill:
         key,
         data=None,
         expect_response=False,
-        wait=False,
+        wait=True,
         cache_key=None,
         cache_keep=False,
         response_skill_id=None,

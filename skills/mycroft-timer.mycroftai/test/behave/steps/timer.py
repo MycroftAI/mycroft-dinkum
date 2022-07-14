@@ -1,6 +1,5 @@
 import time
 from test.integrationtests.voight_kampff import (
-    emit_utterance,
     format_dialog_match_error,
     wait_for_dialog_match,
 )

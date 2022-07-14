@@ -93,7 +93,7 @@ class WikipediaSkill(CommonQuerySkill):
         Requires utterance to directly ask for Wikipedia's answer.
         """
         with self.activity():
-            query = self.extract_topic(message.data.get("ArticleTitle"))
+            query = self.extract_topic(message.data.get("ArticleTitle", ""))
             # Talk to the user, as this can take a little time...
             # self.speak_dialog("searching", {"query": query})
             try:

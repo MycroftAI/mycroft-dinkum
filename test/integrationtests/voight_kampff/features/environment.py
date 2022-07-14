@@ -296,6 +296,7 @@ def after_scenario(context, scenario):
     """Wait for mycroft completion and reset any changed state."""
     context.client.wait_for_session()
     LOG.info("End scenario: %s", scenario)
+    sleep(1)
 
 
 def after_step(context, step):
