@@ -265,6 +265,7 @@ class IntentService:
         )
 
     def handle_listen(self, message: Message):
+        """Prime the next utterance to possibly be intended for a specific skill"""
         self._response_skill_id = message.data.get("response_skill_id")
 
     def handle_utterance(self, message: Message):
@@ -349,12 +350,26 @@ class IntentService:
         LOG.debug("Exit handle utterance")
 
     def _handle_get_response(self, message: Message) -> bool:
+        """
+        Check if this utterance was intended for a specific skill.
+        This method avoids the race condition present in the previous "converse" implementation.
+
+        This works with MycroftSkill.get_response() by:
+        1. "speak" contains a "response_skill_id" with the id of the skill that wants the response
+        2. The "mycroft.mic.listen" message gets "response_skill_id"
+        3. The intent service caches "response_skill_id"
+        4. When the next utterance arrives, it will either use the cached id or override it
+        5. If "response_skill_id" is set, a "mycroft.skill-response" message is sent
+        6. A reply to "mycroft.skill-response" means the appropriate skill got the response
+        """
         handled = False
 
         # Check if this is intended for a specific skill
         response_skill_id = message.data.get(
             "response_skill_id", self._response_skill_id
         )
+        self._response_skill_id = None
+
         if response_skill_id:
             reply = self.bus.wait_for_response(
                 Message(
@@ -369,7 +384,6 @@ class IntentService:
                 handled = True
                 LOG.debug("Utterance handled by skill: %s", response_skill_id)
 
-        self._response_skill_id = None
 
         return handled
 

@@ -571,6 +571,7 @@ class MycroftSkill:
         """
         num_fails = 0
         while True:
+            # Wait for "mycroft.skill-response"
             response = self._response_queue.get(timeout=20)
 
             if response is None:
@@ -592,9 +593,13 @@ class MycroftSkill:
 
             line = on_fail(response)
             if line:
-                self.speak(line, expect_response=True)
+                self.speak(line, expect_response=True, response_skill_id=self.skill_id)
             else:
-                self.bus.emit(Message("mycroft.mic.listen"))
+                self.bus.emit(
+                    Message(
+                        "mycroft.mic.listen", data={"response_skill_id": self.skill_id}
+                    )
+                )
 
     def ask_yesno(self, prompt, data=None):
         """Read prompt and wait for a yes/no answer
@@ -1588,8 +1593,10 @@ class MycroftSkill:
         self.bus.emit(Message("mycroft.tts.stop"))
 
     def _handle_skill_response(self, message: Message):
+        """Catch responses intended for a specific skill"""
         skill_id = message.data.get("skill_id")
         if skill_id == self.skill_id:
+            # Intended for this skill
             utterances = message.data.get("utterances")
             utterance = utterances[0] if utterances else None
             LOG.debug("Handling response in skill: %s", utterance)
