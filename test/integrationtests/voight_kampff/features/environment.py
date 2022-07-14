@@ -86,13 +86,11 @@ class VoightKampffClient:
         self.bus.on("skill.started", self._handle_skill_started)
         self.bus.on("skill.ended", self._handle_skill_ended)
 
-    def say_utterance(self, text: str):
+    def say_utterance(self, text: str, response_skill_id: str = ""):
         self.bus.emit(
             Message(
                 "recognizer_loop:utterance",
-                data={
-                    "utterances": [text],
-                },
+                data={"utterances": [text], "response_skill_id": response_skill_id},
             )
         )
 
@@ -102,9 +100,11 @@ class VoightKampffClient:
 
     def wait_for_skill(self):
         if self._tts_session_ids:
+            LOG.info("Waiting on TTS sessions: %s", self._tts_session_ids)
             self._speaking_finished.wait(timeout=10)
 
         if self._activity_ids:
+            LOG.info("Waiting on activities: %s", self._activity_ids)
             self._activities_ended.wait(timeout=10)
 
     def wait_for_message(self, message_type: str, timeout=5) -> Optional[Message]:
@@ -265,7 +265,16 @@ def after_feature(context, feature):
     LOG.info("Result: {} ({:.2f}s)".format(str(feature.status.name), feature.duration))
 
 
+def before_scenario(context, scenario):
+    context.client.bus.emit(Message("mycroft.mic.listen"))
+
+
 def after_scenario(context, scenario):
     """Wait for mycroft completion and reset any changed state."""
     context.client.wait_for_skill()
     context.client.reset_state()
+    LOG.info("End scenario: %s", scenario)
+
+
+def after_step(context, step):
+    context.client.wait_for_speak()

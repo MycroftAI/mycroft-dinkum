@@ -236,7 +236,7 @@ def then_user_follow_up(context, text):
     be removed when the race condition is addressed.
     """
     context.client.wait_for_message("mycroft.mic.listen")
-    context.client.say_utterance(text)
+    context.client.say_utterance(text, response_skill_id=None)
 
 
 @then('mycroft should send the message "{message_type}"')

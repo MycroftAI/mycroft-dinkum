@@ -336,7 +336,7 @@ class TimerSkill(MycroftSkill):
     def _request_duration(self) -> timedelta:
         """The utterance did not include a timer duration so ask for one.
 
-        Allows the user to respond with "nevermind" if the skill was invoked
+        Allows the user to respond with "cancel" if the skill was invoked
         by accident or user changes their mind.
 
         Returns:
@@ -349,12 +349,10 @@ class TimerSkill(MycroftSkill):
         def validate_duration(string):
             """Check that extract_duration returns a valid duration."""
             extracted_duration = None
-            if self.translate("nevermind") in string.replace(" ", ""):
-                extracted_duration = "nevermind"
-            else:
-                extract = extract_duration(string, self.lang)
-                if extract is not None:
-                    extracted_duration = extract[0]
+            extract = extract_duration(string, self.lang)
+            if extract is not None:
+                extracted_duration = extract[0]
+
             return extracted_duration is not None
 
         response = self.get_response("ask-how-long", validator=validate_duration)
@@ -362,8 +360,7 @@ class TimerSkill(MycroftSkill):
             raise TimerValidationException("No response to request for timer duration.")
         else:
             duration, _ = extract_timer_duration(response)
-            nevermind = self.translate("nevermind") in response.replace(" ", "")
-            if duration is None and not nevermind:
+            if duration is None:
                 raise TimerValidationException("No duration specified")
 
         return duration

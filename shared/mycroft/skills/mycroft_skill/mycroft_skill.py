@@ -25,7 +25,7 @@ from itertools import chain
 from os import walk
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from threading import Event, Timer
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -506,11 +506,11 @@ class MycroftSkill:
                     return utterance != "red"
 
             on_fail (any):
-                Dialog or function returning literal string to speak on
+                Dialog or function returning dialog to speak on
                 invalid input. For example::
 
                     def on_fail(utterance):
-                        return "nobody likes the color red, pick another"
+                        return "pick-another"
 
             num_retries (int): Times to ask user for input, -1 for infinite
                 NOTE: User can not respond and timeout or say "cancel" to stop
@@ -525,12 +525,8 @@ class MycroftSkill:
             self._response_queue.get()
 
         def on_fail_default(utterance):
-            fail_data = data.copy()
-            fail_data["utterance"] = utterance
-            if on_fail:
-                return self.dialog_renderer.render(on_fail, fail_data)
-            else:
-                return self.dialog_renderer.render(dialog, data)
+            LOG.debug("Response failure: %s", utterance)
+            return on_fail or dialog
 
         def is_cancel(utterance):
             return self.voc_match(utterance, "cancel")
@@ -557,9 +553,9 @@ class MycroftSkill:
                 Message("mycroft.mic.listen", data={"response_skill_id": self.skill_id})
             )
 
-        return self._wait_response(is_cancel, validator, on_fail_fn, num_retries)
+        return self._wait_response(is_cancel, validator, on_fail_fn, num_retries, data)
 
-    def _wait_response(self, is_cancel, validator, on_fail, num_retries):
+    def _wait_response(self, is_cancel, validator, on_fail, num_retries, data):
         """Loop until a valid response is received from the user or the retry
         limit is reached.
 
@@ -572,7 +568,10 @@ class MycroftSkill:
         num_fails = 0
         while True:
             # Wait for "mycroft.skill-response"
-            response = self._response_queue.get(timeout=20)
+            try:
+                response = self._response_queue.get(timeout=20)
+            except Empty:
+                response = None
 
             if response is None:
                 # if nothing said, prompt one more time
@@ -591,9 +590,11 @@ class MycroftSkill:
             if 0 < num_retries < num_fails:
                 return None
 
-            line = on_fail(response)
-            if line:
-                self.speak(line, expect_response=True, response_skill_id=self.skill_id)
+            dialog = on_fail(response)
+            if dialog:
+                self.speak_dialog(
+                    dialog, expect_response=True, response_skill_id=self.skill_id
+                )
             else:
                 self.bus.emit(
                     Message(
@@ -1166,6 +1167,7 @@ class MycroftSkill:
 
         # registers the skill as being active
         meta = meta or {}
+        assert meta.get("dialog")
         meta["skill"] = self.name
         meta["skill_id"] = self.skill_id
         self.enclosure.register(self.name)
