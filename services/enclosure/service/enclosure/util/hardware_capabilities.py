@@ -79,7 +79,7 @@ class EnclosureCapabilities:
             for line in out.split("\n"):
                 if line != "":
                     if line.startswith(self.name_line):
-                        dev_name = line[len(self.name_line):]
+                        dev_name = line[len(self.name_line) :]
                         dev_name = dev_name[:-1]
                     elif line.startswith(self.keyboard_line):
                         kbd_obj = {"name": dev_name, "extra": ""}

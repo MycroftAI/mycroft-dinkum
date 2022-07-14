@@ -36,9 +36,10 @@
 #               if you are not going to use neo pixels (instead you will use
 #               xmos to control the leds) nothing additional is required.
 #
+import sys
+
 import board
 import neopixel
-import sys
 
 # process cmd line input
 led_values = []

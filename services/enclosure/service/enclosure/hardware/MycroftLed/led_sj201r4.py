@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from smbus2 import SMBus
-
 from mycroft.enclosure.hardware.MycroftLed.MycroftLed import MycroftLed
 from mycroft.util.log import LOG
+from smbus2 import SMBus
 
 
 class Led(MycroftLed):

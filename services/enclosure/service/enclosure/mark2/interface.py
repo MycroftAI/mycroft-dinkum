@@ -21,8 +21,8 @@ import typing
 from queue import Queue
 from typing import Any
 
-from mycroft.messagebus.message import Message
 from mycroft.messagebus.client import MessageBusClient
+from mycroft.messagebus.message import Message
 from mycroft.skills.event_scheduler import EventSchedulerInterface
 from mycroft.util.network_utils import check_captive_portal
 

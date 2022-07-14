@@ -30,8 +30,21 @@ if [ -z "$1" ]; then
 fi
 
 skill_dir="$1"
-features_dir="${skill_dir}/test/behave"
+skill_id="$(basename "${skill_dir}")"
+skill_features_dir="${skill_dir}/test/behave"
 
+shift 1
+
+if [ ! -d "${skill_features_dir}" ]; then
+    echo "Missing behave tests for skill (expected in ${skill_features_dir})";
+    exit 1;
+fi
+
+# Directory of *this* script
+this_dir="$( cd "$( dirname "$0" )" && pwd )"
+
+# Directory of repo
+base_dir="$(realpath "${this_dir}/../")"
 
 : "${XDG_CONFIG_HOME:=${HOME}/.config}"
 
@@ -41,11 +54,24 @@ venv_dir="${test_config_dir}/.venv"
 
 if [ ! -d "${venv_dir}" ]; then
     echo "Missing virtual environment at ${venv_dir}";
-    echo 'Did you run install.sh?';
+    echo 'Did you run test/install.sh?';
     exit 1;
 fi
 
+# Prepare test directory
+skill_test_dir="${test_config_dir}/${skill_id}"
+rm -rf "${skill_test_dir}"
+mkdir -p "${skill_test_dir}"
+
+# Copy Mycroft test environment
+cp -R "${this_dir}/integrationtests/voight_kampff/features"/* "${skill_test_dir}/"
+
+# Copy skill test environment
+cp -R "${skill_features_dir}"/* "${skill_test_dir}/"
+
+# Run tests
 source "${venv_dir}/bin/activate"
 
-PYTHONPATH="${test_code_dir}:${PYTHONPATH}" \
-    python3 -m test.integrationtests.voight_kampff "$@"
+cd "${skill_test_dir}" && \
+    PYTHONPATH="${base_dir}:${PYTHONPATH}" \
+    behave "$@"

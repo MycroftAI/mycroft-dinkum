@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+
 from mycroft.enclosure.hardware.MycroftLed.MycroftLed import MycroftLed
 
 

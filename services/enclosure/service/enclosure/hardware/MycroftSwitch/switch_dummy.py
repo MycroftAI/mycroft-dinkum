@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+
 from mycroft.enclosure.hardware.MycroftSwitch.MycroftSwitch import MycroftSwitch
 from mycroft.util.log import LOG
 

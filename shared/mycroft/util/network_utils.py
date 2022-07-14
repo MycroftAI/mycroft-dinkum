@@ -15,8 +15,8 @@
 """Utilities for network and internet detection."""
 import socket
 import subprocess
-from urllib.request import urlopen
 from urllib.error import URLError
+from urllib.request import urlopen
 
 import requests
 

@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import call, check_output, CalledProcessError
+from subprocess import CalledProcessError, call, check_output
+
 from .MycroftVolume import MycroftVolume
 
 # Definitions used when sending volume over i2c

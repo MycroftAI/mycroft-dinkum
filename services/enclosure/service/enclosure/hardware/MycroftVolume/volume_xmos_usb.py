@@ -14,6 +14,7 @@
 
 import os
 import time
+
 from mycroft.enclosure.hardware.MycroftVolume.MycroftVolume import MycroftVolume
 
 

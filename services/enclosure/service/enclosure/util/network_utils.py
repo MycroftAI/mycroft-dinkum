@@ -16,15 +16,13 @@
 import socket
 import subprocess
 import typing
-from urllib.request import urlopen
 from urllib.error import URLError
+from urllib.request import urlopen
 
 import requests
 from bs4 import BeautifulSoup
-
 from dbus_next import BusType as DBusType
 from dbus_next.aio import MessageBus as DBusMessageBus
-
 
 from .log import LOG
 

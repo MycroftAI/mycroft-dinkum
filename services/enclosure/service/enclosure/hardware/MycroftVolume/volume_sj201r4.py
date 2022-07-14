@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from smbus2 import SMBus
-from subprocess import call, check_output, CalledProcessError
-from mycroft.util.log import LOG
-from mycroft.enclosure.hardware.MycroftVolume.MycroftVolume import MycroftVolume
 import time
-from math import log, exp
+from math import exp, log
+from subprocess import CalledProcessError, call, check_output
+
+from mycroft.enclosure.hardware.MycroftVolume.MycroftVolume import MycroftVolume
+from mycroft.util.log import LOG
+from smbus2 import SMBus
 
 MAX_VOL = 84
 

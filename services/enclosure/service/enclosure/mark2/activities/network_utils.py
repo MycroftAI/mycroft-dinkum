@@ -18,7 +18,6 @@ import typing
 from dbus_next import BusType as DBusType
 from dbus_next.aio import MessageBus as DBusMessageBus
 
-
 NM_NAMESPACE = "org.freedesktop.NetworkManager"
 NM_PATH = "/org/freedesktop/NetworkManager"
 

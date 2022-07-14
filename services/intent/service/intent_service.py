@@ -336,6 +336,8 @@ class IntentService:
         except Exception as err:
             LOG.exception(err)
 
+        LOG.debug("Exit handle utterance")
+
     def _converse(self, utterances, lang, message):
         """Give active skills a chance at the utterance
 

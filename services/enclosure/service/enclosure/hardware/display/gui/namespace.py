@@ -45,6 +45,7 @@ from typing import List, Union
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message, MessageBusClient
 from mycroft.util.log import LOG
+
 from .bus import (
     create_gui_service,
     determine_if_gui_connected,
@@ -231,9 +232,9 @@ def _validate_page_message(message: Message):
             from a namespace.
     """
     valid = (
-        "page" in message.data and
-        "__from" in message.data and
-        isinstance(message.data["page"], list)
+        "page" in message.data
+        and "__from" in message.data
+        and isinstance(message.data["page"], list)
     )
     if not valid:
         if message.msg_type == "gui.page.show":

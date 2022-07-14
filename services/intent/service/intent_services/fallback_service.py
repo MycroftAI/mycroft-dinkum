@@ -89,7 +89,7 @@ class FallbackService:
                         "lang": lang,
                         "fallback_range": (fb_range.start, fb_range.stop),
                     },
-                )
+                ),
             )
 
             if reply and reply.data.get("handled", False):

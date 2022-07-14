@@ -61,13 +61,11 @@ class VoightKampffClient:
         self._tts_session_ids: Set[str] = set()
         self._activities_ended = Event()
         self._speaking_finished = Event()
-        self._speak_queue: "Queue[Message]" = Queue(maxsize=1)
+        self._speak_queue: "Queue[Message]" = Queue()
 
         # event type -> [messages]
         self.messages: Dict[str, List[Message]] = defaultdict(list)
-        self._message_queues: Dict[str, "Queue[Message]"] = defaultdict(
-            lambda: Queue(maxsize=1)
-        )
+        self._message_queues: Dict[str, "Queue[Message]"] = defaultdict(Queue)
 
         self._connect_to_bus()
 
@@ -203,9 +201,9 @@ def before_all(context):
     context.client = VoightKampffClient()
 
 
-def after_step(context, step):
-    context.client.wait_for_skill()
-    context.client.reset_state()
+# def after_step(context, step):
+#     context.client.wait_for_skill()
+#     context.client.reset_state()
 
 
 def before_feature(context, feature):
@@ -226,8 +224,5 @@ def after_feature(context, feature):
 
 def after_scenario(context, scenario):
     """Wait for mycroft completion and reset any changed state."""
-    # TODO wait for skill handler complete
-    # context.bus.clear_all_messages()
-    # context.matched_message = None
-    # context.step_timeout = 10  # Reset the step_timeout to 10 seconds
-    pass
+    context.client.wait_for_skill()
+    context.client.reset_state()
