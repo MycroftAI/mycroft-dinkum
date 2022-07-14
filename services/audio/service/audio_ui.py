@@ -49,6 +49,7 @@ class TTSRequest:
     num_chunks: int
     listen: bool = False
     response_skill_id: typing.Optional[str] = None
+    mycroft_session_id: typing.Optional[str] = None
 
     @property
     def is_first_chunk(self):
@@ -292,6 +293,7 @@ class AudioUserInterface:
         num_chunks = message.data.get("num_chunks", 1)
         listen = message.data.get("listen", False)
         response_skill_id = message.data.get("response_skill_id")
+        mycroft_session_id = message.data.get("mycroft_session_id")
 
         # if session_id in self._ignore_session_ids:
         #     # Drop chunks from previously stopped session
@@ -305,6 +307,7 @@ class AudioUserInterface:
             num_chunks=num_chunks,
             listen=listen,
             response_skill_id=response_skill_id,
+            mycroft_session_id=mycroft_session_id,
         )
         self._speech_queue.put(request)
 
@@ -345,7 +348,12 @@ class AudioUserInterface:
                 self._tts_session_id = request.session_id
 
                 if request.is_first_chunk:
-                    self.bus.emit(Message("recognizer_loop:audio_output_start"))
+                    self.bus.emit(
+                        Message(
+                            "recognizer_loop:audio_output_start",
+                            data={"mycroft_session_id": request.mycroft_session_id},
+                        )
+                    )
 
                 # TODO: Support other URI types
                 assert request.uri.startswith("file://")
@@ -379,6 +387,7 @@ class AudioUserInterface:
                         session_id=request.session_id,
                         listen=request.listen,
                         response_skill_id=request.response_skill_id,
+                        mycroft_session_id=request.mycroft_session_id,
                     )
 
         except Exception:
@@ -389,12 +398,16 @@ class AudioUserInterface:
         session_id: str,
         listen: bool = False,
         response_skill_id: typing.Optional[str] = None,
+        mycroft_session_id: typing.Optional[str] = None,
     ):
         # Report speaking finished for speak(wait=True)
         self.bus.emit(
             Message(
                 "mycroft.tts.speaking-finished",
-                data={"session_id": session_id},
+                data={
+                    "session_id": session_id,
+                    "mycroft_session_id": mycroft_session_id,
+                },
             )
         )
 
@@ -402,12 +415,13 @@ class AudioUserInterface:
         if listen:
             self.bus.emit(
                 Message(
-                    "mycroft.mic.listen", data={"response_skill_id": response_skill_id}
+                    "mycroft.mic.listen",
+                    data={
+                        "response_skill_id": response_skill_id,
+                        "mycroft_session_id": mycroft_session_id,
+                    },
                 )
             )
-
-        # This check will clear the "signal"
-        check_for_signal("isSpeaking")
 
         LOG.info("TTS session finished: %s", session_id)
 

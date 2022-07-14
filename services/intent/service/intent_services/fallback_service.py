@@ -16,7 +16,7 @@
 import itertools
 import operator
 from collections import defaultdict, namedtuple
-from typing import Dict, Set
+from typing import Dict, Optional, Set
 
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
@@ -31,6 +31,7 @@ class FallbackService:
 
     def __init__(self, bus):
         self.bus = bus
+        self.session_id: Optional[str] = None
         self._fallback_handlers: Dict[int, Set[str]] = defaultdict(set)
 
         self.bus.on("mycroft.skills.register-fallback", self._register_fallback)
@@ -72,29 +73,36 @@ class FallbackService:
         sorted_handlers = sorted(
             self._fallback_handlers.items(), key=operator.itemgetter(0)
         )
-        handlers = [
-            f[1] for f in sorted_handlers if fb_range.start <= f[0] < fb_range.stop
-        ]
-        handler_names = list(itertools.chain.from_iterable(handlers))
-        if handler_names:
-            LOG.debug("Trying %s fallback handler(s)", len(handler_names))
-
-        for handler in handler_names:
-            reply = self.bus.wait_for_response(
-                Message(
-                    "mycroft.skills.handle-fallback",
-                    data={
-                        "name": handler,
-                        "utterance": utterances[0][0],
-                        "lang": lang,
-                        "fallback_range": (fb_range.start, fb_range.stop),
-                    },
-                ),
+        for priority, handler_names in sorted_handlers:
+            if (priority < fb_range.start) or (priority >= fb_range.stop):
+                continue
+            LOG.debug(
+                "Trying %s fallback handler(s) at priority %s",
+                len(handler_names),
+                priority,
             )
+            for handler in handler_names:
+                reply = self.bus.wait_for_response(
+                    Message(
+                        "mycroft.skills.handle-fallback",
+                        data={
+                            "name": handler,
+                            "utterance": utterances[0][0],
+                            "lang": lang,
+                            "fallback_range": (fb_range.start, fb_range.stop),
+                            "mycroft_session_id": self.session_id,
+                        },
+                    ),
+                )
 
-            if reply and reply.data.get("handled", False):
-                skill_id = reply.data["skill_id"]
-                return IntentMatch("Fallback", None, {}, skill_id)
+                if reply and reply.data.get("handled", False):
+                    skill_id = reply.data["skill_id"]
+                    LOG.debug(
+                        "Handled by fallback skill %s at priority %s",
+                        skill_id,
+                        priority,
+                    )
+                    return IntentMatch("Fallback", None, {}, skill_id)
 
         return None
 

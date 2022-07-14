@@ -69,7 +69,15 @@ class QuestionsAnswersSkill(FallbackSkill):
         if not self.valid_question(utt):
             return False
 
-        self.bus.emit(Message("fallback-query.search", data={"utterance": utt}))
+        self.bus.emit(
+            Message(
+                "fallback-query.search",
+                data={"utterance": utt, "mycroft_session_id": self._session_id},
+            )
+        )
+
+        # HACK: Block to keep session open
+        self.action_event.wait(timeout=60)
 
         return True
 
@@ -107,6 +115,7 @@ class QuestionsAnswersSkill(FallbackSkill):
                             "callback_data": self.answer_message.data.get(
                                 "callback_data"
                             ),
+                            "mycroft_session_id": self._session_id,
                         },
                     )
                 )

@@ -16,6 +16,7 @@
 import time
 from copy import copy
 from typing import Optional
+from uuid import uuid4
 
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
@@ -102,6 +103,7 @@ class IntentService:
             )
         self.fallback = FallbackService(bus)
         self._response_skill_id: Optional[str] = None
+        self._session_id: Optional[str] = None
 
         self.bus.on("register_vocab", self.handle_register_vocab)
         self.bus.on("register_intent", self.handle_register_intent)
@@ -266,6 +268,16 @@ class IntentService:
 
     def handle_listen(self, message: Message):
         """Prime the next utterance to possibly be intended for a specific skill"""
+        mycroft_session_id = message.data.get("mycroft_session_id") or str(uuid4())
+        if mycroft_session_id != self._session_id:
+            self.bus.emit(
+                Message(
+                    "mycroft.session.started",
+                    data={"mycroft_session_id": mycroft_session_id},
+                )
+            )
+
+        self._session_id = mycroft_session_id
         self._response_skill_id = message.data.get("response_skill_id")
 
     def handle_utterance(self, message: Message):
@@ -291,11 +303,18 @@ class IntentService:
         Args:
             message (Message): The messagebus data
         """
+        self._session_id = message.data.get(
+            "mycroft_session_id", self._session_id
+        ) or str(uuid4())
+
+        self.fallback.session_id = self._session_id
+
         LOG.debug(
-            "Enter handle utterance: message.data:%s, active_skills:%s"
-            % (message.data, self.active_skills)
+            "Enter handle utterance: message.data:%s, active_skills:%s, session_id:%s"
+            % (message.data, self.active_skills, self._session_id)
         )
         try:
+
             if self._handle_get_response(message):
                 # Handled by a specific skill
                 return
@@ -333,21 +352,48 @@ class IntentService:
             if match:
                 # Launch skill if not handled by the match function
                 if match.intent_type:
-                    reply = message.reply(match.intent_type, match.intent_data)
+                    match_data = {
+                        "mycroft_session_id": self._session_id,
+                        **match.intent_data,
+                    }
+                    reply = message.reply(match.intent_type, match_data)
                     # Add back original list of utterances for intent handlers
                     # match.intent_data only includes the utterance with the
                     # highest confidence.
                     reply.data["utterances"] = utterances
-                    self.bus.emit(reply)
+
+                    if match.intent_service == "Fallback":
+                        # Already received response
+                        self.bus.emit(reply)
+                        self._end_session()
+                    else:
+                        # HACK: Wait for skill handler to finish
+                        response = self.bus.wait_for_response(reply, timeout=600)
+                        if response:
+                            if (
+                                response.data.get("mycroft_session_id")
+                                == self._session_id
+                            ):
+                                self._end_session()
 
             else:
                 # Nothing was able to handle the intent
                 # Ask politely for forgiveness for failing in this vital task
                 self.send_complete_intent_failure(message)
+                self._end_session()
         except Exception as err:
             LOG.exception(err)
 
         LOG.debug("Exit handle utterance")
+
+    def _end_session(self):
+        self.bus.emit(
+            Message(
+                "mycroft.session.ended",
+                data={"mycroft_session_id": self._session_id},
+            )
+        )
+        self._session_id = None
 
     def _handle_get_response(self, message: Message) -> bool:
         """
@@ -383,7 +429,6 @@ class IntentService:
             if reply:
                 handled = True
                 LOG.debug("Utterance handled by skill: %s", response_skill_id)
-
 
         return handled
 
@@ -430,7 +475,11 @@ class IntentService:
         Args:
             message (Message): original message to forward from
         """
-        self.bus.emit(message.forward("complete_intent_failure"))
+        self.bus.emit(
+            message.forward(
+                "complete_intent_failure", data={"mycroft_session_id": self._session_id}
+            )
+        )
         LOG.info("No intent recognized")
 
     def handle_register_vocab(self, message):

@@ -203,6 +203,8 @@ class CommonQuerySkill(MycroftSkill, ABC):
         if message.data["skill_id"] != self.skill_id:
             # Not for this skill!
             return
+
+        self._session_id = message.data.get("mycroft_session_id")
         phrase = message.data["phrase"]
         data = message.data.get("callback_data")
         # Invoke derived class to provide playback data

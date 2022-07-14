@@ -19,6 +19,7 @@ from time import sleep, monotonic
 from queue import Empty, Queue
 from typing import Dict, List, Optional, Set, Union
 from pathlib import Path
+from uuid import uuid4
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import MessageBusClient
@@ -64,6 +65,9 @@ class VoightKampffClient:
         self._speaking_finished = Event()
         self._speak_queue: "Queue[Message]" = Queue()
 
+        self.mycroft_session_id: Optional[str] = None
+        self._session_ended = Event()
+
         # event type -> [messages]
         self.messages: Dict[str, List[Message]] = defaultdict(list)
         self._message_queues: Dict[str, "Queue[Message]"] = defaultdict(Queue)
@@ -83,14 +87,24 @@ class VoightKampffClient:
         self.bus.on("speak", self._handle_speak)
         self.bus.on("mycroft.tts.speaking-finished", self._handle_speaking_finished)
         self.bus.on("complete_intent_failure", self._handle_intent_failure)
-        self.bus.on("skill.started", self._handle_skill_started)
-        self.bus.on("skill.ended", self._handle_skill_ended)
+        self.bus.on("mycroft.session.ended", self._handle_session_ended)
+        # self.bus.on("skill.started", self._handle_skill_started)
+        # self.bus.on("skill.ended", self._handle_skill_ended)
+
+    def start_new_session(self):
+        self._session_ended.clear()
+        self.mycroft_session_id = str(uuid4())
+        LOG.info("Started session: %s", self.mycroft_session_id)
 
     def say_utterance(self, text: str, response_skill_id: str = ""):
         self.bus.emit(
             Message(
                 "recognizer_loop:utterance",
-                data={"utterances": [text], "response_skill_id": response_skill_id},
+                data={
+                    "utterances": [text],
+                    "response_skill_id": response_skill_id,
+                    "mycroft_session_id": self.mycroft_session_id,
+                },
             )
         )
 
@@ -98,14 +112,9 @@ class VoightKampffClient:
         if self._tts_session_ids:
             self._speaking_finished.wait(timeout=10)
 
-    def wait_for_skill(self):
-        if self._tts_session_ids:
-            LOG.info("Waiting on TTS sessions: %s", self._tts_session_ids)
-            self._speaking_finished.wait(timeout=10)
-
-        if self._activity_ids:
-            LOG.info("Waiting on activities: %s", self._activity_ids)
-            self._activities_ended.wait(timeout=10)
+    def wait_for_session(self):
+        LOG.info("Waiting on session: %s", self.mycroft_session_id)
+        self._session_ended.wait(timeout=30)
 
     def wait_for_message(self, message_type: str, timeout=5) -> Optional[Message]:
         maybe_message: Optional[Message] = None
@@ -115,6 +124,14 @@ class VoightKampffClient:
             pass
 
         return maybe_message
+
+    def listen(self):
+        self.bus.emit(
+            Message(
+                "mycroft.mic.listen",
+                data={"mycroft_session_id": self.mycroft_session_id},
+            )
+        )
 
     def match_dialogs_or_fail(
         self, dialogs: Union[str, List[str]], skill_id: Optional[str] = None
@@ -179,39 +196,47 @@ class VoightKampffClient:
         self.bus.close()
 
     def _handle_speak(self, message: Message):
-        session_id = message.data.get("session_id")
-        if session_id:
-            self._tts_session_ids.add(session_id)
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            session_id = message.data.get("session_id")
+            if session_id:
+                self._tts_session_ids.add(session_id)
 
-        self._speak_queue.put_nowait(message)
+            self._speak_queue.put_nowait(message)
 
     def _handle_skill_started(self, message: Message):
-        activity_id = message.data.get("activity_id")
-        if activity_id:
-            self._activity_ids.add(activity_id)
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            activity_id = message.data.get("activity_id")
+            if activity_id:
+                self._activity_ids.add(activity_id)
 
     def _handle_skill_ended(self, message: Message):
-        activity_id = message.data.get("activity_id")
-        if activity_id:
-            self._activity_ids.discard(activity_id)
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            activity_id = message.data.get("activity_id")
+            if activity_id:
+                self._activity_ids.discard(activity_id)
 
-        if not self._activity_ids:
-            self._activities_ended.set()
+            if not self._activity_ids:
+                self._activities_ended.set()
 
     def _handle_speaking_finished(self, message: Message):
-        session_id = message.data.get("session_id")
-        if session_id:
-            self._tts_session_ids.discard(session_id)
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            session_id = message.data.get("session_id")
+            if session_id:
+                self._tts_session_ids.discard(session_id)
 
-        if not self._tts_session_ids:
+            if not self._tts_session_ids:
+                self._speaking_finished.set()
+
+    def _handle_intent_failure(self, message: Message):
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            # Flush any waiters
+            self._activities_ended.set()
             self._speaking_finished.set()
+            self.reset_state()
 
-    def _handle_intent_failure(self, _message: Message):
-        # Flush any waiters
-        self._activities_ended.set()
-        self._speaking_finished.set()
-        self.reset_state()
-
+    def _handle_session_ended(self, message: Message):
+        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+            self._session_ended.set()
 
 def before_all(context):
     # log = create_voight_kampff_logger()
@@ -250,10 +275,6 @@ def before_all(context):
 
 
 def before_feature(context, feature):
-    # We are seeing the first tests in Timer and Volume fail for no reason.
-    # So let the system rest for a moment...
-    # sleep(5)
-
     LOG.info("Starting tests for {}".format(feature.name))
 
 
@@ -266,13 +287,14 @@ def after_feature(context, feature):
 
 
 def before_scenario(context, scenario):
-    context.client.bus.emit(Message("mycroft.mic.listen"))
+    context.client.reset_state()
+    context.client.start_new_session()
+    context.client.listen()
 
 
 def after_scenario(context, scenario):
     """Wait for mycroft completion and reset any changed state."""
-    context.client.wait_for_skill()
-    context.client.reset_state()
+    context.client.wait_for_session()
     LOG.info("End scenario: %s", scenario)
 
 

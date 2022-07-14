@@ -19,6 +19,7 @@ from typing import Callable, Dict
 from uuid import uuid4
 
 from mycroft.messagebus.message import Message
+from mycroft.util.log import LOG
 
 from .mycroft_skill import MycroftSkill
 
@@ -61,8 +62,16 @@ class FallbackSkill(MycroftSkill):
 
     def _handle_fallback(self, message):
         name = message.data["name"]
+        handled = False
         handler = self._handlers.get(name)
-        handled = (handler is not None) and handler(message)
+
+        if handler:
+            self._session_id = message.data.get("mycroft_session_id")
+            try:
+                handled = handler(message)
+            except Exception:
+                LOG.exception("Unexpected error in fallback handler")
+
         self.bus.emit(
             message.response(data={"handled": handled, "skill_id": self.skill_id})
         )

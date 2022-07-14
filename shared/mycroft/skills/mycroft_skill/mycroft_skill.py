@@ -26,7 +26,7 @@ from os import walk
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from queue import Empty, Queue
-from threading import Event, Timer
+from threading import Event, Lock, Timer
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -116,6 +116,8 @@ class MycroftSkill:
 
         # For get_response
         self._response_queue: "Queue[str]" = Queue()
+        self._session_id: typing.Optional[str] = None
+        self._session_lock = Lock()
 
         # Get directory of skill
         #: Member variable containing the absolute path of the skill's root
@@ -126,7 +128,7 @@ class MycroftSkill:
 
         self._bus = None
         self._enclosure = MagicMock()
-        self.bind(bus)
+
         #: Mycroft global configuration. (dict)
         self.config_core = Configuration.get()
 
@@ -168,6 +170,10 @@ class MycroftSkill:
         # Session id from last speak()
         self._tts_session_id: typing.Optional[str] = None
         self._tts_speak_finished = Event()
+
+        # Should be last to avoid race conditions where event handlers try to
+        # access attributes that have yet to be initialized.
+        self.bind(bus)
 
     def change_state(self, new_state):
         """change skill state to new value.
@@ -550,7 +556,13 @@ class MycroftSkill:
             )
         else:
             self.bus.emit(
-                Message("mycroft.mic.listen", data={"response_skill_id": self.skill_id})
+                Message(
+                    "mycroft.mic.listen",
+                    data={
+                        "response_skill_id": self.skill_id,
+                        "mycroft_session_id": self._session_id,
+                    },
+                )
             )
 
         return self._wait_response(is_cancel, validator, on_fail_fn, num_retries, data)
@@ -598,7 +610,11 @@ class MycroftSkill:
             else:
                 self.bus.emit(
                     Message(
-                        "mycroft.mic.listen", data={"response_skill_id": self.skill_id}
+                        "mycroft.mic.listen",
+                        data={
+                            "response_skill_id": self.skill_id,
+                            "mycroft_session_id": self._session_id,
+                        },
                     )
                 )
 
@@ -852,7 +868,7 @@ class MycroftSkill:
             once (bool, optional): Event handler will be removed after it has
                                    been run once.
         """
-        skill_data = {"name": get_handler_name(handler)}
+        skill_data = {"name": get_handler_name(handler), "skill_id": self.skill_id}
 
         def on_error(e):
             """Speak and log the error."""
@@ -894,6 +910,21 @@ class MycroftSkill:
         """
         return self.events.remove(name)
 
+    def _add_intent_handler(self, name, handler):
+        def _handle_intent(message: Message):
+            self._session_id = message.data.get("mycroft_session_id")
+            try:
+                handler(message)
+            except Exception:
+                LOG.exception("Error in intent handler: %s", name)
+            finally:
+                self.bus.emit(
+                    message.response(data={"mycroft_session_id": self._session_id})
+                )
+                self._session_id = None
+
+        self._bus.on(name, _handle_intent)
+
     def _register_adapt_intent(self, intent_parser, handler):
         """Register an adapt intent.
 
@@ -906,7 +937,12 @@ class MycroftSkill:
         munge_intent_parser(intent_parser, name, self.skill_id)
         self.intent_service.register_adapt_intent(name, intent_parser)
         if handler:
-            self.add_event(intent_parser.name, handler, "mycroft.skill.handler")
+            # self.add_event(
+            #     intent_parser.name,
+            #     handler,
+            #     "mycroft.skill.handler",
+            # )
+            self._add_intent_handler(intent_parser.name, handler)
 
     def register_intent(self, intent_parser, handler):
         """Register an Intent with the intent service.
@@ -960,7 +996,12 @@ class MycroftSkill:
             name, str(resource_file.file_path)
         )
         if handler:
-            self.add_event(name, handler, "mycroft.skill.handler")
+            # self.add_event(
+            #     name,
+            #     handler,
+            #     "mycroft.skill.handler",
+            # )
+            self._add_intent_handler(name, handler)
 
     def register_entity_file(self, entity_file):
         """Register an Entity file with the intent service.
@@ -999,7 +1040,8 @@ class MycroftSkill:
         name = "{}:{}".format(self.skill_id, intent_file)
         self.intent_service.register_regex_intent(name, str(regex.file_path))
         if handler:
-            self.add_event(name, handler, "mycroft.skill.handler")
+            # self.add_event(name, handler, "mycroft.skill.handler")
+            self._add_intent_handler(name, handler)
 
     def handle_enable_intent(self, message):
         """Listener to enable a registered intent if it belongs to this skill."""
@@ -1181,6 +1223,7 @@ class MycroftSkill:
             "cache_key": cache_key,
             "cache_keep": cache_keep,
             "activity_id": self._activity_id,
+            "mycroft_session_id": self._session_id,
         }
         m = Message("speak", data)
         self.bus.emit(m)
@@ -1536,7 +1579,11 @@ class MycroftSkill:
         self.bus.emit(
             Message(
                 "skill.started",
-                data={"skill_id": self.skill_id, "activity_id": self._activity_id},
+                data={
+                    "skill_id": self.skill_id,
+                    "activity_id": self._activity_id,
+                    "mycroft_session_id": self._session_id,
+                },
             )
         )
         LOG.info(
@@ -1556,7 +1603,11 @@ class MycroftSkill:
         self.bus.emit(
             Message(
                 "skill.ended",
-                data={"skill_id": self.skill_id, "activity_id": self._activity_id},
+                data={
+                    "skill_id": self.skill_id,
+                    "activity_id": self._activity_id,
+                    "mycroft_session_id": self._session_id,
+                },
             )
         )
         LOG.info(
@@ -1579,7 +1630,12 @@ class MycroftSkill:
             self.activity_ended()
 
     def play_sound_uri(self, uri: str):
-        self.bus.emit(Message("mycroft.audio.play-sound", data={"uri": uri}))
+        self.bus.emit(
+            Message(
+                "mycroft.audio.play-sound",
+                data={"uri": uri, "mycroft_session_id": self._session_id},
+            )
+        )
 
     def wait_while_speaking(self, timeout=60):
         if self._tts_session_id:

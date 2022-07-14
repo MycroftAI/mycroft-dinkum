@@ -31,6 +31,7 @@ class SpeakHandler:
             utterance = message.data["utterance"]
             listen = message.data.get("expect_response", False)
             response_skill_id = message.data.get("response_skill_id")
+            mycroft_session_id = message.data.get("mycroft_session_id")
 
             segments = self._segment(utterance)
             session_id = message.data.get("session_id") or str(uuid4())
@@ -50,6 +51,7 @@ class SpeakHandler:
                             "response_skill_id": response_skill_id
                             if is_last_chunk
                             else None,
+                            "mycroft_session_id": mycroft_session_id,
                         },
                     )
                 )
