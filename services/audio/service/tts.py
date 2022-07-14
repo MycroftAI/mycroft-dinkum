@@ -30,10 +30,12 @@ class SpeakHandler:
         try:
             utterance = message.data["utterance"]
             listen = message.data.get("expect_response", False)
+            response_skill_id = message.data.get("response_skill_id")
 
             segments = self._segment(utterance)
             session_id = message.data.get("session_id") or str(uuid4())
             for i, sentence in enumerate(segments):
+                is_last_chunk = i == (len(segments) - 1)
                 cache_path = self._synthesize(sentence)
                 audio_uri = "file://" + str(cache_path)
                 self.bus.emit(
@@ -44,7 +46,10 @@ class SpeakHandler:
                             "session_id": session_id,
                             "chunk_index": i,
                             "num_chunks": len(segments),
-                            "listen": listen if i == (len(segments) - 1) else False,
+                            "listen": listen if is_last_chunk else False,
+                            "response_skill_id": response_skill_id
+                            if is_last_chunk
+                            else None,
                         },
                     )
                 )

@@ -17,7 +17,8 @@ from collections import defaultdict
 from threading import Event, Lock, Thread
 from time import sleep, monotonic
 from queue import Empty, Queue
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
+from pathlib import Path
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import MessageBusClient
@@ -95,6 +96,10 @@ class VoightKampffClient:
             )
         )
 
+    def wait_for_speak(self):
+        if self._tts_session_ids:
+            self._speaking_finished.wait(timeout=10)
+
     def wait_for_skill(self):
         if self._tts_session_ids:
             self._speaking_finished.wait(timeout=10)
@@ -110,6 +115,44 @@ class VoightKampffClient:
             pass
 
         return maybe_message
+
+    def match_dialogs_or_fail(
+        self, dialogs: Union[str, List[str]], skill_id: Optional[str] = None
+    ):
+        passed = True
+        assert_message = ""
+
+        if isinstance(dialogs, str):
+            dialogs = dialogs.split(";")
+
+        # Strip '.dialog'
+        dialog_stems = {Path(d.strip()).stem for d in dialogs}
+
+        maybe_message = self.get_next_speak()
+        if maybe_message is not None:
+            meta = maybe_message.data.get("meta", {})
+            actual_skill = meta.get("skill_id")
+
+            if skill_id is not None:
+                if skill_id != actual_skill:
+                    passed = False
+                    assert_message = (
+                        f"Expected skill '{skill_id}', got '{actual_skill}'"
+                    )
+
+            if passed:
+                actual_dialog = meta.get("dialog", "")
+                if actual_dialog not in dialog_stems:
+                    assert_message = f"Expected dialog '{dialog_stems}', got '{actual_dialog}' from '{actual_skill}'"
+                    passed = False
+
+            if not passed:
+                assert_message = "\n".join((assert_message, str(maybe_message.data)))
+        else:
+            passed = False
+            assert_message = "Mycroft didn't respond"
+
+        assert passed, assert_message
 
     def get_next_speak(self, timeout=10) -> Optional[Message]:
         message: Optional[Message] = None

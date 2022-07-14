@@ -48,6 +48,7 @@ class TTSRequest:
     chunk_index: int
     num_chunks: int
     listen: bool = False
+    response_skill_id: typing.Optional[str] = None
 
     @property
     def is_first_chunk(self):
@@ -120,9 +121,13 @@ class AudioUserInterface:
             audio_sample_rate=EFFECT_SAMPLE_RATE, audio_channels=EFFECT_CHANNELS
         )
 
-        self._start_listening_uri = "file://" + resolve_resource_file(
-            self.config["sounds"]["start_listening"]
-        )
+        start_listening = self.config["sounds"]["start_listening"]
+        self._start_listening_uri: typing.Optional[str] = None
+
+        if start_listening:
+            self._start_listening_uri = "file://" + resolve_resource_file(
+                start_listening
+            )
 
         # self._ignore_session_ids: typing.Deque[str] = deque(maxlen=100)
 
@@ -239,7 +244,9 @@ class AudioUserInterface:
 
         self._duck_volume()
         self._stop_tts()
-        self._play_effect(self._start_listening_uri)
+
+        if self._start_listening_uri:
+            self._play_effect(self._start_listening_uri)
 
     def _play_effect(self, uri: str, volume: typing.Optional[float] = None):
         """Play sound effect from uri"""
@@ -284,6 +291,7 @@ class AudioUserInterface:
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
         listen = message.data.get("listen", False)
+        response_skill_id = message.data.get("response_skill_id")
 
         # if session_id in self._ignore_session_ids:
         #     # Drop chunks from previously stopped session
@@ -296,6 +304,7 @@ class AudioUserInterface:
             chunk_index=chunk_index,
             num_chunks=num_chunks,
             listen=listen,
+            response_skill_id=response_skill_id,
         )
         self._speech_queue.put(request)
 
@@ -367,13 +376,20 @@ class AudioUserInterface:
 
                 if request.is_last_chunk:
                     self._finish_tts_session(
-                        session_id=request.session_id, listen=request.listen
+                        session_id=request.session_id,
+                        listen=request.listen,
+                        response_skill_id=request.response_skill_id,
                     )
 
         except Exception:
             LOG.exception("error is speech thread")
 
-    def _finish_tts_session(self, session_id: str, listen: bool = False):
+    def _finish_tts_session(
+        self,
+        session_id: str,
+        listen: bool = False,
+        response_skill_id: typing.Optional[str] = None,
+    ):
         # Report speaking finished for speak(wait=True)
         self.bus.emit(
             Message(
@@ -384,7 +400,11 @@ class AudioUserInterface:
 
         self.bus.emit(Message("recognizer_loop:audio_output_end"))
         if listen:
-            self.bus.emit(Message("mycroft.mic.listen"))
+            self.bus.emit(
+                Message(
+                    "mycroft.mic.listen", data={"response_skill_id": response_skill_id}
+                )
+            )
 
         # This check will clear the "signal"
         check_for_signal("isSpeaking")

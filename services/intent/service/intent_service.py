@@ -15,6 +15,7 @@
 """Mycroft's intent service, providing intent parsing since forever!"""
 import time
 from copy import copy
+from typing import Optional
 
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
@@ -100,10 +101,12 @@ class IntentService:
                 "Failed to create padatious handlers " "({})".format(repr(err))
             )
         self.fallback = FallbackService(bus)
+        self._response_skill_id: Optional[str] = None
 
         self.bus.on("register_vocab", self.handle_register_vocab)
         self.bus.on("register_intent", self.handle_register_intent)
         self.bus.on("recognizer_loop:utterance", self.handle_utterance)
+        self.bus.on("mycroft.mic.listen", self.handle_listen)
         self.bus.on("detach_intent", self.handle_detach_intent)
         self.bus.on("detach_skill", self.handle_detach_skill)
         # Context related handlers
@@ -261,7 +264,10 @@ class IntentService:
             % (skill_id, self.active_skills)
         )
 
-    def handle_utterance(self, message):
+    def handle_listen(self, message: Message):
+        self._response_skill_id = message.data.get("response_skill_id")
+
+    def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills
 
         Monitor the messagebus for 'recognizer_loop:utterance', typically
@@ -289,6 +295,10 @@ class IntentService:
             % (message.data, self.active_skills)
         )
         try:
+            if self._handle_get_response(message):
+                # Handled by a specific skill
+                return
+
             lang = _get_message_lang(message)
             set_default_lf_lang(lang)
 
@@ -301,7 +311,7 @@ class IntentService:
             # List of functions to use to match the utterance with intent.
             # These are listed in priority order.
             match_funcs = [
-                self._converse,
+                # self._converse,
                 padatious_matcher.match_high,
                 self.adapt_service.match_intent,
                 self.regex_service.match_intent,
@@ -337,6 +347,31 @@ class IntentService:
             LOG.exception(err)
 
         LOG.debug("Exit handle utterance")
+
+    def _handle_get_response(self, message: Message) -> bool:
+        handled = False
+
+        # Check if this is intended for a specific skill
+        response_skill_id = message.data.get(
+            "response_skill_id", self._response_skill_id
+        )
+        if response_skill_id:
+            reply = self.bus.wait_for_response(
+                Message(
+                    "mycroft.skill-response",
+                    data={
+                        "skill_id": response_skill_id,
+                        "utterances": message.data.get("utterances"),
+                    },
+                )
+            )
+            if reply:
+                handled = True
+                LOG.debug("Utterance handled by skill: %s", response_skill_id)
+
+        self._response_skill_id = None
+
+        return handled
 
     def _converse(self, utterances, lang, message):
         """Give active skills a chance at the utterance

@@ -25,6 +25,7 @@ from itertools import chain
 from os import walk
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
+from queue import Queue
 from threading import Event, Timer
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -112,6 +113,9 @@ class MycroftSkill:
         self.skill_id = ""  # will be set from the path, so guaranteed unique
         self.settings_meta = None  # set when skill is loaded in SkillLoader
         self.skill_service_initializing = False
+
+        # For get_response
+        self._response_queue: "Queue[str]" = Queue()
 
         # Get directory of skill
         #: Member variable containing the absolute path of the skill's root
@@ -333,6 +337,9 @@ class MycroftSkill:
                 "mycroft.tts.speaking-finished", self._handle_speaking_finished
             )
 
+            # For get_response
+            self._bus.on("mycroft.skill-response", self._handle_skill_response)
+
     def _register_public_api(self):
         """Find and register api methods.
         Api methods has been tagged with the api_method member, for each
@@ -475,37 +482,6 @@ class MycroftSkill:
         """
         return False
 
-    def __get_response(self):
-        """Helper to get a response from the user
-
-        NOTE:  There is a race condition here.  There is a small amount of
-        time between the end of the device speaking and the converse method
-        being overridden in this method.  If an utterance is injected during
-        this time, the wrong converse method is executed.  The condition is
-        hidden during normal use due to the amount of time it takes a user
-        to speak a response. The condition is revealed when an automated
-        process injects an utterance quicker than this method can flip the
-        converse methods.
-
-        Returns:
-            str: user's response or None on a timeout
-        """
-        event = Event()
-
-        def converse(utterances, lang=None):
-            converse.response = utterances[0] if utterances else None
-            event.set()
-            return True
-
-        # install a temporary conversation handler
-        self.make_active()
-        converse.response = None
-        default_converse = self.converse
-        self.converse = converse
-        event.wait(15)  # 10 for listener, 5 for SST, then timeout
-        self.converse = default_converse
-        return converse.response
-
     def get_response(
         self, dialog="", data=None, validator=None, on_fail=None, num_retries=-1
     ):
@@ -544,6 +520,10 @@ class MycroftSkill:
         """
         data = data or {}
 
+        # Clear response queue
+        while not self._response_queue.empty():
+            self._response_queue.get()
+
         def on_fail_default(utterance):
             fail_data = data.copy()
             fail_data["utterance"] = utterance
@@ -565,9 +545,17 @@ class MycroftSkill:
         # Speak query and wait for user response
         dialog_exists = self.dialog_renderer.render(dialog, data)
         if dialog_exists:
-            self.speak_dialog(dialog, data, expect_response=True, wait=True)
+            self.speak_dialog(
+                dialog,
+                data,
+                expect_response=True,
+                wait=True,
+                response_skill_id=self.skill_id,
+            )
         else:
-            self.bus.emit(Message("mycroft.mic.listen"))
+            self.bus.emit(
+                Message("mycroft.mic.listen", data={"response_skill_id": self.skill_id})
+            )
 
         return self._wait_response(is_cancel, validator, on_fail_fn, num_retries)
 
@@ -583,7 +571,7 @@ class MycroftSkill:
         """
         num_fails = 0
         while True:
-            response = self.__get_response()
+            response = self._response_queue.get(timeout=20)
 
             if response is None:
                 # if nothing said, prompt one more time
@@ -1151,6 +1139,7 @@ class MycroftSkill:
         meta=None,
         cache_key=None,
         cache_keep=False,
+        response_skill_id=None,
     ):
         """Speak a sentence.
 
@@ -1179,6 +1168,7 @@ class MycroftSkill:
             "session_id": self._tts_session_id,
             "utterance": utterance,
             "expect_response": expect_response,
+            "response_skill_id": response_skill_id,
             "meta": meta,
             "skill_id": self.skill_id,
             "cache_key": cache_key,
@@ -1199,6 +1189,7 @@ class MycroftSkill:
         wait=False,
         cache_key=None,
         cache_keep=False,
+        response_skill_id=None,
     ):
         """Speak a random sentence from a dialog file.
 
@@ -1214,28 +1205,19 @@ class MycroftSkill:
             cache_key (str):        key from cache_speech or cache_dialog
             cache_keep (bool):      True if cache_key can be reused
         """
-        if self.dialog_renderer:
-            data = data or {}
-            self.speak(
-                self.dialog_renderer.render(key, data),
-                expect_response,
-                wait,
-                meta={"dialog": key, "data": data},
-                cache_key=cache_key,
-                cache_keep=cache_keep,
-            )
-        else:
-            self.log.warning(
-                "dialog_render is None, does the locale/dialog folder exist?"
-            )
-            self.speak(
-                key,
-                expect_response,
-                wait,
-                meta={},
-                cache_key=cache_key,
-                cache_keep=cache_keep,
-            )
+        assert (
+            self.dialog_renderer
+        ), "dialog_render is None, does the locale/dialog folder exist?"
+        data = data or {}
+        self.speak(
+            self.dialog_renderer.render(key, data),
+            expect_response,
+            wait,
+            meta={"dialog": key, "data": data},
+            cache_key=cache_key,
+            cache_keep=cache_keep,
+            response_skill_id=response_skill_id,
+        )
 
     # def cache_speech(
     #     self,
@@ -1604,3 +1586,12 @@ class MycroftSkill:
 
     def stop_speaking(self):
         self.bus.emit(Message("mycroft.tts.stop"))
+
+    def _handle_skill_response(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if skill_id == self.skill_id:
+            utterances = message.data.get("utterances")
+            utterance = utterances[0] if utterances else None
+            LOG.debug("Handling response in skill: %s", utterance)
+            self._response_queue.put_nowait(utterance)
+            self._bus.emit(message.response())

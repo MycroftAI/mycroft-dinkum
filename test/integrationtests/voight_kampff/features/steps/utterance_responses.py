@@ -144,33 +144,13 @@ def when_user_says(context, text: str):
 
 @then('"{skill}" should reply with dialog from "{dialog}"')
 def then_dialog(context, skill: str, dialog: str):
-    then_dialog_list(context, skill, dialog)
+    context.client.match_dialogs_or_fail(dialog, skill_id=skill)
 
 
 @then('"{skill}" should reply with dialog from list "{dialog}"')
 def then_dialog_list(context, skill: str, dialog: str):
     """Handle list of possible dialogs, separated by semi-colon (;)"""
-    passed = False
-    assert_message = "Mycroft didn't respond"
-
-    # Strip '.dialog'
-    dialogs = {Path(d.strip()).stem for d in dialog.split(";")}
-
-    maybe_message = context.client.get_next_speak()
-    if maybe_message is not None:
-        meta = maybe_message.data.get("meta", {})
-
-        actual_skill = meta.get("skill_id")
-        if skill != actual_skill:
-            assert_message = f"Expected skill '{skill}', got '{actual_skill}'"
-        else:
-            actual_dialog = meta.get("dialog", "")
-            if actual_dialog not in dialogs:
-                assert_message = f"Expected dialog '{dialogs}', got '{actual_dialog}' from '{actual_skill}'"
-            else:
-                passed = True
-
-    assert passed, assert_message
+    context.client.match_dialogs_or_fail(dialog, skill_id=skill)
 
 
 # @then('"{skill}" should not reply')
@@ -245,31 +225,18 @@ def then_contains(context, text: str):
     assert passed, assert_message
 
 
-# @then('the user replies with "{text}"')
-# @then('the user replies "{text}"')
-# @then('the user says "{text}"')
-# def then_user_follow_up(context, text):
-#     """Send a user response after being prompted by device.
+@then('the user replies with "{text}"')
+@then('the user replies "{text}"')
+@then('the user says "{text}"')
+def then_user_follow_up(context, text):
+    """Send a user response after being prompted by device.
 
-#     The sleep after the device is finished speaking is to address a race
-#     condition in the MycroftSkill base class conversational code.  It can
-#     be removed when the race condition is addressed.
-#     """
-#     # wait_while_speaking()
-#     # time.sleep(2)
-#     context.wait_for_skill()
-#     context.bus.emit(
-#         Message(
-#             "recognizer_loop:utterance",
-#             data={
-#                 "utterances": [text],
-#                 "lang": context.lang,
-#                 "session": "",
-#                 "ident": time.time(),
-#             },
-#             context={"client_name": "mycroft_listener"},
-#         )
-#     )
+    The sleep after the device is finished speaking is to address a race
+    condition in the MycroftSkill base class conversational code.  It can
+    be removed when the race condition is addressed.
+    """
+    context.client.wait_for_message("mycroft.mic.listen")
+    context.client.say_utterance(text)
 
 
 @then('mycroft should send the message "{message_type}"')
