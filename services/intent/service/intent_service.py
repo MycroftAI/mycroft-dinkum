@@ -15,7 +15,7 @@
 """Mycroft's intent service, providing intent parsing since forever!"""
 import time
 from copy import copy
-from typing import Optional
+from typing import Any, Dict, Optional, List
 from uuid import uuid4
 
 from mycroft.configuration import Configuration
@@ -102,13 +102,19 @@ class IntentService:
                 "Failed to create padatious handlers " "({})".format(repr(err))
             )
         self.fallback = FallbackService(bus)
+
         self._response_skill_id: Optional[str] = None
         self._session_id: Optional[str] = None
+        self._session_actions: List[Dict[str, Any]] = []
 
         self.bus.on("register_vocab", self.handle_register_vocab)
         self.bus.on("register_intent", self.handle_register_intent)
+
         self.bus.on("recognizer_loop:utterance", self.handle_utterance)
         self.bus.on("mycroft.mic.listen", self.handle_listen)
+        self.bus.on("mycroft.session.end", self.handle_session_end)
+        self.bus.on("mycroft.tts.speaking-finished", self.handle_tts_finished)
+
         self.bus.on("detach_intent", self.handle_detach_intent)
         self.bus.on("detach_skill", self.handle_detach_skill)
         # Context related handlers
@@ -266,19 +272,126 @@ class IntentService:
             % (skill_id, self.active_skills)
         )
 
+    def start_session(self, mycroft_session_id: str):
+        if self._session_id is not None:
+            # Abort existing session
+            self.abort_session(self._session_id)
+
+        self._session_id = mycroft_session_id
+        self._session_actions.clear()
+        self.bus.emit(
+            Message(
+                "mycroft.session.started",
+                data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
+
+        # TODO: Timeout session
+
+    def abort_session(self, mycroft_session_id: str):
+        LOG.warning("Aborted session: %s", mycroft_session_id)
+        self.end_session(mycroft_session_id, aborted=True)
+
+    def end_session(self, mycroft_session_id: str, aborted: bool = False):
+        if self._session_id == mycroft_session_id:
+            self._session_id = None
+            self._session_actions.clear()
+
+        self.bus.emit(
+            Message(
+                "mycroft.session.ended",
+                data={"mycroft_session_id": mycroft_session_id, "aborted": aborted},
+            )
+        )
+
+    def handle_session_continue(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        if mycroft_session_id == self._session_id:
+            self._session_actions = message.data.get("actions", [])
+            if self._session_actions:
+                skill_id = message.data["skill_id"]
+                self.next_session_action(skill_id)
+
+            self.bus.emit(
+                Message(
+                    "mycroft.session.continued",
+                    data={"mycroft_session_id": mycroft_session_id},
+                )
+            )
+        else:
+            # Newer session has taken over
+            self.abort_session(mycroft_session_id)
+
+    def handle_session_end(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        if mycroft_session_id == self._session_id:
+            self._session_actions = message.data.get("actions", [])
+            if self._session_actions:
+                skill_id = message.data["skill_id"]
+                self.next_session_action(skill_id)
+            else:
+                self.end_session(message.data["mycroft_session_id"])
+
+    def handle_tts_finished(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        if mycroft_session_id == self._session_id:
+            if self._session_actions:
+                skill_id = message.data["skill_id"]
+                self.next_session_action(skill_id)
+            else:
+                self.end_session(mycroft_session_id)
+
     def handle_listen(self, message: Message):
         """Prime the next utterance to possibly be intended for a specific skill"""
         mycroft_session_id = message.data.get("mycroft_session_id") or str(uuid4())
         if mycroft_session_id != self._session_id:
+            self.start_session(mycroft_session_id)
+
+        self._response_skill_id = message.data.get("response_skill_id")
+
+    def next_session_action(self, skill_id: str):
+        mycroft_session_id = self._session_id
+
+        while self._session_actions:
+            action = self._session_actions[0] or {}
+            self._session_actions = self._session_actions[1:]
+
+            action_type = action.get("type")
+            if action_type == "speak":
+                utterance = action.get("utterance", "")
+                expect_response = action.get("expect_response", False)
+                self.bus.emit(
+                    Message(
+                        "speak",
+                        data={
+                            "mycroft_session_id": mycroft_session_id,
+                            "skill_id": skill_id,
+                            "utterance": utterance,
+                            "listen": expect_response,
+                            "meta": {
+                                "dialog": action.get("dialog"),
+                                "skill_id": skill_id,
+                            },
+                        },
+                    )
+                )
+
+                if action.get("wait", True):
+                    # Will be called back when TTS is finished
+                    return
+
+            # TODO: get_response
+            # TODO: show_page
+            # TODO: clear_display
+
             self.bus.emit(
                 Message(
-                    "mycroft.session.started",
-                    data={"mycroft_session_id": mycroft_session_id},
+                    "mycroft.session.action",
+                    data={"mycroft_session_id": self._session_id, "action": action},
                 )
             )
 
-        self._session_id = mycroft_session_id
-        self._response_skill_id = message.data.get("response_skill_id")
+        self.end_session(mycroft_session_id)
 
     def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills
@@ -303,9 +416,12 @@ class IntentService:
         Args:
             message (Message): The messagebus data
         """
-        self._session_id = message.data.get(
+        mycroft_session_id = message.data.get(
             "mycroft_session_id", self._session_id
         ) or str(uuid4())
+
+        if mycroft_session_id != self._session_id:
+            self.start_session(mycroft_session_id)
 
         self.fallback.session_id = self._session_id
 
@@ -362,38 +478,31 @@ class IntentService:
                     # highest confidence.
                     reply.data["utterances"] = utterances
 
-                    if match.intent_service == "Fallback":
-                        # Already received response
-                        self.bus.emit(reply)
-                        self._end_session()
-                    else:
-                        # HACK: Wait for skill handler to finish
-                        response = self.bus.wait_for_response(reply, timeout=600)
-                        if response:
-                            if (
-                                response.data.get("mycroft_session_id")
-                                == self._session_id
-                            ):
-                                self._end_session()
+                    self.bus.emit(reply)
+
+                    # if match.intent_service == "Fallback":
+                    #     # Already received response
+                    #     self.bus.emit(reply)
+                    #     self._end_session()
+                    # else:
+                    #     # HACK: Wait for skill handler to finish
+                    #     response = self.bus.wait_for_response(reply, timeout=600)
+                    #     if response:
+                    #         if (
+                    #             response.data.get("mycroft_session_id")
+                    #             == self._session_id
+                    #         ):
+                    #             self._end_session()
 
             else:
                 # Nothing was able to handle the intent
                 # Ask politely for forgiveness for failing in this vital task
                 self.send_complete_intent_failure(message)
-                self._end_session()
+                self.end_session(self._session_id)
         except Exception as err:
             LOG.exception(err)
 
         LOG.debug("Exit handle utterance")
-
-    def _end_session(self):
-        self.bus.emit(
-            Message(
-                "mycroft.session.ended",
-                data={"mycroft_session_id": self._session_id},
-            )
-        )
-        self._session_id = None
 
     def _handle_get_response(self, message: Message) -> bool:
         """

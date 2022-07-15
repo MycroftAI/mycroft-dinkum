@@ -35,7 +35,6 @@ class DateSkill(MycroftSkill):
     def __init__(self):
         super().__init__("DateSkill")
         self.displayed_time = None
-        self._cached_tts_date: typing.Optional[datetime] = None
 
     # TODO: Move to reusable location
     @property
@@ -55,42 +54,31 @@ class DateSkill(MycroftSkill):
         """Tasks to perform after constructor but before skill is ready for use."""
         date_time_format.cache(self.lang)
 
-        self._current_date_cache_key = f"{self.skill_id}.current-date"
-
-        self.add_event("mycroft.ready", self._cache_current_date_tts)
-
-        # Check if date has changed once a minute
-        # self.schedule_repeating_event(
-        #     handler=self._cache_current_date_tts,
-        #     when=None,
-        #     frequency=60,
-        #     name="CacheTTS",
-        # )
-
     @intent_handler(AdaptIntent().require("query").require("date").optionally("today"))
     def handle_current_date_request(self, message):
         """Respond to a request from the user for the current date.
 
         Example: "What is the date today?"
         """
-        with self.activity():
-            # First ensure that no other date has been requested
-            # eg "What is the date tomorrow"
-            # In the perfect world this would never happen...
-            # However the keywords for this intent are very broad.
-            utterance = message.data["utterance"]
-            requested_date = extract_datetime_from_utterance(utterance)
-            today_vocab = self.resources.load_vocabulary_file("today")[0][0]
-            today_date = extract_datetime_from_utterance(today_vocab)
-            if requested_date is None or requested_date == today_date:
-                self._handle_current_date()
-            else:
-                self._handle_relative_date(message)
+        # First ensure that no other date has been requested
+        # eg "What is the date tomorrow"
+        # In the perfect world this would never happen...
+        # However the keywords for this intent are very broad.
+        utterance = message.data["utterance"]
+        requested_date = extract_datetime_from_utterance(utterance)
+        today_vocab = self.resources.load_vocabulary_file("today")[0][0]
+        today_date = extract_datetime_from_utterance(today_vocab)
+        if requested_date is None or requested_date == today_date:
+            result = self._handle_current_date()
+        else:
+            result = self._handle_relative_date(message)
+
+        return result
 
     @intent_handler(
         AdaptIntent().require("query").require("relative-day").require("date")
     )
-    def handle_relative_date_request(self, request: Message):
+    def handle_relative_date_request(self, message: Message):
         """Respond to a request from the user for a date in the past or future.
 
         Example: "What is the date in five days?"
@@ -98,11 +86,10 @@ class DateSkill(MycroftSkill):
         Args:
             request: The request from the user that triggered this intent.
         """
-        with self.activity():
-            self._handle_relative_date(request)
+        return self._handle_relative_date(message)
 
     @intent_handler(AdaptIntent().require("query").require("month"))
-    def handle_day_for_date(self, request):
+    def handle_day_for_date(self, message: Message):
         """Respond to a request from the user for a specific past or future date.
 
         Example: "When is July 10th?"
@@ -110,30 +97,29 @@ class DateSkill(MycroftSkill):
         Args:
             request: The request from the user that triggered this intent.
         """
-        with self.activity():
-            self._handle_relative_date(request)
+        return self._handle_relative_date(message)
 
     @intent_handler(AdaptIntent().require("query").require("leap-year"))
-    def handle_next_leap_year_request(self, _):
+    def handle_next_leap_year_request(self, _message):
         """Respond to a request from the user for the next leap year.
 
         Example: "When is the next leap year?"
         """
-        with self.activity():
-            today = now_local().date()
-            leap_date = date(today.year, 2, 28)
-            year = today.year if today <= leap_date else today.year + 1
-            while not is_leap_year(year):
-                year += 1
-            self.speak_dialog("next-leap-year", data=dict(year=year), wait=True)
+        today = now_local().date()
+        leap_date = date(today.year, 2, 28)
+        year = today.year if today <= leap_date else today.year + 1
+        while not is_leap_year(year):
+            year += 1
+
+        return self.end_session(dialog=("next-leap-year", dict(year=year)))
 
     @intent_handler("date-future-weekend.intent")
-    def handle_future_weekend_request(self, _):
-        with self.activity():
-            saturday_date = get_speakable_weekend_date("this saturday")
-            sunday_date = get_speakable_weekend_date("this sunday")
-            dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
-            self.speak_dialog("date-future-weekend", data=dialog_data, wait=True)
+    def handle_future_weekend_request(self, _message):
+        saturday_date = get_speakable_weekend_date("this saturday")
+        sunday_date = get_speakable_weekend_date("this sunday")
+        dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
+
+        return self.end_session(dialog=("date-future-weekend", dialog_data))
 
     @intent_handler("date-last-weekend.intent")
     def handle_last_weekend_request(self, _):
@@ -141,121 +127,51 @@ class DateSkill(MycroftSkill):
 
         Example: "What were the dates last weekend?"
         """
-        with self.activity():
-            saturday_date = get_speakable_weekend_date("last saturday")
-            sunday_date = get_speakable_weekend_date("last sunday")
-            dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
-            self.speak_dialog("date-last-weekend", data=dialog_data, wait=True)
+        saturday_date = get_speakable_weekend_date("last saturday")
+        sunday_date = get_speakable_weekend_date("last sunday")
+        dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
+
+        return self.end_session(dialog=("date-last-weekend", dialog_data))
 
     def _handle_current_date(self):
         """Build, speak and display the response to a current date request."""
         response = Response()
         response.build_current_date_response()
-        self._respond(response, cache_key=self._current_date_cache_key)
-        self._cache_current_date_tts()
+        return self._respond(response)
 
-    def _handle_relative_date(self, request: Message):
+    def _handle_relative_date(self, message: Message):
         """Build, speak and display the response to a current date request.
 
         Args:
-            request: The request from the user that triggered this intent.
+            message: The request from the user that triggered this intent.
         """
-        utterance = request.data["utterance"].lower()
+        utterance = message.data["utterance"].lower()
         response = Response()
         response.build_relative_date_response(utterance)
         if response.date_time is not None:
-            self._respond(response)
+            return self._respond(response)
 
-    def _respond(self, response: Response, cache_key=None):
+        return None
+
+    def _respond(self, response: Response):
         """Speak and display the response to a date request.
 
         Args:
             response: Data used by the speak/display logic to communicate the Response
         """
-        self._display(response)
-        self.speak_dialog(
-            response.dialog_name, response.dialog_data, wait=True, cache_key=cache_key
+        return self.end_session(
+            dialog=(
+                response.dialog_name,
+                response.dialog_data,
+            ),
+            gui_page="date-mark-ii.qml",
+            gui_data={
+                "weekdayString": response.date_time.strftime("%A").upper(),
+                "monthString": response.date_time.strftime("%B"),
+                "dayString": response.date_time.strftime("%-d"),
+            },
+            gui_clear_after_speak=True,
         )
-        self._clear_display()
-
-    def _display(self, response: Response):
-        """Display the response to a date request if the platform supports it.
-
-        Args:
-            response: Data used by the display logic to communicate the Response
-        """
-        if self.platform == MARK_I:
-            self._display_mark_i(response)
-        elif self.gui.connected:
-            self._display_gui(response)
-
-    def _display_mark_i(self, response: Response):
-        """Display the response to a date request on the Mark I.
-
-        This logic could be re-used for other platforms that have an Arduino faceplate
-        with the same dimensions as the Mark I's.
-
-        Args:
-            response: Data used by the display logic to communicate the Response
-        """
-        display_date = self._get_display_date(response.date_time)
-        self.enclosure.deactivate_mouth_events()
-        self.enclosure.mouth_text(display_date)
-
-    def _get_display_date(self, date_time: datetime) -> str:
-        """Format the datetime object returned from the parser for display purposes.
-
-        Args:
-            date_time: Contains the date that will be displayed.
-        """
-        if self.config_core.get("date_format") == "MDY":
-            display_date = date_time.strftime("%-m/%-d/%Y")
-        else:
-            display_date = date_time.strftime("%Y/%-d/%-m")
-
-        return display_date
-
-    def _display_gui(self, response: Response):
-        """Display the response to a date request on a device using the GUI Framework.
-
-        Args:
-            response: Data used by the display logic to communicate the Response
-        """
-        self.gui["weekdayString"] = response.date_time.strftime("%A").upper()
-        self.gui["monthString"] = response.date_time.strftime("%B")
-        self.gui["dayString"] = response.date_time.strftime("%-d")
-        if self.platform == MARK_II:
-            self.gui.show_page("date-mark-ii.qml", override_idle=True)
-        else:
-            self.gui.show_page("date-scalable.qml", override_idle=True)
-
-    def _clear_display(self):
-        """Clear the display medium of the date."""
-        if self.platform == MARK_I:
-            self.enclosure.mouth_reset()
-            self.enclosure.activate_mouth_events()
-            self.enclosure.display_manager.remove_active()
-        elif self.gui.connected:
-            self.gui.release()
-
-    def _cache_current_date_tts(self, _message=None):
-        try:
-            now = datetime.now()
-            if (self._cached_tts_date is None) or (
-                self._cached_tts_date.date() != now.date()
-            ):
-                self._cached_tts_date = now
-
-                response = Response()
-                response.build_current_date_response()
-
-                # self.cache_dialog(
-                #     response.dialog_name,
-                #     response.dialog_data,
-                #     cache_key=self._current_date_cache_key,
-                # )
-        except Exception:
-            self.log.exception("Error while caching TTS")
 
 
 def create_skill():

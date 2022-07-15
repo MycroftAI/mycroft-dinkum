@@ -30,6 +30,7 @@ class SpeakHandler:
         try:
             utterance = message.data["utterance"]
             listen = message.data.get("expect_response", False)
+            skill_id = message.data.get("skill_id")
             response_skill_id = message.data.get("response_skill_id")
             mycroft_session_id = message.data.get("mycroft_session_id")
 
@@ -48,6 +49,7 @@ class SpeakHandler:
                             "chunk_index": i,
                             "num_chunks": len(segments),
                             "listen": listen if is_last_chunk else False,
+                            "skill_id": skill_id,
                             "response_skill_id": response_skill_id
                             if is_last_chunk
                             else None,

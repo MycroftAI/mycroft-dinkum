@@ -66,9 +66,10 @@ class FallbackSkill(MycroftSkill):
         handler = self._handlers.get(name)
 
         if handler:
-            self._session_id = message.data.get("mycroft_session_id")
+            self._mycroft_session_id = message.data.get("mycroft_session_id")
             try:
-                handled = handler(message)
+                handled, response_message = handler(message)
+                self.bus.emit(response_message)
             except Exception:
                 LOG.exception("Unexpected error in fallback handler")
 

@@ -48,6 +48,7 @@ class TTSRequest:
     chunk_index: int
     num_chunks: int
     listen: bool = False
+    skill_id: typing.Optional[str] = None
     response_skill_id: typing.Optional[str] = None
     mycroft_session_id: typing.Optional[str] = None
 
@@ -292,6 +293,7 @@ class AudioUserInterface:
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
         listen = message.data.get("listen", False)
+        skill_id = message.data.get("skill_id")
         response_skill_id = message.data.get("response_skill_id")
         mycroft_session_id = message.data.get("mycroft_session_id")
 
@@ -306,6 +308,7 @@ class AudioUserInterface:
             chunk_index=chunk_index,
             num_chunks=num_chunks,
             listen=listen,
+            skill_id=skill_id,
             response_skill_id=response_skill_id,
             mycroft_session_id=mycroft_session_id,
         )
@@ -386,6 +389,7 @@ class AudioUserInterface:
                     self._finish_tts_session(
                         session_id=request.session_id,
                         listen=request.listen,
+                        skill_id=request.skill_id,
                         response_skill_id=request.response_skill_id,
                         mycroft_session_id=request.mycroft_session_id,
                     )
@@ -397,6 +401,7 @@ class AudioUserInterface:
         self,
         session_id: str,
         listen: bool = False,
+        skill_id: typing.Optional[str] = None,
         response_skill_id: typing.Optional[str] = None,
         mycroft_session_id: typing.Optional[str] = None,
     ):
@@ -406,6 +411,7 @@ class AudioUserInterface:
                 "mycroft.tts.speaking-finished",
                 data={
                     "session_id": session_id,
+                    "skill_id": skill_id,
                     "mycroft_session_id": mycroft_session_id,
                 },
             )

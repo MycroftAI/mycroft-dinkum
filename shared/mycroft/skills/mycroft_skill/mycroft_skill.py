@@ -29,9 +29,10 @@ from queue import Empty, Queue
 from threading import Event, Lock, Timer
 from unittest.mock import MagicMock
 from uuid import uuid4
+from typing import Dict, Any, Optional, Tuple, Union
 
+import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder
-from mycroft import dialog
 from mycroft.api import DeviceApi
 from mycroft.configuration import Configuration
 from mycroft.dialog import load_dialogs
@@ -121,7 +122,7 @@ class MycroftSkill:
 
         # For get_response
         self._response_queue: "Queue[str]" = Queue()
-        self._session_id: typing.Optional[str] = None
+        self._mycroft_session_id: typing.Optional[str] = None
         self._session_lock = Lock()
 
         # Get directory of skill
@@ -344,12 +345,12 @@ class MycroftSkill:
             self._register_public_api()
 
             # Unblock wait_while_speaking
-            self._bus.on(
-                "mycroft.tts.speaking-finished", self._handle_speaking_finished
-            )
+            # self._bus.on(
+            #     "mycroft.tts.speaking-finished", self._handle_speaking_finished
+            # )
 
-            # For get_response
-            self._bus.on("mycroft.skill-response", self._handle_skill_response)
+            # # For get_response
+            # self._bus.on("mycroft.skill-response", self._handle_skill_response)
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -493,214 +494,214 @@ class MycroftSkill:
         """
         return False
 
-    def get_response(
-        self, dialog="", data=None, validator=None, on_fail=None, num_retries=-1
-    ):
-        """Get response from user.
+    # def get_response(
+    #     self, dialog="", data=None, validator=None, on_fail=None, num_retries=-1
+    # ):
+    #     """Get response from user.
 
-        If a dialog is supplied it is spoken, followed immediately by listening
-        for a user response. If the dialog is omitted listening is started
-        directly.
+    #     If a dialog is supplied it is spoken, followed immediately by listening
+    #     for a user response. If the dialog is omitted listening is started
+    #     directly.
 
-        The response can optionally be validated before returning.
+    #     The response can optionally be validated before returning.
 
-        Example::
+    #     Example::
 
-            color = self.get_response('ask.favorite.color')
+    #         color = self.get_response('ask.favorite.color')
 
-        Args:
-            dialog (str): Optional dialog to speak to the user
-            data (dict): Data used to render the dialog
-            validator (any): Function with following signature::
+    #     Args:
+    #         dialog (str): Optional dialog to speak to the user
+    #         data (dict): Data used to render the dialog
+    #         validator (any): Function with following signature::
 
-                def validator(utterance):
-                    return utterance != "red"
+    #             def validator(utterance):
+    #                 return utterance != "red"
 
-            on_fail (any):
-                Dialog or function returning dialog to speak on
-                invalid input. For example::
+    #         on_fail (any):
+    #             Dialog or function returning dialog to speak on
+    #             invalid input. For example::
 
-                    def on_fail(utterance):
-                        return "pick-another"
+    #                 def on_fail(utterance):
+    #                     return "pick-another"
 
-            num_retries (int): Times to ask user for input, -1 for infinite
-                NOTE: User can not respond and timeout or say "cancel" to stop
+    #         num_retries (int): Times to ask user for input, -1 for infinite
+    #             NOTE: User can not respond and timeout or say "cancel" to stop
 
-        Returns:
-            str: User's reply or None if timed out or canceled
-        """
-        data = data or {}
+    #     Returns:
+    #         str: User's reply or None if timed out or canceled
+    #     """
+    #     data = data or {}
 
-        # Clear response queue
-        while not self._response_queue.empty():
-            self._response_queue.get()
+    #     # Clear response queue
+    #     while not self._response_queue.empty():
+    #         self._response_queue.get()
 
-        def on_fail_default(utterance):
-            LOG.debug("Response failure: %s", utterance)
-            return on_fail or dialog
+    #     def on_fail_default(utterance):
+    #         LOG.debug("Response failure: %s", utterance)
+    #         return on_fail or dialog
 
-        def is_cancel(utterance):
-            return self.voc_match(utterance, "cancel")
+    #     def is_cancel(utterance):
+    #         return self.voc_match(utterance, "cancel")
 
-        def validator_default(utterance):
-            # accept anything except 'cancel'
-            return not is_cancel(utterance)
+    #     def validator_default(utterance):
+    #         # accept anything except 'cancel'
+    #         return not is_cancel(utterance)
 
-        on_fail_fn = on_fail if callable(on_fail) else on_fail_default
-        validator = validator or validator_default
+    #     on_fail_fn = on_fail if callable(on_fail) else on_fail_default
+    #     validator = validator or validator_default
 
-        # Speak query and wait for user response
-        dialog_exists = self.dialog_renderer.render(dialog, data)
-        if dialog_exists:
-            self.speak_dialog(
-                dialog,
-                data,
-                expect_response=True,
-                wait=True,
-                response_skill_id=self.skill_id,
-            )
-        else:
-            self.bus.emit(
-                Message(
-                    "mycroft.mic.listen",
-                    data={
-                        "response_skill_id": self.skill_id,
-                        "mycroft_session_id": self._session_id,
-                    },
-                )
-            )
+    #     # Speak query and wait for user response
+    #     dialog_exists = self.dialog_renderer.render(dialog, data)
+    #     if dialog_exists:
+    #         self.speak_dialog(
+    #             dialog,
+    #             data,
+    #             expect_response=True,
+    #             wait=True,
+    #             response_skill_id=self.skill_id,
+    #         )
+    #     else:
+    #         self.bus.emit(
+    #             Message(
+    #                 "mycroft.mic.listen",
+    #                 data={
+    #                     "response_skill_id": self.skill_id,
+    #                     "mycroft_session_id": self._mycroft_session_id,
+    #                 },
+    #             )
+    #         )
 
-        return self._wait_response(is_cancel, validator, on_fail_fn, num_retries, data)
+    #     return self._wait_response(is_cancel, validator, on_fail_fn, num_retries, data)
 
-    def _wait_response(self, is_cancel, validator, on_fail, num_retries, data):
-        """Loop until a valid response is received from the user or the retry
-        limit is reached.
+    # def _wait_response(self, is_cancel, validator, on_fail, num_retries, data):
+    #     """Loop until a valid response is received from the user or the retry
+    #     limit is reached.
 
-        Args:
-            is_cancel (callable): function checking cancel criteria
-            validator (callbale): function checking for a valid response
-            on_fail (callable): function handling retries
+    #     Args:
+    #         is_cancel (callable): function checking cancel criteria
+    #         validator (callbale): function checking for a valid response
+    #         on_fail (callable): function handling retries
 
-        """
-        num_fails = 0
-        while True:
-            # Wait for "mycroft.skill-response"
-            try:
-                response = self._response_queue.get(timeout=20)
-            except Empty:
-                response = None
+    #     """
+    #     num_fails = 0
+    #     while True:
+    #         # Wait for "mycroft.skill-response"
+    #         try:
+    #             response = self._response_queue.get(timeout=20)
+    #         except Empty:
+    #             response = None
 
-            if response is None:
-                # if nothing said, prompt one more time
-                num_none_fails = 1 if num_retries < 0 else num_retries
-                if num_fails >= num_none_fails:
-                    return None
-            else:
-                if validator(response):
-                    return response
+    #         if response is None:
+    #             # if nothing said, prompt one more time
+    #             num_none_fails = 1 if num_retries < 0 else num_retries
+    #             if num_fails >= num_none_fails:
+    #                 return None
+    #         else:
+    #             if validator(response):
+    #                 return response
 
-                # catch user saying 'cancel'
-                if is_cancel(response):
-                    return None
+    #             # catch user saying 'cancel'
+    #             if is_cancel(response):
+    #                 return None
 
-            num_fails += 1
-            if 0 < num_retries < num_fails:
-                return None
+    #         num_fails += 1
+    #         if 0 < num_retries < num_fails:
+    #             return None
 
-            dialog = on_fail(response)
-            if dialog:
-                self.speak_dialog(
-                    dialog, expect_response=True, response_skill_id=self.skill_id
-                )
-            else:
-                self.bus.emit(
-                    Message(
-                        "mycroft.mic.listen",
-                        data={
-                            "response_skill_id": self.skill_id,
-                            "mycroft_session_id": self._session_id,
-                        },
-                    )
-                )
+    #         dialog = on_fail(response)
+    #         if dialog:
+    #             self.speak_dialog(
+    #                 dialog, expect_response=True, response_skill_id=self.skill_id
+    #             )
+    #         else:
+    #             self.bus.emit(
+    #                 Message(
+    #                     "mycroft.mic.listen",
+    #                     data={
+    #                         "response_skill_id": self.skill_id,
+    #                         "mycroft_session_id": self._mycroft_session_id,
+    #                     },
+    #                 )
+    #             )
 
-    def ask_yesno(self, prompt, data=None):
-        """Read prompt and wait for a yes/no answer
+    # def ask_yesno(self, prompt, data=None):
+    #     """Read prompt and wait for a yes/no answer
 
-        This automatically deals with translation and common variants,
-        such as 'yeah', 'sure', etc.
+    #     This automatically deals with translation and common variants,
+    #     such as 'yeah', 'sure', etc.
 
-        Args:
-              prompt (str): a dialog id or string to read
-              data (dict): response data
-        Returns:
-              string:  'yes', 'no' or whatever the user response if not
-                       one of those, including None
-        """
-        resp = self.get_response(dialog=prompt, data=data)
+    #     Args:
+    #           prompt (str): a dialog id or string to read
+    #           data (dict): response data
+    #     Returns:
+    #           string:  'yes', 'no' or whatever the user response if not
+    #                    one of those, including None
+    #     """
+    #     resp = self.get_response(dialog=prompt, data=data)
 
-        if self.voc_match(resp, "yes"):
-            return "yes"
-        elif self.voc_match(resp, "no"):
-            return "no"
-        else:
-            return resp
+    #     if self.voc_match(resp, "yes"):
+    #         return "yes"
+    #     elif self.voc_match(resp, "no"):
+    #         return "no"
+    #     else:
+    #         return resp
 
-    def ask_selection(
-        self, options, dialog="", data=None, min_conf=0.65, numeric=False
-    ):
-        """Read options, ask dialog question and wait for an answer.
+    # def ask_selection(
+    #     self, options, dialog="", data=None, min_conf=0.65, numeric=False
+    # ):
+    #     """Read options, ask dialog question and wait for an answer.
 
-        This automatically deals with fuzzy matching and selection by number
-        e.g.
+    #     This automatically deals with fuzzy matching and selection by number
+    #     e.g.
 
-        * "first option"
-        * "last option"
-        * "second option"
-        * "option number four"
+    #     * "first option"
+    #     * "last option"
+    #     * "second option"
+    #     * "option number four"
 
-        Args:
-              options (list): list of options to present user
-              dialog (str): a dialog id or string to read AFTER all options
-              data (dict): Data used to render the dialog
-              min_conf (float): minimum confidence for fuzzy match, if not
-                                reached return None
-              numeric (bool): speak options as a numeric menu
-        Returns:
-              string: list element selected by user, or None
-        """
-        assert isinstance(options, list)
+    #     Args:
+    #           options (list): list of options to present user
+    #           dialog (str): a dialog id or string to read AFTER all options
+    #           data (dict): Data used to render the dialog
+    #           min_conf (float): minimum confidence for fuzzy match, if not
+    #                             reached return None
+    #           numeric (bool): speak options as a numeric menu
+    #     Returns:
+    #           string: list element selected by user, or None
+    #     """
+    #     assert isinstance(options, list)
 
-        if not len(options):
-            return None
-        elif len(options) == 1:
-            return options[0]
+    #     if not len(options):
+    #         return None
+    #     elif len(options) == 1:
+    #         return options[0]
 
-        if numeric:
-            for idx, opt in enumerate(options):
-                opt_str = "{number}, {option_text}".format(
-                    number=pronounce_number(idx + 1, self.lang), option_text=opt
-                )
+    #     if numeric:
+    #         for idx, opt in enumerate(options):
+    #             opt_str = "{number}, {option_text}".format(
+    #                 number=pronounce_number(idx + 1, self.lang), option_text=opt
+    #             )
 
-                self.speak(opt_str, wait=True)
-        else:
-            opt_str = join_list(options, "or", lang=self.lang) + "?"
-            self.speak(opt_str, wait=True)
+    #             self.speak(opt_str, wait=True)
+    #     else:
+    #         opt_str = join_list(options, "or", lang=self.lang) + "?"
+    #         self.speak(opt_str, wait=True)
 
-        resp = self.get_response(dialog=dialog, data=data)
+    #     resp = self.get_response(dialog=dialog, data=data)
 
-        if resp:
-            match, score = match_one(resp, options)
-            if score < min_conf:
-                if self.voc_match(resp, "last"):
-                    resp = options[-1]
-                else:
-                    num = extract_number(resp, ordinals=True, lang=self.lang)
-                    resp = None
-                    if num and num <= len(options):
-                        resp = options[num - 1]
-            else:
-                resp = match
-        return resp
+    #     if resp:
+    #         match, score = match_one(resp, options)
+    #         if score < min_conf:
+    #             if self.voc_match(resp, "last"):
+    #                 resp = options[-1]
+    #             else:
+    #                 num = extract_number(resp, ordinals=True, lang=self.lang)
+    #                 resp = None
+    #                 if num and num <= len(options):
+    #                     resp = options[num - 1]
+    #         else:
+    #             resp = match
+    #     return resp
 
     def voc_match(self, utt, voc_filename, lang=None, exact=False):
         """Determine if the given utterance contains the vocabulary provided.
@@ -880,8 +881,8 @@ class MycroftSkill:
             # Convert "MyFancySkill" to "My Fancy Skill" for speaking
             handler_name = camel_case_split(self.name)
             msg_data = {"skill": handler_name}
-            msg = dialog.get("skill.error", self.lang, msg_data)
-            self.speak(msg)
+            msg = mycroft.dialog.get("skill.error", self.lang, msg_data)
+            # self.speak(msg)
             LOG.exception(msg)
             # append exception information in message
             skill_data["exception"] = repr(e)
@@ -917,17 +918,20 @@ class MycroftSkill:
 
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
-            self._session_id = message.data.get("mycroft_session_id")
+            self._mycroft_session_id = message.data.get("mycroft_session_id")
+            result_message: Optional[Message] = None
             try:
                 message = unmunge_message(message, self.skill_id)
-                handler(message)
+                result_message = handler(message)
             except Exception:
                 LOG.exception("Error in intent handler: %s", name)
-            finally:
-                self.bus.emit(
-                    message.response(data={"mycroft_session_id": self._session_id})
-                )
-                self._session_id = None
+
+            if result_message is None:
+                result_message = self.end_session()
+
+            self.bus.emit(result_message)
+            if result_message.msg_type == "mycroft.session.end":
+                self._mycroft_session_id = None
 
         self._bus.on(name, _handle_intent)
 
@@ -1185,174 +1189,94 @@ class MycroftSkill:
         re.compile(regex)  # validate regex
         self.intent_service.register_adapt_regex(regex)
 
-    def speak(
-        self,
-        utterance,
-        expect_response=False,
-        wait=True,
-        meta=None,
-        cache_key=None,
-        cache_keep=False,
-        response_skill_id=None,
-    ):
-        """Speak a sentence.
-
-        Args:
-            utterance (str):        sentence mycroft should speak
-            expect_response (bool): set to True if Mycroft should listen
-                                    for a response immediately after
-                                    speaking the utterance.
-            wait (bool):            set to True to block while the text
-                                    is being spoken.
-            meta:                   Information of what built the sentence.
-            cache_key (str):        key from cache_speech or cache_dialog
-            cache_keep (bool):      True if cache_key can be reused
-        """
-        # Flush any previous wait_while_speaking()
-        self._tts_speak_finished.set()
-        self._tts_speak_finished.clear()
-        self._tts_session_id = str(uuid4())
-
-        # registers the skill as being active
-        meta = meta or {}
-        meta["skill"] = self.name
-        meta["skill_id"] = self.skill_id
-        self.enclosure.register(self.name)
-        data = {
-            "session_id": self._tts_session_id,
-            "utterance": utterance,
-            "expect_response": expect_response,
-            "response_skill_id": response_skill_id,
-            "meta": meta,
-            "skill_id": self.skill_id,
-            "cache_key": cache_key,
-            "cache_keep": cache_keep,
-            "activity_id": self._activity_id,
-            "mycroft_session_id": self._session_id,
-        }
-        m = Message("speak", data)
-        self.bus.emit(m)
-
-        if wait:
-            self.wait_while_speaking()
-
-    def speak_dialog(
-        self,
-        key,
-        data=None,
-        expect_response=False,
-        wait=True,
-        cache_key=None,
-        cache_keep=False,
-        response_skill_id=None,
-    ):
-        """Speak a random sentence from a dialog file.
-
-        Args:
-            key (str): dialog file key (e.g. "hello" to speak from the file
-                                        "locale/en-us/hello.dialog")
-            data (dict): information used to populate sentence
-            expect_response (bool): set to True if Mycroft should listen
-                                    for a response immediately after
-                                    speaking the utterance.
-            wait (bool):            set to True to block while the text
-                                    is being spoken.
-            cache_key (str):        key from cache_speech or cache_dialog
-            cache_keep (bool):      True if cache_key can be reused
-        """
-        assert (
-            self.dialog_renderer
-        ), "dialog_render is None, does the locale/dialog folder exist?"
-        data = data or {}
-        self.speak(
-            self.dialog_renderer.render(key, data),
-            expect_response,
-            wait,
-            meta={"dialog": key, "data": data},
-            cache_key=cache_key,
-            cache_keep=cache_keep,
-            response_skill_id=response_skill_id,
-        )
-
-    # def cache_speech(
+    # def speak(
     #     self,
     #     utterance,
+    #     expect_response=False,
+    #     wait=True,
     #     meta=None,
-    #     cache_key: typing.Optional[str] = None,
-    #     expire: typing.Optional[datetime] = None,
-    #     timeout=60,
-    # ) -> typing.Optional[str]:
-    #     """Synthesize a sentence and store it in cache.
+    #     cache_key=None,
+    #     cache_keep=False,
+    #     response_skill_id=None,
+    # ):
+    #     """Speak a sentence.
 
     #     Args:
     #         utterance (str):        sentence mycroft should speak
+    #         expect_response (bool): set to True if Mycroft should listen
+    #                                 for a response immediately after
+    #                                 speaking the utterance.
+    #         wait (bool):            set to True to block while the text
+    #                                 is being spoken.
     #         meta:                   Information of what built the sentence.
-    #         cache_key:              Optional key to use for cache (generated if None)
-    #         expire:                 Optional datetime when the cache will expire
-
-    #     Returns:
-    #         key (str):              cache key to be used later with speak_from_cache
+    #         cache_key (str):        key from cache_speech or cache_dialog
+    #         cache_keep (bool):      True if cache_key can be reused
     #     """
+    #     # Flush any previous wait_while_speaking()
+    #     self._tts_speak_finished.set()
+    #     self._tts_speak_finished.clear()
+    #     self._tts_session_id = str(uuid4())
+
+    #     # registers the skill as being active
     #     meta = meta or {}
     #     meta["skill"] = self.name
+    #     meta["skill_id"] = self.skill_id
+    #     self.enclosure.register(self.name)
     #     data = {
+    #         "session_id": self._tts_session_id,
     #         "utterance": utterance,
-    #         "cache_only": True,
+    #         "expect_response": expect_response,
+    #         "response_skill_id": response_skill_id,
     #         "meta": meta,
     #         "skill_id": self.skill_id,
+    #         "cache_key": cache_key,
+    #         "cache_keep": cache_keep,
+    #         "activity_id": self._activity_id,
+    #         "mycroft_session_id": self._mycroft_session_id,
     #     }
+    #     m = Message("speak", data)
+    #     self.bus.emit(m)
 
-    #     if cache_key is not None:
-    #         data["cache_key"] = cache_key
+    #     if wait:
+    #         self.wait_while_speaking()
 
-    #     if expire is not None:
-    #         data["cache_expire"] = expire.isoformat()
-
-    #     m = Message("speak.cache", data)
-    #     reply = self.bus.wait_for_response(m, "speak.cache.reply", timeout=timeout)
-
-    #     if reply:
-    #         return reply.data["key"]
-
-    #     return None
-
-    # def cache_dialog(
+    # def speak_dialog(
     #     self,
     #     key,
     #     data=None,
-    #     cache_key: typing.Optional[str] = None,
-    #     expire: typing.Optional[datetime] = None,
-    #     timeout=60,
-    # ) -> typing.Optional[str]:
-    #     """Synthesize a random sentence from a dialog file and store it in cache.
+    #     expect_response=False,
+    #     wait=True,
+    #     cache_key=None,
+    #     cache_keep=False,
+    #     response_skill_id=None,
+    # ):
+    #     """Speak a random sentence from a dialog file.
 
     #     Args:
-    #         key (str):              dialog file key (e.g. "hello" to speak from the file
+    #         key (str): dialog file key (e.g. "hello" to speak from the file
     #                                     "locale/en-us/hello.dialog")
-    #         data (dict):            information used to populate sentence
-    #         cache_key:              Optional key to use for cache (generated if None)
-    #         expire:                 Optional datetime when the cache will expire
-
-    #     Returns:
-    #         key (str):              cache key to be used later with speak_from_cache
+    #         data (dict): information used to populate sentence
+    #         expect_response (bool): set to True if Mycroft should listen
+    #                                 for a response immediately after
+    #                                 speaking the utterance.
+    #         wait (bool):            set to True to block while the text
+    #                                 is being spoken.
+    #         cache_key (str):        key from cache_speech or cache_dialog
+    #         cache_keep (bool):      True if cache_key can be reused
     #     """
-
-    #     if self.dialog_renderer:
-    #         data = data or {}
-    #         cache_key = self.cache_speech(
-    #             self.dialog_renderer.render(key, data),
-    #             meta={"dialog": key, "data": data},
-    #             cache_key=cache_key,
-    #             expire=expire,
-    #             timeout=timeout,
-    #         )
-    #     else:
-    #         self.log.warning(
-    #             "dialog_render is None, does the locale/dialog folder exist?"
-    #         )
-    #         cache_key = self.cache_speech(key, timeout=timeout)
-
-    #     return cache_key
+    #     assert (
+    #         self.dialog_renderer
+    #     ), "dialog_render is None, does the locale/dialog folder exist?"
+    #     data = data or {}
+    #     self.speak(
+    #         self.dialog_renderer.render(key, data),
+    #         expect_response,
+    #         wait,
+    #         meta={"dialog": key, "data": data},
+    #         cache_key=cache_key,
+    #         cache_keep=cache_keep,
+    #         response_skill_id=response_skill_id,
+    #     )
 
     def acknowledge(self):
         """Acknowledge a successful request.
@@ -1575,93 +1499,178 @@ class MycroftSkill:
         """Cancel any repeating events started by the skill."""
         return self.event_scheduler.cancel_all_repeating_events()
 
-    def activity_started(self):
-        """Indicate that a skill activity has started.
+    # def activity_started(self):
+    #     """Indicate that a skill activity has started.
 
-        This will flush the TTS cache and keep LED animations going.
-        """
-        self._activity_id = str(uuid4())
-        self.bus.emit(
-            Message(
-                "skill.started",
-                data={
-                    "skill_id": self.skill_id,
-                    "activity_id": self._activity_id,
-                    "mycroft_session_id": self._session_id,
-                },
-            )
-        )
-        LOG.info(
-            "%s started (skill=%s, activity=%s)",
-            self.name,
-            self.skill_id,
-            self._activity_id,
-        )
+    #     This will flush the TTS cache and keep LED animations going.
+    #     """
+    #     self._activity_id = str(uuid4())
+    #     self.bus.emit(
+    #         Message(
+    #             "skill.started",
+    #             data={
+    #                 "skill_id": self.skill_id,
+    #                 "activity_id": self._activity_id,
+    #                 "mycroft_session_id": self._mycroft_session_id,
+    #             },
+    #         )
+    #     )
+    #     LOG.info(
+    #         "%s started (skill=%s, activity=%s)",
+    #         self.name,
+    #         self.skill_id,
+    #         self._activity_id,
+    #     )
 
-        self.acknowledge()
+    #     self.acknowledge()
 
-    def activity_ended(self):
-        """Indicate that a skill activity has ended.
+    # def activity_ended(self):
+    #     """Indicate that a skill activity has ended.
 
-        This will stop LED animations.
-        """
-        self.bus.emit(
-            Message(
-                "skill.ended",
-                data={
-                    "skill_id": self.skill_id,
-                    "activity_id": self._activity_id,
-                    "mycroft_session_id": self._session_id,
-                },
-            )
-        )
-        LOG.info(
-            "%s ended (skill=%s, activity=%s)",
-            self.name,
-            self.skill_id,
-            self._activity_id,
-        )
+    #     This will stop LED animations.
+    #     """
+    #     self.bus.emit(
+    #         Message(
+    #             "skill.ended",
+    #             data={
+    #                 "skill_id": self.skill_id,
+    #                 "activity_id": self._activity_id,
+    #                 "mycroft_session_id": self._mycroft_session_id,
+    #             },
+    #         )
+    #     )
+    #     LOG.info(
+    #         "%s ended (skill=%s, activity=%s)",
+    #         self.name,
+    #         self.skill_id,
+    #         self._activity_id,
+    #     )
 
-    @contextmanager
-    def activity(self):
-        """Return a context manager that calls activity started/ended.
+    # @contextmanager
+    # def activity(self):
+    #     """Return a context manager that calls activity started/ended.
 
-        Yields the activity id.
-        """
-        self.activity_started()
-        try:
-            yield self._activity_id
-        finally:
-            self.activity_ended()
+    #     Yields the activity id.
+    #     """
+    #     self.activity_started()
+    #     try:
+    #         yield self._activity_id
+    #     finally:
+    #         self.activity_ended()
 
     def play_sound_uri(self, uri: str):
         self.bus.emit(
             Message(
                 "mycroft.audio.play-sound",
-                data={"uri": uri, "mycroft_session_id": self._session_id},
+                data={"uri": uri, "mycroft_session_id": self._mycroft_session_id},
             )
         )
 
-    def wait_while_speaking(self, timeout=60):
-        if self._tts_session_id:
-            self._tts_speak_finished.wait(timeout=timeout)
+    # def wait_while_speaking(self, timeout=60):
+    #     if self._tts_session_id:
+    #         self._tts_speak_finished.wait(timeout=timeout)
 
-    def _handle_speaking_finished(self, message: Message):
-        session_id = message.data.get("session_id")
-        if session_id == self._tts_session_id:
-            self._tts_session_id = None
-            self._tts_speak_finished.set()
+    # def _handle_speaking_finished(self, message: Message):
+    #     session_id = message.data.get("session_id")
+    #     if session_id == self._tts_session_id:
+    #         self._tts_session_id = None
+    #         self._tts_speak_finished.set()
 
-    def stop_speaking(self):
-        self.bus.emit(Message("mycroft.tts.stop"))
+    # def stop_speaking(self):
+    #     self.bus.emit(Message("mycroft.tts.stop"))
 
-    def _handle_skill_response(self, message: Message):
-        """Catch responses intended for a specific skill"""
-        skill_id = message.data.get("skill_id")
-        if skill_id == self.skill_id:
-            # Intended for this skill
-            utterances = message.data.get("utterances")
-            utterance = utterances[0] if utterances else None
-            LOG.debug("Handling response in skill: %s", utterance)
-            self._response_queue.put_nowait(utterance)
-            self._bus.emit(message.response())
+    # def _handle_skill_response(self, message: Message):
+    #     """Catch responses intended for a specific skill"""
+    #     skill_id = message.data.get("skill_id")
+    #     if skill_id == self.skill_id:
+    #         # Intended for this skill
+    #         utterances = message.data.get("utterances")
+    #         utterance = utterances[0] if utterances else None
+    #         LOG.debug("Handling response in skill: %s", utterance)
+    #         self._response_queue.put_nowait(utterance)
+    #         self._bus.emit(message.response())
+
+    # -------------------------------------------------------------------------
+
+    def _make_actions(
+        self,
+        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        speak: Optional[str] = None,
+        gui_page: Optional[str] = None,
+        gui_data: Optional[Dict[str, Any]] = None,
+        gui_clear_after_speak: bool = False,
+    ):
+        actions = []
+
+        if gui_page is not None:
+            actions.append({"type": "show_page", "data": gui_data or {}})
+
+        if dialog is not None:
+            dialog_data = {}
+            if not isinstance(dialog, str):
+                dialog, dialog_data = dialog
+
+            speak = self.dialog_renderer.render(dialog, dialog_data)
+
+        if speak is not None:
+            actions.append(
+                {"type": "speak", "utterance": speak, "dialog": dialog, "wait": True}
+            )
+
+        if gui_clear_after_speak:
+            actions.append({"type": "clear_display"})
+
+        return actions
+
+    def continue_session(
+        self,
+        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        speak: Optional[str] = None,
+        gui_page: Optional[str] = None,
+        gui_data: Optional[Dict[str, Any]] = None,
+        gui_clear_after_speak: bool = False,
+        expect_response: bool = False,
+    ) -> Message:
+        return Message(
+            "mycroft.session.continue",
+            data={
+                "mycroft_session_id": self._mycroft_session_id,
+                "skill_id": self.skill_id,
+                "actions": self._make_actions(
+                    dialog=dialog,
+                    speak=speak,
+                    gui_page=gui_page,
+                    gui_data=gui_data,
+                    gui_clear_after_speak=gui_clear_after_speak,
+                ),
+                "expect_response": expect_response,
+            },
+        )
+
+    def end_session(
+        self,
+        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        speak: Optional[str] = None,
+        gui_page: Optional[str] = None,
+        gui_data: Optional[Dict[str, Any]] = None,
+        gui_clear_after_speak: bool = False,
+    ) -> Message:
+        return Message(
+            "mycroft.session.end",
+            data={
+                "mycroft_session_id": self._mycroft_session_id,
+                "skill_id": self.skill_id,
+                "actions": self._make_actions(
+                    dialog=dialog,
+                    speak=speak,
+                    gui_page=gui_page,
+                    gui_data=gui_data,
+                    gui_clear_after_speak=gui_clear_after_speak,
+                ),
+            },
+        )
+
+    def abort_session(self) -> Message:
+        message = self.end_session()
+        message.data["aborted"] = True
+        return message

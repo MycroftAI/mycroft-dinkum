@@ -33,6 +33,11 @@ def main():
     unit_dir = config_home / "systemd" / "user"
     unit_dir.mkdir(parents=True, exist_ok=True)
 
+    # Remove previous service files
+    for unit_file in unit_dir.glob("mycroft*.*"):
+        if unit_file.is_file():
+            unit_file.unlink()
+
     services: Dict[int, Set[str]] = defaultdict(set)
     for priority, service_dir in args.service:
         services[priority].add(service_dir)
@@ -41,6 +46,7 @@ def main():
     sorted_services = sorted(services.items(), key=operator.itemgetter(0))
     all_service_ids = set()
     after_services = set()
+    skills_after_services = set()
     for priority, service_dirs in sorted_services:
         service_ids = set()
         service_paths = []
@@ -51,6 +57,7 @@ def main():
             if service_id == SKILLS_TARGET:
                 skills_service_path = service_path
                 service_ids.add(f"{SKILLS_TARGET}.target")
+                skills_after_services = set(after_services)
             else:
                 service_path = Path(service_dir)
                 service_id = f"{service_path.name}.service"
@@ -67,7 +74,7 @@ def main():
                     print(
                         "Description=", "Mycroft service ", service_id, sep="", file=f
                     )
-                    print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
+                    print("BindTo=", MYCROFT_TARGET, ".target", sep="", file=f)
                     if after_services:
                         print(
                             "After=",
@@ -104,7 +111,13 @@ def main():
 
     if args.skill:
         assert skills_service_path, f"No service named {SKILLS_TARGET}"
-        _write_skills_target(skills_service_path, args.skill, config_home, unit_dir)
+        _write_skills_target(
+            skills_service_path,
+            args.skill,
+            skills_after_services,
+            config_home,
+            unit_dir,
+        )
 
     _write_mycroft_target(all_service_ids, unit_dir)
 
@@ -122,7 +135,11 @@ def _write_mycroft_target(service_ids: Set[str], unit_dir: Path):
 
 
 def _write_skills_target(
-    skills_service_path: Path, skill_dirs: List[str], config_home: Path, unit_dir: Path
+    skills_service_path: Path,
+    skill_dirs: List[str],
+    after_services: Set[str],
+    config_home: Path,
+    unit_dir: Path,
 ):
     skill_paths = [Path(d) for d in skill_dirs]
     skill_ids = {p.name for p in skill_paths}
@@ -131,8 +148,10 @@ def _write_skills_target(
     with open(unit_dir / f"mycroft-{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
         print("[Unit]", file=f)
         print("Description=", "Mycroft skills", sep="", file=f)
-        print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
+        print("BindTo=", MYCROFT_TARGET, ".target", sep="", file=f)
         print("Requires=", " ".join(service_ids), sep="", file=f)
+        if after_services:
+            print("After=", " ".join(after_services), sep="", file=f)
 
     for skill_path in skill_paths:
         skill_id = skill_path.name
@@ -141,7 +160,7 @@ def _write_skills_target(
             unit_dir / f"mycroft-skill-{skill_id}.service", "w", encoding="utf-8"
         ) as f:
             print("[Unit]", file=f)
-            print("PartOf=", "mycroft-", SKILLS_TARGET, ".target", sep="", file=f)
+            print("BindTo=", "mycroft-", SKILLS_TARGET, ".target", sep="", file=f)
             print("Description=", "Mycroft skill ", skill_id, sep="", file=f)
 
             print("", file=f)

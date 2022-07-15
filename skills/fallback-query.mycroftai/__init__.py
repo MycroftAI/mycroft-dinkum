@@ -30,6 +30,7 @@ class QuestionsAnswersSkill(FallbackSkill):
         self.searching_event = threading.Event()
         self.answer_message: typing.Optional[Message] = None
         self.action_event = threading.Event()
+        self.query_done_event = threading.Event()
 
     def initialize(self):
         self.add_event("fallback-query.search", self.handle_query_search)
@@ -64,6 +65,7 @@ class QuestionsAnswersSkill(FallbackSkill):
         """Send the phrase to the CommonQuerySkills and prepare for handling
         the replies.
         """
+        self.query_done_event.clear()
         utt = message.data.get("utterance")
 
         if not self.valid_question(utt):
@@ -77,52 +79,59 @@ class QuestionsAnswersSkill(FallbackSkill):
         )
 
         # HACK: Block to keep session open
-        self.action_event.wait(timeout=60)
+        self.query_done_event.wait(timeout=60)
+        self.log.debug("Done: %s", self._session_id)
 
         return True
 
     def handle_query_search(self, message):
-        with self.activity():
-            utt = message.data.get("utterance")
+        try:
+            with self.activity():
+                utt = message.data.get("utterance")
 
-            if self.is_searching:
-                self._stop_search()
+                if self.is_searching:
+                    self._stop_search()
 
-            self.log.info("Searching for %s", utt)
-            self._start_search()
-            self.schedule_event(
-                self._query_timeout,
-                5,
-                data={"phrase": utt},
-                name="QuestionQueryTimeout",
-            )
-
-            self.bus.emit(message.forward("question:query", data={"phrase": utt}))
-
-            self.gui.show_page("SearchingForAnswers.qml")
-            self.speak_dialog("just.one.moment")
-            self.searching_event.wait(timeout=6)
-
-            if self.answer_message:
-                self.log.info("CQS action start (data=%s)", self.answer_message.data)
-                self.action_event.clear()
-                self.bus.emit(
-                    message.forward(
-                        "question:action",
-                        data={
-                            "skill_id": self.answer_message.data["skill_id"],
-                            "phrase": utt,
-                            "callback_data": self.answer_message.data.get(
-                                "callback_data"
-                            ),
-                            "mycroft_session_id": self._session_id,
-                        },
-                    )
+                self.log.info("Searching for %s", utt)
+                self._start_search()
+                self.schedule_event(
+                    self._query_timeout,
+                    5,
+                    data={"phrase": utt},
+                    name="QuestionQueryTimeout",
                 )
-                self.action_event.wait(timeout=60)
-                self.log.info("CQS action complete")
-            else:
-                self.speak_dialog("noAnswer", wait=True)
+
+                self.bus.emit(message.forward("question:query", data={"phrase": utt}))
+
+                self.gui.show_page("SearchingForAnswers.qml")
+                self.speak_dialog("just.one.moment")
+                self.searching_event.wait(timeout=6)
+
+                if self.answer_message:
+                    self.log.info(
+                        "CQS action start (data=%s)", self.answer_message.data
+                    )
+                    self.action_event.clear()
+                    self.bus.emit(
+                        message.forward(
+                            "question:action",
+                            data={
+                                "skill_id": self.answer_message.data["skill_id"],
+                                "phrase": utt,
+                                "callback_data": self.answer_message.data.get(
+                                    "callback_data"
+                                ),
+                                "mycroft_session_id": self._session_id,
+                            },
+                        )
+                    )
+                    self.action_event.wait(timeout=60)
+                    self.log.info("CQS action complete")
+                else:
+                    # No action
+                    self.speak_dialog("noAnswer", wait=True)
+        finally:
+            self.query_done_event.set()
 
     def handle_query_response(self, message):
         with self.lock:

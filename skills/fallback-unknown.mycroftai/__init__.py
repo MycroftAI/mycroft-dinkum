@@ -46,33 +46,25 @@ class UnknownSkill(FallbackSkill):
             ]
 
     def handle_fallback(self, message):
-        with self.activity():
-            self.gui_show(self.last_utterances)
+        # TODO
+        # self.gui_show(self.last_utterances)
 
-            utterance = message.data["utterance"].lower()
-            for key, vocab in self.question_vocab.items():
-                for line in vocab:
-                    if utterance.startswith(line):
-                        self.log.info("Fallback type: " + line)
-                        self.speak_dialog(
-                            key, data={"remaining": line.replace(key, "")}, wait=True
-                        )
-                        return True
+        utterance = message.data["utterance"].lower()
+        for key, vocab in self.question_vocab.items():
+            for line in vocab:
+                if utterance.startswith(line):
+                    self.log.info("Fallback type: " + line)
+                    return True, self.end_session(
+                        dialog=(key, {"remaining": line.replace(key, "")})
+                    )
 
-            self.log.info(utterance)
-            self.speak_dialog("unknown", wait=True)
-
-            if self.gui.connected:
-                time.sleep(5)
-                self.gui.release()
-
-            return True
+        self.log.info(utterance)
+        return True, self.end_session(dialog="unknown")
 
     def handle_unknown_recognition(self, message):
         """Called when no transcription is returned from STT"""
-        with self.activity():
-            self.log.info("Unknown recognition")
-            self.speak_dialog("unknown", wait=True)
+        self.log.info("Unknown recognition")
+        return self.end_session(dialog="unknown")
 
     def handle_utterance(self, message):
         utterances = message.data.get("utterances")
@@ -82,10 +74,11 @@ class UnknownSkill(FallbackSkill):
     @intent_handler(AdaptIntent().require("show").require("utterance"))
     def show_last_utterance(self, _):
         """Handles a user's request to show the most recent utterance."""
-        with self.activity():
-            self.gui_show(self.last_utterances)
-            time.sleep(5)
-            self.gui.release()
+        # TODO
+        # with self.activity():
+        #     self.gui_show(self.last_utterances)
+        #     time.sleep(5)
+        #     self.gui.release()
 
     def gui_show(self, utterances: typing.Iterable[str]):
         """Show speech to text utterance for debugging"""
