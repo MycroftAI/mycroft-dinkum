@@ -15,7 +15,7 @@
 """Mycroft's intent service, providing intent parsing since forever!"""
 import time
 from copy import copy
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from mycroft.configuration import Configuration

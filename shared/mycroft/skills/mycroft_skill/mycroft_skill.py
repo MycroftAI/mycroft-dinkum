@@ -27,9 +27,9 @@ from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Event, Lock, Timer
+from typing import Any, Dict, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
-from typing import Dict, Any, Optional, Tuple, Union
 
 import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder

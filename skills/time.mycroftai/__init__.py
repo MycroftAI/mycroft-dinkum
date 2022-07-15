@@ -68,8 +68,7 @@ class TimeSkill(MycroftSkill):
         Args:
             request: Data from the intent parser regarding the user's voice request.
         """
-        with self.activity():
-            self._handle_current_time(request)
+        return self._handle_current_time(request)
 
     @intent_handler("what-time-is-it.intent")
     def handle_current_time_padatious(self, request: Message):
@@ -80,8 +79,7 @@ class TimeSkill(MycroftSkill):
         Args:
             request: Data from the intent parser regarding the user's voice request.
         """
-        with self.activity():
-            self._handle_current_time(request)
+        return self._handle_current_time(request)
 
     @intent_handler(
         AdaptIntent("")
@@ -98,8 +96,7 @@ class TimeSkill(MycroftSkill):
         Args:
             request: Data from the intent parser regarding the user's voice request.
         """
-        with self.activity():
-            self._handle_future_time(request)
+        return self._handle_future_time(request)
 
     @intent_handler("what-time-will-it-be.intent")
     def handle_future_time_padatious(self, request: Message):
@@ -110,18 +107,7 @@ class TimeSkill(MycroftSkill):
         Args:
             request: Data from the intent parser regarding the user's voice request.
         """
-        with self.activity():
-            self._handle_future_time(request)
-
-    @intent_handler(AdaptIntent("mark-one-idle").require("display").require("time"))
-    def handle_show_time(self, _):
-        """Respond to a request top show the time on a Mark I when idle.
-
-        Example: "What time will it be in 8 hours?"
-        """
-        with self.activity():
-            self.settings["show_time"] = True
-            self._check_mark_i_idle_setting()
+        return self._handle_future_time(request)
 
     def _handle_future_time(self, request: Message):
         """Respond to a request for the future time.
@@ -136,12 +122,12 @@ class TimeSkill(MycroftSkill):
         try:
             response.build_future_time_response(request.data["utterance"])
         except LocationNotFoundError:
-            self._handle_location_not_found(response)
+            return self._handle_location_not_found(response)
         else:
             if response.date_time is None:
-                self._handle_current_time(request)
-            else:
-                self._respond(response)
+                return self._handle_current_time(request)
+
+            return self._respond(response)
 
     def _handle_current_time(self, request: Message):
         """Respond to a request for the current time.
@@ -157,16 +143,9 @@ class TimeSkill(MycroftSkill):
         try:
             response.build_current_time_response(request.data["utterance"])
         except LocationNotFoundError:
-            self._handle_location_not_found(response)
+            return self._handle_location_not_found(response)
         else:
-            # cache_key = (
-            #     self._current_time_cache_key
-            #     if not response.requested_location
-            #     else None
-            # )
-            # self._respond(response, cache_key=cache_key)
-            self._respond(response, cache_key=None)
-            # self._cache_current_time_tts()
+            return self._respond(response)
 
     def _handle_location_not_found(self, response: Response):
         """User requested time in a city not recognized by a Geolocation API call.
@@ -175,20 +154,24 @@ class TimeSkill(MycroftSkill):
             response: object used to formulate the response
         """
         dialog_data = dict(location=response.requested_location)
-        self.speak_dialog("location-not-found", dialog_data)
+        return self.end_session(dialog=("location-not-found", dialog_data))
 
-    def _respond(self, response: Response, cache_key=None):
+    def _respond(self, response: Response):
         """Speak and display the response to the user's request.
 
         Args:
             response: object used to formulate the response
         """
         self._display_time(response)
-        self.speak_dialog(
-            response.dialog_name, response.dialog_data, cache_key=cache_key, wait=True
+
+        return self.end_session(
+            dialog=(response.dialog_name, response.dialog_data),
+            gui_page="time-scalable.qml",
+            gui_data={
+                "timeString": get_display_time(response.date_time, self.config_core)
+            },
+            gui_clear_after_speak=True,
         )
-        if self.gui.connected:
-            self.gui.release()
 
     def _display_time(self, response: Response):
         """Display the time on the appropriate medium for the active platform.
@@ -199,60 +182,12 @@ class TimeSkill(MycroftSkill):
         if self.gui.connected:
             self._display_gui(response)
 
-    # TODO: change this to use the skill API
-    # TODO: move this to the home screen skill
-    def _is_alarm_set(self) -> bool:
-        """Query the alarm skill if an alarm is set."""
-        query = Message("private.mycroftai.has_alarm")
-        msg = self.bus.wait_for_response(query)
-        return msg and msg.data.get("active_alarms", 0) > 0
-
-    def _display_gui(self, response: Response):
-        """Display time on a device that supports the Mycroft GUI Framework.
-
-        Args:
-            response: object used to formulate the response
-        """
-        display_time = get_display_time(response.date_time, self.config_core)
-        page_name = "time-scalable.qml"
-        self.gui["timeString"] = display_time
-        self.gui.show_page(page_name, override_idle=True)
-
     def load_regex_files(self):
         """Skip this logic to handle the location regular expression in the skill.
 
         See note in module-level docstring.
         """
         pass
-
-    # def _cache_current_time_tts(self, _message=None):
-    #     try:
-    #         # Re-cache in a minute
-    #         self.cancel_scheduled_event("CacheTTS")
-
-    #         now = datetime.now()
-    #         next_minute = datetime(
-    #             year=now.year,
-    #             month=now.month,
-    #             day=now.day,
-    #             hour=now.hour,
-    #             minute=now.minute,
-    #         ) + timedelta(minutes=1)
-
-    #         self.schedule_event(
-    #             self._cache_current_time_tts, when=next_minute, name="CacheTTS"
-    #         )
-
-    #         response = Response(self.config_core, self.location_regex_path)
-    #         response.build_current_time_response("")
-
-    #         self.cache_dialog(
-    #             response.dialog_name,
-    #             response.dialog_data,
-    #             cache_key=self._current_time_cache_key,
-    #         )
-    #     except Exception:
-    #         self.log.exception("Error while caching TTS")
 
 
 def create_skill():
