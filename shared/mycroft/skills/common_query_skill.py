@@ -14,6 +14,7 @@
 import time
 from abc import ABC, abstractmethod
 from enum import IntEnum
+from typing import Optional
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
@@ -116,6 +117,7 @@ class CommonQuerySkill(MycroftSkill, ABC):
             self.bus.emit(
                 message.response(
                     {
+                        "mycroft_session_id": message.data.get("mycroft_session_id"),
                         "phrase": search_phrase,
                         "skill_id": self.skill_id,
                         "answer": answer,
@@ -204,14 +206,21 @@ class CommonQuerySkill(MycroftSkill, ABC):
             # Not for this skill!
             return
 
-        self._session_id = message.data.get("mycroft_session_id")
+        self._mycroft_session_id = message.data.get("mycroft_session_id")
         phrase = message.data["phrase"]
         data = message.data.get("callback_data")
-        # Invoke derived class to provide playback data
+
+        result: Optional[Message] = None
         try:
-            self.CQS_action(phrase, data)
+            result = self.CQS_action(phrase, data)
         finally:
             self.bus.emit(Message("query:action-complete", data=message.data))
+
+        if result is None:
+            # Automatically close session
+            result = self.end_session()
+
+        self.bus.emit(result)
 
     def stop(self):
         # TODO check if active
@@ -253,4 +262,4 @@ class CommonQuerySkill(MycroftSkill, ABC):
         """
         # Derived classes may implement this if they use additional media
         # or wish to set context after being called.
-        pass
+        return None

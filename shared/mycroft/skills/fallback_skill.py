@@ -15,7 +15,7 @@
 """The fallback skill implements a special type of skill handling
 utterances not handled by the intent system.
 """
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 from uuid import uuid4
 
 from mycroft.messagebus.message import Message
@@ -60,22 +60,41 @@ class FallbackSkill(MycroftSkill):
         self.bus.on("mycroft.skills.handle-fallback", self._handle_fallback)
         super().initialize()
 
-    def _handle_fallback(self, message):
+    def _handle_fallback(self, message: Message):
         name = message.data["name"]
+        mycroft_session_id = message.data.get("mycroft_session_id")
         handled = False
+        response_message: Optional[Message] = None
         handler = self._handlers.get(name)
 
         if handler:
-            self._mycroft_session_id = message.data.get("mycroft_session_id")
+            self._mycroft_session_id = mycroft_session_id
             try:
-                handled, response_message = handler(message)
-                self.bus.emit(response_message)
+                # Handler may return a boolean value indicating if the message
+                # was handled, or a (handled, message) tuple.
+                result = handler(message)
+                if isinstance(result, tuple):
+                    handled, response_message = result
+                else:
+                    handled = bool(result)
+                    if handled:
+                        # Automatically close session
+                        response_message = self.end_session()
             except Exception:
                 LOG.exception("Unexpected error in fallback handler")
 
-        self.bus.emit(
-            message.response(data={"handled": handled, "skill_id": self.skill_id})
-        )
+            self.bus.emit(
+                message.response(
+                    data={
+                        "mycroft_session_id": mycroft_session_id,
+                        "handled": handled,
+                        "skill_id": self.skill_id,
+                    }
+                )
+            )
+
+            if response_message is not None:
+                self.bus.emit(response_message)
 
     def register_fallback(self, handler: FallbackHandler, priority: int):
         """Register a fallback with the list of fallback handlers and with the

@@ -352,6 +352,9 @@ class MycroftSkill:
             # # For get_response
             # self._bus.on("mycroft.skill-response", self._handle_skill_response)
 
+            self._bus.on("mycroft.session.started", self._handle_session_started)
+            self._bus.on("mycroft.session.ended", self._handle_session_ended)
+
     def _register_public_api(self):
         """Find and register api methods.
         Api methods has been tagged with the api_method member, for each
@@ -918,7 +921,12 @@ class MycroftSkill:
 
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
-            self._mycroft_session_id = message.data.get("mycroft_session_id")
+            if message.data.get("mycroft_session_id") != self._mycroft_session_id:
+                self.log.warning(
+                    "Dropping intent message from different session: %s", message.data
+                )
+                return
+
             result_message: Optional[Message] = None
             try:
                 message = unmunge_message(message, self.skill_id)
@@ -930,8 +938,6 @@ class MycroftSkill:
                 result_message = self.end_session()
 
             self.bus.emit(result_message)
-            if result_message.msg_type == "mycroft.session.end":
-                self._mycroft_session_id = None
 
         self._bus.on(name, _handle_intent)
 
@@ -1592,15 +1598,30 @@ class MycroftSkill:
 
     # -------------------------------------------------------------------------
 
-    def _make_actions(
+    def _build_actions(
         self,
         dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
         speak: Optional[str] = None,
+        speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
         gui_clear_after_speak: bool = False,
+        message: Optional[Message] = None,
     ):
         actions = []
+
+        if message is not None:
+            actions.append(
+                {
+                    "type": "message",
+                    "message_type": message.msg_type,
+                    "data": {
+                        # Automatically add session id
+                        "mycroft_session_id": self._mycroft_session_id,
+                        **message.data,
+                    },
+                }
+            )
 
         if gui_page is not None:
             actions.append({"type": "show_page", "data": gui_data or {}})
@@ -1614,7 +1635,12 @@ class MycroftSkill:
 
         if speak is not None:
             actions.append(
-                {"type": "speak", "utterance": speak, "dialog": dialog, "wait": True}
+                {
+                    "type": "speak",
+                    "utterance": speak,
+                    "dialog": dialog,
+                    "wait": speak_wait,
+                }
             )
 
         if gui_clear_after_speak:
@@ -1626,22 +1652,26 @@ class MycroftSkill:
         self,
         dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
         speak: Optional[str] = None,
+        speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
         gui_clear_after_speak: bool = False,
         expect_response: bool = False,
+        message: Optional[Message] = None,
     ) -> Message:
         return Message(
             "mycroft.session.continue",
             data={
                 "mycroft_session_id": self._mycroft_session_id,
                 "skill_id": self.skill_id,
-                "actions": self._make_actions(
+                "actions": self._build_actions(
                     dialog=dialog,
                     speak=speak,
+                    speak_wait=speak_wait,
                     gui_page=gui_page,
                     gui_data=gui_data,
                     gui_clear_after_speak=gui_clear_after_speak,
+                    message=message,
                 ),
                 "expect_response": expect_response,
             },
@@ -1651,21 +1681,25 @@ class MycroftSkill:
         self,
         dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
         speak: Optional[str] = None,
+        speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
         gui_clear_after_speak: bool = False,
+        message: Optional[Message] = None,
     ) -> Message:
         return Message(
             "mycroft.session.end",
             data={
                 "mycroft_session_id": self._mycroft_session_id,
                 "skill_id": self.skill_id,
-                "actions": self._make_actions(
+                "actions": self._build_actions(
                     dialog=dialog,
                     speak=speak,
+                    speak_wait=speak_wait,
                     gui_page=gui_page,
                     gui_data=gui_data,
                     gui_clear_after_speak=gui_clear_after_speak,
+                    message=message,
                 ),
             },
         )
@@ -1674,3 +1708,9 @@ class MycroftSkill:
         message = self.end_session()
         message.data["aborted"] = True
         return message
+
+    def _handle_session_started(self, message: Message):
+        self._mycroft_session_id = message.data.get("mycroft_session_id")
+
+    def _handle_session_ended(self, _message: Message):
+        self._mycroft_session_id = None

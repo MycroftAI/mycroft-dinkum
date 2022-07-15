@@ -93,6 +93,7 @@ class FallbackService:
                             "mycroft_session_id": self.session_id,
                         },
                     ),
+                    timeout=5,
                 )
 
                 if reply and reply.data.get("handled", False):

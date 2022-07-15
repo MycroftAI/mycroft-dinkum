@@ -46,7 +46,6 @@ class WikipediaSkill(CommonQuerySkill):
             translated_articles (list[str]): used in cleaning queries
         """
         super(WikipediaSkill, self).__init__(name="WikipediaSkill")
-        self._match = self._cqs_match = Article()
         self.platform = self.config_core["enclosure"].get("platform", "unknown")
         self.max_image_width = 416 if self.platform == "mycroft_mark_ii" else 1920
         self.translated_question_words = self.translate_list("question_words")
@@ -92,33 +91,20 @@ class WikipediaSkill(CommonQuerySkill):
 
         Requires utterance to directly ask for Wikipedia's answer.
         """
-        with self.activity():
-            query = self.extract_topic(message.data.get("ArticleTitle", ""))
-            # Talk to the user, as this can take a little time...
-            # self.speak_dialog("searching", {"query": query})
-            try:
-                page, disambiguation_page = self.search_wikipedia(query)
-                if page is None:
-                    self.report_no_match(query)
-                    return
-                self.log.info(f"Best result from Wikipedia is: {page.title}")
-                self.handle_result(page, query)
-                # TODO determine intended disambiguation behaviour
-                # disabling disambiguation for now.
-                if False and disambiguation_page is not None:
-                    self.log.info(
-                        f"Disambiguation page available: {disambiguation_page}"
-                    )
-                    if self.translate("disambiguate-exists") != "disambiguate-exists":
-                        # Dialog file exists and can be spoken
-                        correct_topic = self.ask_yesno("disambiguate-exists")
-                        if correct_topic != "no":
-                            return
-                    new_page = self.handle_disambiguation(disambiguation_page)
-                    if new_page is not None:
-                        self.handle_result(new_page, query)
-            except CONNECTION_ERRORS:
-                self.speak_dialog("connection-error", wait=True)
+        query = self.extract_topic(message.data.get("ArticleTitle", ""))
+        # Talk to the user, as this can take a little time...
+        # self.speak_dialog("searching", {"query": query})
+        try:
+            page, disambiguation_page = self.search_wikipedia(query)
+            if page is None:
+                self.report_no_match(query)
+                return
+            self.log.info(f"Best result from Wikipedia is: {page.title}")
+            result = self.handle_result(page, query)
+        except CONNECTION_ERRORS:
+            result = self.end_session(dialog="connection-error")
+
+        return result
 
     @intent_handler("Random.intent")
     def handle_random_intent(self, _):
@@ -126,58 +112,14 @@ class WikipediaSkill(CommonQuerySkill):
 
         Uses the Special:Random page of wikipedia
         """
-        with self.activity():
-            if self.wiki is None:
-                self.log.error("not connected to wikipedia")
-                return
-
+        if self.wiki is None:
+            self.log.error("not connected to wikipedia")
+        else:
             self.log.info("Fetching random Wikipedia page")
             lang = self.translate_namedvalues("wikipedia_lang")["code"]
             page = self.wiki.get_random_page(lang=lang)
             self.log.info("Random page selected: %s", page.title)
-            self.handle_result(page, "random page")
-
-    @intent_handler(AdaptIntent().require("More").require("wiki_article"))
-    def handle_tell_more(self, _):
-        """Follow up query handler, "tell me more".
-
-        If a "spoken_lines" entry exists in the active contexts
-        this can be triggered.
-        """
-        # Read more of the last article queried
-        with self.activity():
-            if not self._match:
-                self.log.error("handle_tell_more called without previous match")
-                return
-
-            if self.wiki is None:
-                self.log.error("not connected to wikipedia")
-                return
-
-            summary_to_read, new_lines_spoken = self.wiki.get_summary_next_lines(
-                self._match.page, self._match.num_lines_spoken
-            )
-
-            if self._match.image is None:
-                # TODO consider showing next image on page instead of same image each time.
-                image = self.wiki.get_best_image_url(
-                    self._match.page, self.max_image_width
-                )
-                article = self._match._replace(image=image)
-
-            if summary_to_read:
-                article = self._match._replace(
-                    summary=summary_to_read, num_lines_spoken=new_lines_spoken
-                )
-                self.display_article(article)
-                self.speak(summary_to_read, wait=True)
-                self.gui.release()
-
-                # Update context
-                self._match = article
-                self.set_context("wiki_article", "")
-            else:
-                self.speak_dialog("thats all")
+            return self.handle_result(page, "random page")
 
     def CQS_match_query_phrase(
         self, query: str
@@ -234,27 +176,26 @@ class WikipediaSkill(CommonQuerySkill):
             self.log.error("No title returned from CQS match")
             return
 
-        with self.activity():
-            if self._cqs_match.title == title:
-                title, page, summary, num_lines, image = self._cqs_match
-            else:
-                # This should never get called, but just in case.
-                self.log.warning(
-                    "CQS match data was not saved. " "Please report this to Mycroft."
-                )
-                page = self.wiki.get_page(title)
-                summary, num_lines = self.wiki.get_summary_intro(page)
+        if self._cqs_match.title == title:
+            title, page, summary, num_lines, image = self._cqs_match
+        else:
+            # This should never get called, but just in case.
+            self.log.warning(
+                "CQS match data was not saved. " "Please report this to Mycroft."
+            )
+            page = self.wiki.get_page(title)
+            summary, num_lines = self.wiki.get_summary_intro(page)
 
-            if image is None:
-                image = self.wiki.get_best_image_url(page, self.max_image_width)
-            article = Article(title, page, summary, num_lines, image)
-            self.display_article(article)
-            self.speak(summary, wait=True)
-            # Wait for the summary to finish, then remove skill from GUI
-            self.gui.release()
-            # Set context for follow up queries - "tell me more"
-            self._match = article
-            self.set_context("wiki_article", "")
+        if image is None:
+            image = self.wiki.get_best_image_url(page, self.max_image_width)
+        article = Article(title, page, summary, num_lines, image)
+
+        return self.end_session(
+            speak=summary,
+            gui_page="feature_image.qml",
+            gui_data=self.get_display_data(article),
+            gui_clear_after_speak=True,
+        )
 
     def extract_topic(self, query: str) -> str:
         """Extract the topic of a query.
@@ -320,32 +261,6 @@ class WikipediaSkill(CommonQuerySkill):
         image = self.wiki.get_best_image_url(page, self.max_image_width)
         self._cqs_match = self._cqs_match._replace(image=image)
 
-    def handle_disambiguation(self, disambiguation_title: str) -> MediaWikiPage:
-        """Ask user which of the different matches should be used.
-
-        Args:
-            disambiguation_title: name of disambiguation page
-        Returns:
-            wikipedia page selected by the user
-        """
-        try:
-            self.wiki.get_page(disambiguation_title)
-        except DisambiguationError as disambiguation:
-            self.log.debug(disambiguation.options)
-            self.log.debug(disambiguation.details)
-            options = disambiguation.options[:3]
-            self.speak_dialog("disambiguate-intro", wait=True)
-            choice = self.ask_selection(options)
-            self.log.debug("Disambiguation choice is {}".format(choice))
-            try:
-                wiki_page = self.wiki.get_page(choice)
-            except CONNECTION_ERRORS as error:
-                self.log.exception(error)
-                raise error
-            except DisambiguationError:
-                self.handle_disambiguation(choice)
-            return wiki_page
-
     def handle_result(self, page: MediaWikiPage, query: str):
         """Handle result depending on result type.
 
@@ -354,35 +269,32 @@ class WikipediaSkill(CommonQuerySkill):
             page: wiki page for search result
         """
         if page is None:
-            self.report_no_match(query)
+            result = self.report_no_match(query)
         else:
-            self.report_match(page)
+            result = self.report_match(page)
+
+        return result
 
     def report_no_match(self, query: str):
         """Answer no match found."""
-        self.speak_dialog("no entry found", data={"topic": query}, wait=True)
+        return self.end_session(dialog=("no entry found", {"topic": query}))
 
     def report_match(self, page: MediaWikiPage):
         """Read short summary to user."""
         if self.wiki is None:
             self.log.error("not connected to wikipedia")
-            return
-
-        summary, num_lines = self.wiki.get_summary_intro(page)
-        # wait for the "just a minute while I look for that" dialog to finish
-        article = Article(page.title, page, summary, num_lines)
-        self.display_article(article)
-        self.speak(summary)
-        image = self.wiki.get_best_image_url(page, self.max_image_width)
-        article = article._replace(image=image)
-        self.update_display_data(article)
-        # Wait for the summary to finish, then remove skill from GUI
-        self.wait_while_speaking()
-        self.gui.release()
-        # Remember context and speak results
-        self._match = article
-        # TODO improve context handling
-        self.set_context("wiki_article", "")
+        else:
+            summary, num_lines = self.wiki.get_summary_intro(page)
+            # wait for the "just a minute while I look for that" dialog to finish
+            article = Article(page.title, page, summary, num_lines)
+            image = self.wiki.get_best_image_url(page, self.max_image_width)
+            article = article._replace(image=image)
+            return self.end_session(
+                speak=summary,
+                gui_page="feature_image.qml",
+                gui_data=self.get_display_data(article),
+                gui_clear_after_speak=True,
+            )
 
     def display_article(self, article: Article):
         """Display the match page on a GUI if connected.
@@ -393,7 +305,7 @@ class WikipediaSkill(CommonQuerySkill):
         self.update_display_data(article)
         self.gui.show_page("feature_image.qml", override_idle=True)
 
-    def update_display_data(self, article: Article):
+    def get_display_data(self, article: Article):
         """Update the GUI display data when a page is already being shown.
 
         Arguments:
@@ -401,9 +313,11 @@ class WikipediaSkill(CommonQuerySkill):
         """
         title = article.title or ""
 
-        self.gui["title"] = title
-        self.gui["summary"] = article.summary or ""
-        self.gui["imgLink"] = article.image or ""
+        return {
+            "title": title,
+            "summary": article.summary or "",
+            "imgLink": article.image or "",
+        }
 
     def stop(self):
         self.log.debug("wiki stop() hit")

@@ -105,6 +105,7 @@ class IntentService:
 
         self._response_skill_id: Optional[str] = None
         self._session_id: Optional[str] = None
+        self._session_continue = False
         self._session_actions: List[Dict[str, Any]] = []
 
         self.bus.on("register_vocab", self.handle_register_vocab)
@@ -112,6 +113,7 @@ class IntentService:
 
         self.bus.on("recognizer_loop:utterance", self.handle_utterance)
         self.bus.on("mycroft.mic.listen", self.handle_listen)
+        self.bus.on("mycroft.session.continue", self.handle_session_continue)
         self.bus.on("mycroft.session.end", self.handle_session_end)
         self.bus.on("mycroft.tts.speaking-finished", self.handle_tts_finished)
 
@@ -278,6 +280,7 @@ class IntentService:
             self.abort_session(self._session_id)
 
         self._session_id = mycroft_session_id
+        self._session_continue = False
         self._session_actions.clear()
         self.bus.emit(
             Message(
@@ -295,6 +298,7 @@ class IntentService:
     def end_session(self, mycroft_session_id: str, aborted: bool = False):
         if self._session_id == mycroft_session_id:
             self._session_id = None
+            self._session_continue = False
             self._session_actions.clear()
 
         self.bus.emit(
@@ -307,10 +311,10 @@ class IntentService:
     def handle_session_continue(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
         if mycroft_session_id == self._session_id:
+            self._session_continue = True
             self._session_actions = message.data.get("actions", [])
-            if self._session_actions:
-                skill_id = message.data["skill_id"]
-                self.next_session_action(skill_id)
+            skill_id = message.data["skill_id"]
+            self.next_session_action(skill_id)
 
             self.bus.emit(
                 Message(
@@ -325,20 +329,22 @@ class IntentService:
     def handle_session_end(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
         if mycroft_session_id == self._session_id:
+            self._session_continue = False
             self._session_actions = message.data.get("actions", [])
-            if self._session_actions:
-                skill_id = message.data["skill_id"]
-                self.next_session_action(skill_id)
-            else:
+            skill_id = message.data["skill_id"]
+            self.next_session_action(skill_id)
+
+            if not self._session_actions:
+                # Session is over
                 self.end_session(message.data["mycroft_session_id"])
 
     def handle_tts_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
         if mycroft_session_id == self._session_id:
-            if self._session_actions:
-                skill_id = message.data["skill_id"]
-                self.next_session_action(skill_id)
-            else:
+            skill_id = message.data["skill_id"]
+            self.next_session_action(skill_id)
+            if (not self._session_actions) and (not self._session_continue):
+                # Session will not continue
                 self.end_session(mycroft_session_id)
 
     def handle_listen(self, message: Message):
@@ -379,6 +385,10 @@ class IntentService:
                 if action.get("wait", True):
                     # Will be called back when TTS is finished
                     return
+            elif action_type == "message":
+                msg_type = action["message_type"]
+                msg_data = action.get("data", {})
+                self.bus.emit(Message(msg_type, data=msg_data))
 
             # TODO: get_response
             # TODO: show_page
@@ -390,8 +400,6 @@ class IntentService:
                     data={"mycroft_session_id": self._session_id, "action": action},
                 )
             )
-
-        self.end_session(mycroft_session_id)
 
     def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills

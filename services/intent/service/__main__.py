@@ -19,6 +19,7 @@ from threading import Event, Thread
 
 import sdnotify
 from mycroft.configuration import Configuration
+from mycroft.skills.event_scheduler import EventScheduler
 from mycroft_bus_client import Message, MessageBusClient
 
 from .intent_service import IntentService
@@ -44,6 +45,7 @@ def main():
         bus = _connect_to_bus()
         config = Configuration.get()
         intent_service = IntentService(bus)
+        event_scheduler = EventScheduler(bus)
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -58,6 +60,7 @@ def main():
         except KeyboardInterrupt:
             LOG.info("Service is shutting down...")
         finally:
+            event_scheduler.shutdown()
             bus.close()
     except Exception:
         LOG.exception("Service failed to start")

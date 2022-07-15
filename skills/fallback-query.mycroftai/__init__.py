@@ -14,7 +14,7 @@
 import re
 import threading
 import time
-import typing
+from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills.fallback_skill import FallbackSkill
@@ -28,7 +28,7 @@ class QuestionsAnswersSkill(FallbackSkill):
         self.lock = threading.Lock()
         self.is_searching = False
         self.searching_event = threading.Event()
-        self.answer_message: typing.Optional[Message] = None
+        self.answer_message: Optional[Message] = None
         self.action_event = threading.Event()
         self.query_done_event = threading.Event()
 
@@ -65,124 +65,154 @@ class QuestionsAnswersSkill(FallbackSkill):
         """Send the phrase to the CommonQuerySkills and prepare for handling
         the replies.
         """
-        self.query_done_event.clear()
+        # self.query_done_event.clear()
         utt = message.data.get("utterance")
 
         if not self.valid_question(utt):
             return False
 
-        self.bus.emit(
-            Message(
-                "fallback-query.search",
-                data={"utterance": utt, "mycroft_session_id": self._session_id},
-            )
+        # self.bus.emit(
+        #     Message(
+        #         "fallback-query.search",
+        #         data={"utterance": utt, "mycroft_session_id": self._session_id},
+        #     )
+        # )
+
+        # # HACK: Block to keep session open
+        # self.query_done_event.wait(timeout=60)
+        # self.log.debug("Done: %s", self._session_id)
+
+        # return True
+
+        self.answer_message = None
+        self.schedule_event(
+            self._query_timeout,
+            5,
+            data={"phrase": utt, "mycroft_session_id": self._mycroft_session_id},
+            name="QuestionQueryTimeout",
         )
 
-        # HACK: Block to keep session open
-        self.query_done_event.wait(timeout=60)
-        self.log.debug("Done: %s", self._session_id)
-
-        return True
+        return True, self.continue_session(
+            dialog="just.one.moment",
+            speak_wait=False,
+            message=Message("question:query", data={"phrase": utt}),
+            gui_page="SearchingForAnswers.qml",
+        )
 
     def handle_query_search(self, message):
-        try:
-            with self.activity():
-                utt = message.data.get("utterance")
+        utt = message.data.get("utterance")
 
-                if self.is_searching:
-                    self._stop_search()
+        # try:
+        #     with self.activity():
+        #         utt = message.data.get("utterance")
 
-                self.log.info("Searching for %s", utt)
-                self._start_search()
-                self.schedule_event(
-                    self._query_timeout,
-                    5,
-                    data={"phrase": utt},
-                    name="QuestionQueryTimeout",
-                )
+        #         if self.is_searching:
+        #             self._stop_search()
 
-                self.bus.emit(message.forward("question:query", data={"phrase": utt}))
+        #         self.log.info("Searching for %s", utt)
+        #         self._start_search()
+        #         self.schedule_event(
+        #             self._query_timeout,
+        #             5,
+        #             data={"phrase": utt},
+        #             name="QuestionQueryTimeout",
+        #         )
 
-                self.gui.show_page("SearchingForAnswers.qml")
-                self.speak_dialog("just.one.moment")
-                self.searching_event.wait(timeout=6)
+        #         self.bus.emit(message.forward("question:query", data={"phrase": utt}))
 
-                if self.answer_message:
-                    self.log.info(
-                        "CQS action start (data=%s)", self.answer_message.data
-                    )
-                    self.action_event.clear()
-                    self.bus.emit(
-                        message.forward(
-                            "question:action",
-                            data={
-                                "skill_id": self.answer_message.data["skill_id"],
-                                "phrase": utt,
-                                "callback_data": self.answer_message.data.get(
-                                    "callback_data"
-                                ),
-                                "mycroft_session_id": self._session_id,
-                            },
-                        )
-                    )
-                    self.action_event.wait(timeout=60)
-                    self.log.info("CQS action complete")
-                else:
-                    # No action
-                    self.speak_dialog("noAnswer", wait=True)
-        finally:
-            self.query_done_event.set()
+        #         self.gui.show_page("SearchingForAnswers.qml")
+        #         self.speak_dialog("just.one.moment")
+        #         self.searching_event.wait(timeout=6)
+
+        #         if self.answer_message:
+        #             self.log.info(
+        #                 "CQS action start (data=%s)", self.answer_message.data
+        #             )
+        #             self.action_event.clear()
+        #             self.bus.emit(
+        #                 message.forward(
+        #                     "question:action",
+        #                     data={
+        #                         "skill_id": self.answer_message.data["skill_id"],
+        #                         "phrase": utt,
+        #                         "callback_data": self.answer_message.data.get(
+        #                             "callback_data"
+        #                         ),
+        #                         "mycroft_session_id": self._session_id,
+        #                     },
+        #                 )
+        #             )
+        #             self.action_event.wait(timeout=60)
+        #             self.log.info("CQS action complete")
+        #         else:
+        #             # No action
+        #             self.speak_dialog("noAnswer", wait=True)
+        # finally:
+        #     self.query_done_event.set()
 
     def handle_query_response(self, message):
-        with self.lock:
-            if not self.is_searching:
-                return
+        if message.data.get("mycroft_session_id") != self._mycroft_session_id:
+            # Different session now
+            return
 
-            searching = message.data.get("searching")
-            if searching:
-                return
+        searching = message.data.get("searching")
+        if searching:
+            # No answer yet
+            return
 
-            answer = message.data.get("answer")
+        answer = message.data.get("answer")
 
-            if answer:
-                skill_id = message.data["skill_id"]
-                conf = message.data["conf"]
+        if answer:
+            skill_id = message.data["skill_id"]
+            conf = message.data["conf"]
 
-                if (not self.answer_message) or (
-                    conf > self.answer_message.data["conf"]
-                ):
-                    self.log.info(
-                        "Answer from %s: %s (confidence=%s)", skill_id, answer, conf
-                    )
-                    self.answer_message = message
+            if (not self.answer_message) or (conf > self.answer_message.data["conf"]):
+                self.log.info(
+                    "Answer from %s: %s (confidence=%s)", skill_id, answer, conf
+                )
+                self.answer_message = message
 
     def _query_timeout(self, message):
-        with self.lock:
-            if not self.is_searching:
-                return
+        if message.data.get("mycroft_session_id") != self._mycroft_session_id:
+            # Different session now
+            return
 
-            if self.answer_message:
-                self._answer_found()
-            else:
-                self.log.info("Search timeout")
-                self._stop_search()
+        if self.answer_message:
+            # Engage action
+            self.log.info("CQS action start (data=%s)", self.answer_message.data)
+            self.bus.emit(
+                message.forward(
+                    "question:action",
+                    data={
+                        "mycroft_session_id": self._mycroft_session_id,
+                        "skill_id": self.answer_message.data.get("skill_id"),
+                        "phrase": message.data.get("phrase"),
+                        "callback_data": self.answer_message.data.get("callback_data"),
+                    },
+                )
+            )
+        else:
+            # No answers
+            self.log.info("Search timeout")
+            result = self.end_session(dialog="noAnswer")
+            self.bus.emit(result)
 
     def handle_query_action_complete(self, message):
-        self.action_event.set()
+        pass
 
-    def _start_search(self):
-        self.is_searching = True
-        self.answer_message = None
-        self.searching_event.clear()
+    # def _start_search(self):
+    #     self.is_searching = True
+    #     self.answer_message = None
+    #     self.searching_event.clear()
 
-    def _stop_search(self):
-        self.is_searching = False
-        self.answer_message = None
-        self.searching_event.set()
+    # def _stop_search(self):
+    #     self.is_searching = False
+    #     self.answer_message = None
+    #     self.searching_event.set()
 
-    def _answer_found(self):
-        self.is_searching = False
-        self.searching_event.set()
+    # def _answer_found(self):
+    #     self.is_searching = False
+    #     self.searching_event.set()
 
 
 def create_skill():
