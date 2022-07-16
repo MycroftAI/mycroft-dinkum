@@ -352,8 +352,9 @@ class MycroftSkill:
             # # For get_response
             # self._bus.on("mycroft.skill-response", self._handle_skill_response)
 
-            self._bus.on("mycroft.session.started", self._handle_session_started)
-            self._bus.on("mycroft.session.ended", self._handle_session_ended)
+            # self._bus.on("mycroft.session.started", self._handle_session_started)
+            # self._bus.on("mycroft.session.ended", self._handle_session_ended)
+            self._bus.on("mycroft.skill-response", self._handle_skill_response)
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -921,18 +922,18 @@ class MycroftSkill:
 
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
-            if message.data.get("mycroft_session_id") != self._mycroft_session_id:
-                self.log.warning(
-                    "Dropping intent message from different session: %s", message.data
-                )
-                return
-
+            self._mycroft_session_id = message.data.get("mycroft_session_id")
             result_message: Optional[Message] = None
             try:
                 message = unmunge_message(message, self.skill_id)
                 result_message = handler(message)
             except Exception:
                 LOG.exception("Error in intent handler: %s", name)
+
+                # Speak error
+                self.start_session(
+                    dialog=("skill.error", {"skill": camel_case_split(self.name)})
+                )
 
             if result_message is None:
                 result_message = self.end_session()
@@ -1605,7 +1606,7 @@ class MycroftSkill:
         speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
-        gui_clear_after_speak: bool = False,
+        gui_clear: str = "on_idle",
         message: Optional[Message] = None,
     ):
         actions = []
@@ -1624,29 +1625,81 @@ class MycroftSkill:
             )
 
         if gui_page is not None:
-            actions.append({"type": "show_page", "data": gui_data or {}})
+            actions.append(
+                {
+                    "type": "show_page",
+                    "data": gui_data or {},
+                    "override_idle": gui_clear == "on_idle",
+                }
+            )
 
         if dialog is not None:
-            dialog_data = {}
-            if not isinstance(dialog, str):
-                dialog, dialog_data = dialog
+            if isinstance(dialog, (str, tuple)):
+                # Single dialog
+                dialogs = [dialog]
+            else:
+                dialogs = list(dialog)
 
-            speak = self.dialog_renderer.render(dialog, dialog_data)
+            for dialog_info in dialogs:
+                if isinstance(dialog_info, str):
+                    dialog_name, dialog_data = dialog_info, {}
+                else:
+                    dialog_name, dialog_data = dialog_info
+
+                utterance = self.dialog_renderer.render(dialog_name, dialog_data)
+                actions.append(
+                    {
+                        "type": "speak",
+                        "utterance": utterance,
+                        "dialog": dialog_name,
+                        "wait": speak_wait,
+                    }
+                )
 
         if speak is not None:
             actions.append(
                 {
                     "type": "speak",
                     "utterance": speak,
-                    "dialog": dialog,
                     "wait": speak_wait,
                 }
             )
 
-        if gui_clear_after_speak:
+        if gui_clear == "after_speak":
             actions.append({"type": "clear_display"})
 
         return actions
+
+    def start_session(
+        self,
+        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        speak: Optional[str] = None,
+        speak_wait: bool = True,
+        gui_page: Optional[str] = None,
+        gui_data: Optional[Dict[str, Any]] = None,
+        gui_clear: str = "on_idle",
+        expect_response: bool = False,
+        message: Optional[Message] = None,
+        continue_session: bool = False,
+    ) -> Message:
+        return Message(
+            "mycroft.session.start",
+            data={
+                "mycroft_session_id": self._mycroft_session_id,
+                "skill_id": self.skill_id,
+                "actions": self._build_actions(
+                    dialog=dialog,
+                    speak=speak,
+                    speak_wait=speak_wait,
+                    gui_page=gui_page,
+                    gui_data=gui_data,
+                    gui_clear=gui_clear,
+                    message=message,
+                ),
+                "expect_response": expect_response,
+                "continue_session": continue_session,
+            },
+        )
 
     def continue_session(
         self,
@@ -1655,7 +1708,7 @@ class MycroftSkill:
         speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
-        gui_clear_after_speak: bool = False,
+        gui_clear: str = "on_idle",
         expect_response: bool = False,
         message: Optional[Message] = None,
     ) -> Message:
@@ -1670,7 +1723,7 @@ class MycroftSkill:
                     speak_wait=speak_wait,
                     gui_page=gui_page,
                     gui_data=gui_data,
-                    gui_clear_after_speak=gui_clear_after_speak,
+                    gui_clear=gui_clear,
                     message=message,
                 ),
                 "expect_response": expect_response,
@@ -1684,7 +1737,7 @@ class MycroftSkill:
         speak_wait: bool = True,
         gui_page: Optional[str] = None,
         gui_data: Optional[Dict[str, Any]] = None,
-        gui_clear_after_speak: bool = False,
+        gui_clear: str = "on_idle",
         message: Optional[Message] = None,
     ) -> Message:
         return Message(
@@ -1698,7 +1751,7 @@ class MycroftSkill:
                     speak_wait=speak_wait,
                     gui_page=gui_page,
                     gui_data=gui_data,
-                    gui_clear_after_speak=gui_clear_after_speak,
+                    gui_clear=gui_clear,
                     message=message,
                 ),
             },
@@ -1709,8 +1762,27 @@ class MycroftSkill:
         message.data["aborted"] = True
         return message
 
-    def _handle_session_started(self, message: Message):
-        self._mycroft_session_id = message.data.get("mycroft_session_id")
+    # def _handle_session_started(self, message: Message):
+    #     self._mycroft_session_id = message.data.get("mycroft_session_id")
 
-    def _handle_session_ended(self, _message: Message):
-        self._mycroft_session_id = None
+    # def _handle_session_ended(self, _message: Message):
+    #     self._mycroft_session_id = None
+
+    def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
+        return None
+
+    def _handle_skill_response(self, message: Message):
+        if (message.data.get("skill_id") == self.skill_id) and (
+            message.data.get("mycroft_session_id") == self._mycroft_session_id
+        ):
+            utterances = message.data.get("utterances", [])
+            utterance = utterances[0] if utterances else None
+            result_message = None
+            try:
+                result_message = self.raw_utterance(utterance)
+            except Exception:
+                LOG.exception("Unexpected error in raw_utterance")
+
+            if result_message is None:
+                result_message = self.end_session()
+            self.bus.emit(result_message)

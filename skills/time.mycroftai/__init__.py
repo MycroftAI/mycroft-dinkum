@@ -170,7 +170,7 @@ class TimeSkill(MycroftSkill):
             gui_data={
                 "timeString": get_display_time(response.date_time, self.config_core)
             },
-            gui_clear_after_speak=True,
+            gui_clear="after_speak",
         )
 
     def _display_time(self, response: Response):

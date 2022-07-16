@@ -59,12 +59,11 @@ class VoightKampffClient:
     def __init__(self):
         self.bus = InterceptAllBusClient(self._on_message)
 
-        self._activity_ids: Set[str] = set()
         self._tts_session_ids: Set[str] = set()
-        self._activities_ended = Event()
         self._speaking_finished = Event()
         self._speak_queue: "Queue[Message]" = Queue()
 
+        self._active_sessions: Set[str] = set()
         self.mycroft_session_id: Optional[str] = None
         self._session_ended = Event()
 
@@ -87,9 +86,8 @@ class VoightKampffClient:
         self.bus.on("speak", self._handle_speak)
         self.bus.on("mycroft.tts.speaking-finished", self._handle_speaking_finished)
         self.bus.on("complete_intent_failure", self._handle_intent_failure)
+        self.bus.on("mycroft.session.started", self._handle_session_started)
         self.bus.on("mycroft.session.ended", self._handle_session_ended)
-        # self.bus.on("skill.started", self._handle_skill_started)
-        # self.bus.on("skill.ended", self._handle_skill_ended)
 
     def start_new_session(self):
         self._session_ended.clear()
@@ -103,7 +101,6 @@ class VoightKampffClient:
                 data={
                     "utterances": [text],
                     "response_skill_id": response_skill_id,
-                    "mycroft_session_id": self.mycroft_session_id,
                 },
             )
         )
@@ -114,8 +111,9 @@ class VoightKampffClient:
             self._speaking_finished.wait(timeout=10)
 
     def wait_for_session(self):
-        LOG.info("Waiting on session: %s", self.mycroft_session_id)
-        self._session_ended.wait(timeout=30)
+        if self._active_sessions:
+            LOG.info("Waiting on session(s): %s", self._active_sessions)
+            self._session_ended.wait(timeout=30)
 
     def wait_for_message(self, message_type: str, timeout=5) -> Optional[Message]:
         maybe_message: Optional[Message] = None
@@ -133,6 +131,7 @@ class VoightKampffClient:
                 data={"mycroft_session_id": self.mycroft_session_id},
             )
         )
+        sleep(1)
 
     def match_dialogs_or_fail(
         self, dialogs: Union[str, List[str]], skill_id: Optional[str] = None
@@ -185,9 +184,8 @@ class VoightKampffClient:
         self.messages.clear()
         self._message_queues.clear()
 
-        self._activity_ids.clear()
-        self._activities_ended.clear()
         self._tts_session_ids.clear()
+        self._session_ended.clear()
         self._speaking_finished.clear()
 
         while not self._speak_queue.empty():
@@ -197,47 +195,41 @@ class VoightKampffClient:
         self.bus.close()
 
     def _handle_speak(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
-            session_id = message.data.get("session_id")
-            if session_id:
-                self._tts_session_ids.add(session_id)
+        LOG.info(message.data)
+        # if message.data.get("mycroft_session_id") in self._active_sessions:
+        session_id = message.data.get("session_id")
+        if session_id:
+            self._tts_session_ids.add(session_id)
 
-            self._speak_queue.put_nowait(message)
-
-    def _handle_skill_started(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
-            activity_id = message.data.get("activity_id")
-            if activity_id:
-                self._activity_ids.add(activity_id)
-
-    def _handle_skill_ended(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
-            activity_id = message.data.get("activity_id")
-            if activity_id:
-                self._activity_ids.discard(activity_id)
-
-            if not self._activity_ids:
-                self._activities_ended.set()
+        self._speak_queue.put_nowait(message)
 
     def _handle_speaking_finished(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
-            session_id = message.data.get("session_id")
-            if session_id:
-                self._tts_session_ids.discard(session_id)
+        # if message.data.get("mycroft_session_id") in self._active_sessions:
+        session_id = message.data.get("session_id")
+        if session_id:
+            self._tts_session_ids.discard(session_id)
 
-            if not self._tts_session_ids:
-                self._speaking_finished.set()
+        if not self._tts_session_ids:
+            self._speaking_finished.set()
 
     def _handle_intent_failure(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
-            # Flush any waiters
-            self._activities_ended.set()
-            self._speaking_finished.set()
-            self.reset_state()
+        # if message.data.get("mycroft_session_id") in self._active_sessions:
+        # Flush any waiters
+        self._speaking_finished.set()
+        self._session_ended.set()
+        self.reset_state()
+
+    def _handle_session_started(self, message: Message):
+        self.mycroft_session_id = message.data.get("mycroft_session_id")
+        self._active_sessions.add(self.mycroft_session_id)
 
     def _handle_session_ended(self, message: Message):
-        if message.data.get("mycroft_session_id") == self.mycroft_session_id:
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        LOG.debug("Ended: %s", mycroft_session_id)
+        self._active_sessions.discard(mycroft_session_id)
+        if not self._active_sessions:
             self._session_ended.set()
+
 
 def before_all(context):
     # log = create_voight_kampff_logger()

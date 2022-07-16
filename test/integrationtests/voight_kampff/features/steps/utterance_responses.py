@@ -229,12 +229,7 @@ def then_contains(context, text: str):
 @then('the user replies "{text}"')
 @then('the user says "{text}"')
 def then_user_follow_up(context, text):
-    """Send a user response after being prompted by device.
-
-    The sleep after the device is finished speaking is to address a race
-    condition in the MycroftSkill base class conversational code.  It can
-    be removed when the race condition is addressed.
-    """
+    """Send a user response after being prompted by device."""
     context.client.wait_for_message("mycroft.mic.listen")
     context.client.say_utterance(text, response_skill_id=None)
 

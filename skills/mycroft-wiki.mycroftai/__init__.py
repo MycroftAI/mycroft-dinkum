@@ -194,7 +194,7 @@ class WikipediaSkill(CommonQuerySkill):
             speak=summary,
             gui_page="feature_image.qml",
             gui_data=self.get_display_data(article),
-            gui_clear_after_speak=True,
+            gui_clear="after_speak",
         )
 
     def extract_topic(self, query: str) -> str:
@@ -293,7 +293,7 @@ class WikipediaSkill(CommonQuerySkill):
                 speak=summary,
                 gui_page="feature_image.qml",
                 gui_data=self.get_display_data(article),
-                gui_clear_after_speak=True,
+                gui_clear="after_speak",
             )
 
     def display_article(self, article: Article):

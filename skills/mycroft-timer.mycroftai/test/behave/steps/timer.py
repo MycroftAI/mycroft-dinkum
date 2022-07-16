@@ -51,13 +51,13 @@ def start_single_named_dialog_timer(context, duration, name):
 @given("multiple active timers")
 def start_multiple_timers(context):
     """Clear any active timers and start multiple timers by duration."""
-    # _cancel_all_timers(context)
-    # for row in context.table:
-    #     _start_a_timer(
-    #         context.bus,
-    #         utterance="set a timer for " + row["duration"],
-    #         response=["started-timer", "started-timer-named"],
-    #     )
+    _cancel_all_timers(context)
+    for row in context.table:
+        _start_a_timer(
+            context,
+            utterance="set a timer for " + row["duration"],
+            response=["started-timer", "started-timer-named"],
+        )
 
 
 def _start_a_timer(context, utterance: str, response: List[str]):

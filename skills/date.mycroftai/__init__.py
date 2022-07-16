@@ -170,7 +170,7 @@ class DateSkill(MycroftSkill):
                 "monthString": response.date_time.strftime("%B"),
                 "dayString": response.date_time.strftime("%-d"),
             },
-            gui_clear_after_speak=True,
+            gui_clear="after_speak",
         )
 
 

@@ -148,8 +148,10 @@ class AudioUserInterface:
             "recognizer_loop:audio_output_end": self.handle_tts_finished,
             # "mycroft.volume.duck": self.handle_duck_volume,
             # "mycroft.volume.unduck": self.handle_unduck_volume,
-            "skill.started": self.handle_skill_started,
-            "skill.ended": self.handle_skill_ended,
+            # "skill.started": self.handle_skill_started,
+            # "skill.ended": self.handle_skill_ended,
+            # "mycroft.session.started": self.handle_session_started,
+            # "mycroft.session.ended": self.handle_session_ended,
             "mycroft.audio.play-sound": self.handle_play_sound,
             "mycroft.tts.stop": self.handle_tts_stop,
             "mycroft.tts.speak-chunk": self.handle_tts_chunk,
@@ -260,26 +262,32 @@ class AudioUserInterface:
             )
             LOG.info("Played sound: %s", uri)
 
-    def handle_skill_started(self, message):
-        """Handler for skills' activity_started"""
-        skill_id = message.data.get("skill_id")
-        self._activity_id = message.data.get("activity_id")
+    # def handle_session_started(self, message):
+    #     self._stop_tts()
 
-        LOG.info(
-            "Clearing TTS queue for activity '%s', skill=%s",
-            self._activity_id,
-            skill_id,
-        )
+    # def handle_session_ended(self, message):
+    #     self._unduck_volume()
 
-        self._stop_tts()
+    # def handle_skill_started(self, message):
+    #     """Handler for skills' activity_started"""
+    #     skill_id = message.data.get("skill_id")
+    #     self._activity_id = message.data.get("activity_id")
 
-    def handle_skill_ended(self, message):
-        """Handler for skills' activity_ended"""
-        activity_id = message.data.get("activity_id")
+    #     LOG.info(
+    #         "Clearing TTS queue for activity '%s', skill=%s",
+    #         self._activity_id,
+    #         skill_id,
+    #     )
 
-        if (activity_id == self._activity_id) or (not activity_id):
-            self._activity_id = None
-            self._unduck_volume()
+    #     self._stop_tts()
+
+    # def handle_skill_ended(self, message):
+    #     """Handler for skills' activity_ended"""
+    #     activity_id = message.data.get("activity_id")
+
+    #     if (activity_id == self._activity_id) or (not activity_id):
+    #         self._activity_id = None
+    #         self._unduck_volume()
 
     def _drain_speech_queue(self):
         """Ensures the text to speech queue is emptied"""
@@ -385,7 +393,9 @@ class AudioUserInterface:
                     timeout = duration_sec + 0.5
                     self._speech_finished.wait(timeout=timeout)
 
-                if request.is_last_chunk:
+                if request.is_last_chunk or (
+                    self._tts_session_id != request.session_id
+                ):
                     self._finish_tts_session(
                         session_id=request.session_id,
                         listen=request.listen,
