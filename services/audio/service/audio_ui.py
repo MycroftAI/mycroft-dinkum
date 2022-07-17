@@ -44,12 +44,10 @@ class TTSRequest:
     """
 
     uri: str
-    session_id: str
+    tts_session_id: str
     chunk_index: int
     num_chunks: int
-    listen: bool = False
     skill_id: typing.Optional[str] = None
-    response_skill_id: typing.Optional[str] = None
     mycroft_session_id: typing.Optional[str] = None
 
     @property
@@ -154,8 +152,8 @@ class AudioUserInterface:
             # "mycroft.session.ended": self.handle_session_ended,
             "mycroft.audio.play-sound": self.handle_play_sound,
             "mycroft.tts.stop": self.handle_tts_stop,
-            "mycroft.tts.speak-chunk": self.handle_tts_chunk,
-            "mycroft.audio.hal.media-finished": self.handle_media_finished,
+            "mycroft.tts.chunk.start": self.handle_tts_chunk,
+            "mycroft.audio.hal.media.ended": self.handle_media_finished,
             "mycroft.audio.service.play": self.handle_stream_play,
             "mycroft.audio.service.pause": self.handle_stream_pause,
             "mycroft.audio.service.resume": self.handle_stream_resume,
@@ -216,9 +214,6 @@ class AudioUserInterface:
     def _stop_tts(self):
         LOG.info("Stopping TTS")
 
-        # if self._tts_session_id:
-        #     self._ignore_session_ids.append(self._tts_session_id)
-
         self._tts_session_id = None
 
         self._drain_speech_queue()
@@ -262,33 +257,6 @@ class AudioUserInterface:
             )
             LOG.info("Played sound: %s", uri)
 
-    # def handle_session_started(self, message):
-    #     self._stop_tts()
-
-    # def handle_session_ended(self, message):
-    #     self._unduck_volume()
-
-    # def handle_skill_started(self, message):
-    #     """Handler for skills' activity_started"""
-    #     skill_id = message.data.get("skill_id")
-    #     self._activity_id = message.data.get("activity_id")
-
-    #     LOG.info(
-    #         "Clearing TTS queue for activity '%s', skill=%s",
-    #         self._activity_id,
-    #         skill_id,
-    #     )
-
-    #     self._stop_tts()
-
-    # def handle_skill_ended(self, message):
-    #     """Handler for skills' activity_ended"""
-    #     activity_id = message.data.get("activity_id")
-
-    #     if (activity_id == self._activity_id) or (not activity_id):
-    #         self._activity_id = None
-    #         self._unduck_volume()
-
     def _drain_speech_queue(self):
         """Ensures the text to speech queue is emptied"""
         while not self._speech_queue.empty():
@@ -297,27 +265,18 @@ class AudioUserInterface:
     def handle_tts_chunk(self, message):
         """Queues a text to speech audio chunk to be played"""
         uri = message.data["uri"]
-        session_id = message.data.get("session_id", "")
+        tts_session_id = message.data.get("tts_session_id", "")
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
-        listen = message.data.get("listen", False)
-        skill_id = message.data.get("skill_id")
-        response_skill_id = message.data.get("response_skill_id")
+        # skill_id = message.data.get("skill_id")
         mycroft_session_id = message.data.get("mycroft_session_id")
-
-        # if session_id in self._ignore_session_ids:
-        #     # Drop chunks from previously stopped session
-        #     LOG.info("Ignoring TTS chunk from session: %s", session_id)
-        #     return
 
         request = TTSRequest(
             uri=uri,
-            session_id=session_id,
+            tts_session_id=tts_session_id,
             chunk_index=chunk_index,
             num_chunks=num_chunks,
-            listen=listen,
-            skill_id=skill_id,
-            response_skill_id=response_skill_id,
+            # skill_id=skill_id,
             mycroft_session_id=mycroft_session_id,
         )
         self._speech_queue.put(request)
@@ -355,9 +314,7 @@ class AudioUserInterface:
                 if request is None:
                     break
 
-                # if request.session_id not in self._ignore_session_ids:
-                self._tts_session_id = request.session_id
-
+                self._tts_session_id = request.tts_session_id
                 if request.is_first_chunk:
                     self.bus.emit(
                         Message(
@@ -370,37 +327,61 @@ class AudioUserInterface:
                 assert request.uri.startswith("file://")
                 file_path = request.uri[len("file://") :]
 
+                self.bus.emit(
+                    Message(
+                        "mycroft.tts.chunk.started",
+                        data={
+                            "mycroft_session_id": request.mycroft_session_id,
+                            "tts_session_id": request.tts_session_id,
+                            "chunk_index": request.chunk_index,
+                            "num_chunks": request.num_chunks,
+                            "uri": request.uri,
+                        },
+                    )
+                )
+
                 # Play TTS chunk
                 self._speech_finished.clear()
                 if os.path.isfile(file_path):
                     duration_sec = self._ahal.play_foreground(
                         ForegroundChannel.SPEECH,
                         file_path,
-                        media_id=request.session_id,
+                        media_id=request.tts_session_id,
                     )
 
-                    assert duration_sec is not None
-                    LOG.info(
-                        "Speaking TTS chunk %s/%s for %s sec from session %s",
-                        request.chunk_index + 1,
-                        request.num_chunks,
-                        duration_sec,
-                        request.session_id,
-                    )
+                    if duration_sec is not None:
+                        LOG.info(
+                            "Speaking TTS chunk %s/%s for %s sec from session %s",
+                            request.chunk_index + 1,
+                            request.num_chunks,
+                            duration_sec,
+                            request.tts_session_id,
+                        )
 
-                    # Wait at most a half second after TTS should have been finished.
-                    # This event is set whenever TTS is cleared.
-                    timeout = duration_sec + 0.5
-                    self._speech_finished.wait(timeout=timeout)
+                        # Wait at most a half second after TTS should have been finished.
+                        # This event is set whenever TTS is cleared.
+                        timeout = duration_sec + 0.5
+                        self._speech_finished.wait(timeout=timeout)
+
+                self.bus.emit(
+                    Message(
+                        "mycroft.tts.chunk.ended",
+                        data={
+                            "mycroft_session_id": request.mycroft_session_id,
+                            "tts_session_id": request.tts_session_id,
+                            "chunk_index": request.chunk_index,
+                            "num_chunks": request.num_chunks,
+                            "uri": request.uri,
+                        },
+                    )
+                )
 
                 if request.is_last_chunk or (
-                    self._tts_session_id != request.session_id
+                    self._tts_session_id != request.tts_session_id
                 ):
                     self._finish_tts_session(
-                        session_id=request.session_id,
-                        listen=request.listen,
-                        skill_id=request.skill_id,
-                        response_skill_id=request.response_skill_id,
+                        session_id=request.tts_session_id,
+                        # skill_id=request.skill_id,
                         mycroft_session_id=request.mycroft_session_id,
                     )
 
@@ -410,34 +391,27 @@ class AudioUserInterface:
     def _finish_tts_session(
         self,
         session_id: str,
-        listen: bool = False,
-        skill_id: typing.Optional[str] = None,
-        response_skill_id: typing.Optional[str] = None,
+        # skill_id: typing.Optional[str] = None,
         mycroft_session_id: typing.Optional[str] = None,
     ):
         # Report speaking finished for speak(wait=True)
         self.bus.emit(
             Message(
-                "mycroft.tts.speaking-finished",
+                "mycroft.tts.session.ended",
                 data={
-                    "session_id": session_id,
-                    "skill_id": skill_id,
+                    "tts_session_id": session_id,
+                    # "skill_id": skill_id,
                     "mycroft_session_id": mycroft_session_id,
                 },
             )
         )
 
-        self.bus.emit(Message("recognizer_loop:audio_output_end"))
-        if listen:
-            self.bus.emit(
-                Message(
-                    "mycroft.mic.listen",
-                    data={
-                        "response_skill_id": response_skill_id,
-                        "mycroft_session_id": mycroft_session_id,
-                    },
-                )
+        self.bus.emit(
+            Message(
+                "recognizer_loop:audio_output_end",
+                data={"mycroft_session_id": mycroft_session_id},
             )
+        )
 
         LOG.info("TTS session finished: %s", session_id)
 

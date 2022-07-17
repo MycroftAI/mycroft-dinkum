@@ -90,7 +90,7 @@ class AudioHAL:
                 media_id = self._fg_media_ids.get(channel) or ""
                 self.bus.emit(
                     Message(
-                        "mycroft.audio.hal.media-finished",
+                        "mycroft.audio.hal.media.ended",
                         data={"channel": channel, "media_id": media_id},
                     )
                 )
@@ -213,7 +213,7 @@ class AudioHAL:
 
         self.bus.emit(
             Message(
-                "mycroft.audio.hal.media-finished",
+                "mycroft.audio.hal.media.ended",
                 data={"background": True, "media_id": media_id},
             )
         )

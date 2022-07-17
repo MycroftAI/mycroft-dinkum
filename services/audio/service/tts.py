@@ -29,30 +29,25 @@ class SpeakHandler:
     def __call__(self, message: Message):
         try:
             utterance = message.data["utterance"]
-            listen = message.data.get("expect_response", False)
-            skill_id = message.data.get("skill_id")
-            response_skill_id = message.data.get("response_skill_id")
+            # skill_id = message.data.get("skill_id")
             mycroft_session_id = message.data.get("mycroft_session_id")
+            LOG.debug("Speak for session '%s': %s", mycroft_session_id, utterance)
 
             segments = self._segment(utterance)
-            session_id = message.data.get("session_id") or str(uuid4())
+            tts_session_id = message.data.get("tts_session_id") or str(uuid4())
             for i, sentence in enumerate(segments):
-                is_last_chunk = i == (len(segments) - 1)
+                # is_last_chunk = i == (len(segments) - 1)
                 cache_path = self._synthesize(sentence)
                 audio_uri = "file://" + str(cache_path)
                 self.bus.emit(
                     Message(
-                        "mycroft.tts.speak-chunk",
+                        "mycroft.tts.chunk.start",
                         data={
                             "uri": audio_uri,
-                            "session_id": session_id,
+                            "tts_session_id": tts_session_id,
                             "chunk_index": i,
                             "num_chunks": len(segments),
-                            "listen": listen if is_last_chunk else False,
-                            "skill_id": skill_id,
-                            "response_skill_id": response_skill_id
-                            if is_last_chunk
-                            else None,
+                            # "skill_id": skill_id,
                             "mycroft_session_id": mycroft_session_id,
                         },
                     )

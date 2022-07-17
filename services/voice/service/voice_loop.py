@@ -5,8 +5,9 @@ import subprocess
 from collections import deque
 from pathlib import Path
 from queue import Queue
-from threading import Event, Thread
-from typing import Any
+from threading import Thread
+from typing import Any, Optional
+from uuid import uuid4
 
 import numpy as np
 # import websockets
@@ -42,10 +43,21 @@ def voice_loop(
     command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
     chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
     is_recording = False
+    mycroft_session_id: Optional[str] = None
 
-    def do_listen():
-        nonlocal is_recording
-        bus.emit(Message("recognizer_loop:awoken"))
+    def do_listen(message: Optional[Message] = None):
+        nonlocal is_recording, mycroft_session_id
+        if message:
+            mycroft_session_id = message.data.get("mycroft_session_id")
+        else:
+            mycroft_session_id = str(uuid4())
+
+        bus.emit(
+            Message(
+                "recognizer_loop:awoken",
+                data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
 
         # Begin voice command
         command.reset()
@@ -72,8 +84,8 @@ def voice_loop(
         muted = False
         LOG.info("Unmuted microphone")
 
-    def handle_listen(_message):
-        do_listen()
+    def handle_listen(message):
+        do_listen(message)
 
     bus.on("mycroft.mic.mute", handle_mute)
     bus.on("mycroft.mic.unmute", handle_unmute)
@@ -113,7 +125,10 @@ def voice_loop(
                     bus.emit(
                         Message(
                             "recognizer_loop:utterance",
-                            {"utterances": [text]},
+                            {
+                                "utterances": [text],
+                                "mycroft_session_id": mycroft_session_id,
+                            },
                         )
                     )
                 else:
