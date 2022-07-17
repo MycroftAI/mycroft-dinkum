@@ -162,8 +162,6 @@ class TimeSkill(MycroftSkill):
         Args:
             response: object used to formulate the response
         """
-        self._display_time(response)
-
         return self.end_session(
             dialog=(response.dialog_name, response.dialog_data),
             gui_page="time-scalable.qml",
@@ -172,15 +170,6 @@ class TimeSkill(MycroftSkill):
             },
             gui_clear="after_speak",
         )
-
-    def _display_time(self, response: Response):
-        """Display the time on the appropriate medium for the active platform.
-
-        Args:
-            response: object used to formulate the response
-        """
-        if self.gui.connected:
-            self._display_gui(response)
 
     def load_regex_files(self):
         """Skip this logic to handle the location regular expression in the skill.

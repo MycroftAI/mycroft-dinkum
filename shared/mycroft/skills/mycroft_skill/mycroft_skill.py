@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 """Common functionality relating to the implementation of mycroft skills."""
+import itertools
 import logging
 import re
 import sys
@@ -27,7 +28,7 @@ from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Event, Lock, Timer
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -56,6 +57,14 @@ from .event_container import (
     unmunge_message,
 )
 from .skill_control import SkillControl
+
+SessionDialogDataType = Optional[Dict[str, Any]]
+SessionDialogType = Union[str, Tuple[str, SessionDialogDataType]]
+SessionDialogsType = Union[SessionDialogType, List[SessionDialogType]]
+
+SessionGuiDataType = Optional[Dict[str, Any]]
+SessionGuiType = Union[str, Tuple[str, SessionGuiDataType]]
+SessionGuisType = Union[SessionGuiType, List[SessionGuiType]]
 
 
 def simple_trace(stack_trace):
@@ -1601,11 +1610,10 @@ class MycroftSkill:
 
     def _build_actions(
         self,
-        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        dialog: Optional[SessionDialogsType] = None,
         speak: Optional[str] = None,
         speak_wait: bool = True,
-        gui_page: Optional[str] = None,
-        gui_data: Optional[Dict[str, Any]] = None,
+        gui: Optional[SessionGuisType] = None,
         gui_clear: str = "on_idle",
         message: Optional[Message] = None,
     ):
@@ -1624,16 +1632,15 @@ class MycroftSkill:
                 }
             )
 
-        if gui_page is not None:
-            actions.append(
-                {
-                    "type": "show_page",
-                    "page": "file://" + self.find_resource(gui_page, "ui"),
-                    "data": gui_data or {},
-                    "override_idle": gui_clear == "on_idle",
-                }
-            )
+        guis = []
+        if gui is not None:
+            if isinstance(gui, (str, tuple)):
+                # Single gui
+                guis = [gui]
+            else:
+                guis = list(gui)
 
+        dialogs = []
         if dialog is not None:
             if isinstance(dialog, (str, tuple)):
                 # Single dialog
@@ -1641,11 +1648,28 @@ class MycroftSkill:
             else:
                 dialogs = list(dialog)
 
-            for dialog_info in dialogs:
-                if isinstance(dialog_info, str):
-                    dialog_name, dialog_data = dialog_info, {}
+        for maybe_dialog, maybe_gui in itertools.zip_longest(dialogs, guis):
+            if maybe_gui is not None:
+                if isinstance(maybe_gui, str):
+                    gui_page, gui_data = maybe_gui, {}
                 else:
-                    dialog_name, dialog_data = dialog_info
+                    gui_page, gui_data = maybe_gui
+
+                actions.append(
+                    {
+                        "type": "show_page",
+                        # "page": "file://" + self.find_resource(gui_page, "ui"),
+                        "page": f"file:///home/pi/mycroft-dinkum/skills/{self.skill_id}/ui/{gui_page}",
+                        "data": gui_data or {},
+                        "override_idle": gui_clear == "on_idle",
+                    }
+                )
+
+            if maybe_dialog is not None:
+                if isinstance(maybe_dialog, str):
+                    dialog_name, dialog_data = maybe_dialog, {}
+                else:
+                    dialog_name, dialog_data = maybe_dialog
 
                 utterance = self.dialog_renderer.render(dialog_name, dialog_data)
                 actions.append(
@@ -1673,11 +1697,10 @@ class MycroftSkill:
 
     def start_session(
         self,
-        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        dialog: Optional[SessionDialogsType] = None,
         speak: Optional[str] = None,
         speak_wait: bool = True,
-        gui_page: Optional[str] = None,
-        gui_data: Optional[Dict[str, Any]] = None,
+        gui: Optional[SessionGuisType] = None,
         gui_clear: str = "on_idle",
         expect_response: bool = False,
         message: Optional[Message] = None,
@@ -1692,8 +1715,7 @@ class MycroftSkill:
                     dialog=dialog,
                     speak=speak,
                     speak_wait=speak_wait,
-                    gui_page=gui_page,
-                    gui_data=gui_data,
+                    gui=gui,
                     gui_clear=gui_clear,
                     message=message,
                 ),
@@ -1704,11 +1726,10 @@ class MycroftSkill:
 
     def continue_session(
         self,
-        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        dialog: Optional[SessionDialogsType] = None,
         speak: Optional[str] = None,
         speak_wait: bool = True,
-        gui_page: Optional[str] = None,
-        gui_data: Optional[Dict[str, Any]] = None,
+        gui: Optional[SessionGuisType] = None,
         gui_clear: str = "on_idle",
         expect_response: bool = False,
         message: Optional[Message] = None,
@@ -1722,8 +1743,7 @@ class MycroftSkill:
                     dialog=dialog,
                     speak=speak,
                     speak_wait=speak_wait,
-                    gui_page=gui_page,
-                    gui_data=gui_data,
+                    gui=gui,
                     gui_clear=gui_clear,
                     message=message,
                 ),
@@ -1733,11 +1753,10 @@ class MycroftSkill:
 
     def end_session(
         self,
-        dialog: Optional[Union[str, Tuple[str, Dict[Any, str]]]] = None,
+        dialog: Optional[SessionDialogsType] = None,
         speak: Optional[str] = None,
         speak_wait: bool = True,
-        gui_page: Optional[str] = None,
-        gui_data: Optional[Dict[str, Any]] = None,
+        gui: Optional[SessionGuisType] = None,
         gui_clear: str = "on_idle",
         message: Optional[Message] = None,
     ) -> Message:
@@ -1750,8 +1769,7 @@ class MycroftSkill:
                     dialog=dialog,
                     speak=speak,
                     speak_wait=speak_wait,
-                    gui_page=gui_page,
-                    gui_data=gui_data,
+                    gui=gui,
                     gui_clear=gui_clear,
                     message=message,
                 ),

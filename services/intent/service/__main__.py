@@ -20,8 +20,8 @@ from typing import Any, Dict
 
 import sdnotify
 from mycroft.configuration import Configuration
-from mycroft.skills.event_scheduler import EventScheduler
 from mycroft.messagebus.client import create_client
+from mycroft.skills.event_scheduler import EventScheduler
 from mycroft_bus_client import Message, MessageBusClient
 
 from .intent_service import IntentService

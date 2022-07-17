@@ -27,14 +27,13 @@ import asyncio
 import json
 from threading import Lock, Thread
 
+from mycroft.configuration import Configuration
+from mycroft.messagebus import Message
+from mycroft.util.log import LOG
 from tornado import ioloop
 from tornado.options import parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketHandler
-
-from mycroft.configuration import Configuration
-from mycroft.messagebus import Message
-from mycroft.util.log import LOG
 
 write_lock = Lock()
 

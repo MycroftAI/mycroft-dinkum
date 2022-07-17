@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 from typing import Any, Dict
+
 from mycroft_bus_client import MessageBusClient
 
 
