@@ -440,9 +440,37 @@ class IntentService:
                 msg_type = action["message_type"]
                 msg_data = action.get("data", {})
                 self.bus.emit(Message(msg_type, data=msg_data))
-
-            # TODO: show_page
-            # TODO: clear_display
+            elif action_type == "show_page":
+                self.bus.emit(
+                    Message("gui.clear.namespace", data={"__from": session.skill_id})
+                )
+                gui_data = action.get("data", {})
+                self.bus.emit(
+                    Message(
+                        "gui.value.set", data={"__from": session.skill_id, **gui_data}
+                    )
+                )
+                gui_page = action.get("page")
+                if gui_page:
+                    self.bus.emit(
+                        Message(
+                            "gui.page.show",
+                            {
+                                "page": [gui_page],
+                                "index": 0,
+                                "__from": session.skill_id,
+                            },
+                        )
+                    )
+            elif action_type == "clear_display":
+                self.bus.emit(
+                    Message("gui.clear.namespace", data={"__from": session.skill_id})
+                )
+                self.bus.emit(
+                    Message(
+                        "mycroft.gui.screen.close", data={"skill_id": session.skill_id}
+                    )
+                )
 
             self.bus.emit(
                 Message(

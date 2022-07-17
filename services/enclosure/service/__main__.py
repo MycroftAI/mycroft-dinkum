@@ -16,9 +16,11 @@ import logging
 import sys
 import time
 from threading import Event, Thread
+from typing import Any, Dict
 
 import sdnotify
 from mycroft.configuration import Configuration
+from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
 from .enclosure.mark2 import EnclosureMark2
@@ -41,8 +43,8 @@ def main():
     LOG.info("Starting service...")
 
     try:
-        bus = _connect_to_bus()
         config = Configuration.get()
+        bus = _connect_to_bus(config)
 
         enclosure = EnclosureMark2(bus, config)
         enclosure.run()
@@ -68,8 +70,8 @@ def main():
         LOG.exception("Service failed to start")
 
 
-def _connect_to_bus() -> MessageBusClient:
-    bus = MessageBusClient()
+def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
+    bus = create_client(config)
     bus.run_in_thread()
     bus.connected_event.wait()
     bus.emit(Message(f"{SERVICE_ID}.initialize.started"))

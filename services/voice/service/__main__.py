@@ -16,9 +16,11 @@ import logging
 import sys
 import time
 from threading import Thread
+from typing import Any, Dict
 
 import sdnotify
 from mycroft.configuration import Configuration
+from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
 from .voice_loop import (
@@ -46,8 +48,8 @@ def main():
     LOG.info("Starting service...")
 
     try:
-        bus = _connect_to_bus()
         config = Configuration.get()
+        bus = _connect_to_bus(config)
         hotword = load_hotword_module(config)
         vad = load_vad_detector()
         stt = load_stt_module(config, bus)
@@ -71,8 +73,8 @@ def main():
         LOG.exception("Service failed to start")
 
 
-def _connect_to_bus() -> MessageBusClient:
-    bus = MessageBusClient()
+def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
+    bus = create_client(config)
     bus.run_in_thread()
     bus.connected_event.wait()
     bus.emit(Message(f"{SERVICE_ID}.initialize.started"))

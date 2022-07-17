@@ -17,10 +17,12 @@ import logging
 import sys
 import time
 from threading import Event, Thread
+from typing import Any, Dict
 
 import sdnotify
 from lingua_franca import load_languages
 from mycroft.configuration import Configuration
+from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
 from .load import create_skill_instance, load_skill_source
@@ -50,8 +52,8 @@ def main():
     LOG.info("Starting service...")
 
     try:
-        bus = _connect_to_bus()
         config = Configuration.get()
+        bus = _connect_to_bus(config)
         _load_language(config)
 
         skill_module = load_skill_source(args.skill_directory, args.skill_id)
@@ -87,8 +89,8 @@ def _load_language(config):
     load_languages([lang_code, "en-us"])
 
 
-def _connect_to_bus() -> MessageBusClient:
-    bus = MessageBusClient()
+def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
+    bus = create_client(config)
     bus.run_in_thread()
     bus.connected_event.wait()
     LOG.info("Connected to Mycroft Core message bus")

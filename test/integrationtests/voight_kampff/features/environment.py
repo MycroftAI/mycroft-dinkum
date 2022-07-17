@@ -131,7 +131,7 @@ class VoightKampffClient:
                 data={"mycroft_session_id": self.mycroft_session_id},
             )
         )
-        sleep(1)
+        sleep(0.25)
 
     def match_dialogs_or_fail(
         self, dialogs: Union[str, List[str]], skill_id: Optional[str] = None

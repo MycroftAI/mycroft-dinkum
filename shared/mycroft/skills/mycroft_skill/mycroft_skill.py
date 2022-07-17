@@ -1628,6 +1628,7 @@ class MycroftSkill:
             actions.append(
                 {
                     "type": "show_page",
+                    "page": "file://" + self.find_resource(gui_page, "ui"),
                     "data": gui_data or {},
                     "override_idle": gui_clear == "on_idle",
                 }

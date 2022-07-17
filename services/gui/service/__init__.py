@@ -1,4 +1,4 @@
-# Copyright 2022 Mycroft AI Inc.
+# Copyright 2017 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,18 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-from typing import Any, Dict
-from mycroft_bus_client import MessageBusClient
-
-
-def create_client(config: Dict[str, Any]) -> MessageBusClient:
-    kwargs = {}
-    websocket_config = config.get("websocket", {})
-
-    for key in ["host", "port", "route", "ssl"]:
-        value = websocket_config.get(key)
-        if value:
-            kwargs[key] = value
-
-    return MessageBusClient(**kwargs)

@@ -23,10 +23,9 @@ from mycroft.configuration import Configuration
 from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
-from .audio_ui import AudioUserInterface
-from .tts import load_tts_module, register_tts
+from .namespace import NamespaceManager
 
-SERVICE_ID = "audio"
+SERVICE_ID = "gui"
 LOG = logging.getLogger(SERVICE_ID)
 NOTIFIER = sdnotify.SystemdNotifier()
 WATCHDOG_DELAY = 0.5
@@ -37,7 +36,7 @@ def main():
     logging.basicConfig(
         level=logging.DEBUG,
         handlers=[
-            logging.FileHandler(f"/var/log/mycroft/{SERVICE_ID}.log"),
+            logging.FileHandler(f"/var/log/mycroft/{SERVICE_ID}.log", mode="a"),
             logging.StreamHandler(sys.stdout),
         ],
     )
@@ -46,15 +45,7 @@ def main():
     try:
         config = Configuration.get()
         bus = _connect_to_bus(config)
-
-        # Text to speech plugin
-        tts = load_tts_module(config)
-
-        # Audio UI/HAL
-        audio_ui = AudioUserInterface(config)
-        audio_ui.initialize(bus)
-
-        register_tts(config, bus, tts)
+        namespace_manager = NamespaceManager(bus)
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -64,15 +55,12 @@ def main():
         bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
 
         try:
-            # Wait for exit signal
+            # Wait for exit
             Event().wait()
         except KeyboardInterrupt:
-            pass
+            LOG.info("Service is shutting down...")
         finally:
-            audio_ui.shutdown()
             bus.close()
-
-        LOG.info("Service is shutting down...")
     except Exception:
         LOG.exception("Service failed to start")
 
