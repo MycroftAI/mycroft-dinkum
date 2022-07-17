@@ -427,6 +427,7 @@ class IntentService:
                             "utterance": utterance,
                             "meta": {
                                 "dialog": action.get("dialog"),
+                                "skill_id": session.skill_id,
                             },
                         },
                     )
