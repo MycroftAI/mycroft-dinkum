@@ -185,6 +185,7 @@ class DuckduckgoSkill(CommonQuerySkill):
 
         if text_answer is not None:
             ret = ret._replace(response=response, text=text_answer)
+        self.log.debug(response.image)
         if response.image is not None and len(response.image.url) > 0:
             image_url = "https://duckduckgo.com/" + response.image.url
             ret = ret._replace(image=image_url)
@@ -247,37 +248,40 @@ class DuckduckgoSkill(CommonQuerySkill):
             self.log.warning("CQS match data does not match. " "Cannot display result.")
             return
 
-        with self.activity():
-            self.display_answer(self._cqs_match)
-            self.speak(self._cqs_match.text, wait=True)
+        gui = self.display_answer(self._cqs_match)
+        speak = self._cqs_match.text
+        return self.end_session(speak=speak, gui=gui)
 
     @intent_handler(AdaptIntent("AskDucky").require("DuckDuckGo"))
     def handle_ask_ducky(self, message):
         """Intent handler to request information specifically from DDG."""
-        with self.activity():
-            utt = message.data["utterance"]
+        dialog = None
+        speak = None
+        gui = None
+        utt = message.data["utterance"]
 
-            if utt is None:
-                self.log.warning("no utterance received")
-                return
+        if utt is None:
+            self.log.warning("no utterance received")
+            return
 
-            for voc in self.sorted_vocab:
-                utt = utt.replace(voc, "")
+        for voc in self.sorted_vocab:
+            utt = utt.replace(voc, "")
 
-            utt = utt.strip()
-            utt = self.extract_topic(utt)
-            # TODO - improve method of cleaning input
-            for article in self.translated_articles:
-                utt = utt.replace(f"{article} ", "")
+        utt = utt.strip()
+        utt = self.extract_topic(utt)
+        # TODO - improve method of cleaning input
+        for article in self.translated_articles:
+            utt = utt.replace(f"{article} ", "")
 
-            if utt is not None:
-                answer = self.query_ddg(utt)
-                if answer.text is not None:
-                    self.display_answer(answer)
-                    self.speak(answer.text, wait=True)
-                    self.gui.release()
-                else:
-                    self.speak_dialog("no-answer", data={"query": utt}, wait=True)
+        if utt is not None:
+            answer = self.query_ddg(utt)
+            if answer.text is not None:
+                gui = self.display_answer(answer)
+                speak = answer.text
+            else:
+                dialog = ("no-answer", {"query": utt})
+
+        return self.end_session(speak=speak, dialog=dialog, gui=gui)
 
     def display_answer(self, answer: Answer):
         """Display the result page on a GUI if connected.
@@ -285,12 +289,12 @@ class DuckduckgoSkill(CommonQuerySkill):
         Arguments:
             answer: Answer containing necessary fields
         """
-        self.gui["title"] = answer.query.title() or ""
-        self.gui["summary"] = answer.text or ""
-        self.gui["imgLink"] = answer.image or ""
-        # TODO - Duration of article display currently fixed at 60 seconds.
-        # This should be more closely tied with the speech of the summary.
-        self.gui.show_page("feature_image.qml", override_idle=True)
+        return (
+            "answer_only.qml",
+            {
+                "answer": answer.text or answer.query.title() or "",
+            },
+        )
 
     def stop(self):
         self.log.debug("Ducky stop() hit")

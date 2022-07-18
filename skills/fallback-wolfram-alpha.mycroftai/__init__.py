@@ -52,7 +52,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         self.log.debug("Settings changed")
         self.autotranslate = self.settings.get("autotranslate", True)
         for setting in self.settings.keys():
-            self.log.debug("%s: %s" % (setting, self.settings[setting]))
+            self.log.debug("%s: %s", setting, self.settings[setting])
         self.__init_client()
 
     def __init_client(self):
@@ -68,7 +68,6 @@ class WolframAlphaSkill(CommonQuerySkill):
         # Clear any previous match query data
         self._last_query = self._cqs_match = Query()
         # Clear the display and any prior session data
-        self.gui.release()
         # Clear the cache directory of old files
         clear_cache(self.cache_dir)
 
@@ -96,12 +95,11 @@ class WolframAlphaSkill(CommonQuerySkill):
             utt_verb = parsed_question.get("QuestionVerb")
             utt_query = parsed_question.get("Query")
             query = "%s %s %s" % (utt_word, utt_verb, utt_query)
-            phrase = "know %s %s %s" % (utt_word, utt_query, utt_verb)
             self.log.debug("Querying WolframAlpha: " + query)
         else:
             # This utterance doesn't look like a question, don't waste
             # time with WolframAlpha.
-            self.log.info("Non-question, ignoring: %s" % (utterance))
+            self.log.info("Non-question, ignoring: %s", utterance)
             return None
 
         try:
@@ -169,10 +167,13 @@ class WolframAlphaSkill(CommonQuerySkill):
             )
             return
 
-        with self.activity():
-            self._display_answer(self._cqs_match.display_text, self._cqs_match.image)
-            self.log.debug("Setting information for follow up query")
-            self._last_query = self._cqs_match
+        speak, gui = self._display_answer(
+            self._cqs_match.display_text, self._cqs_match.image
+        )
+        self.log.debug("Setting information for follow up query")
+        self._last_query = self._cqs_match
+
+        return self.end_session(speak=speak, gui=gui)
 
     def _get_cqs_match_image(self):
         """Fetch the image for a CQS answer.
@@ -197,44 +198,38 @@ class WolframAlphaSkill(CommonQuerySkill):
 
     def _display_answer(self, text, image=None):
         """Display the answer."""
+        speak = None
+        gui = None
+
         if self.fetching_image:
             self.bus.once("skill.wolfram-alpha.image-fetch.ended", self._display_answer)
 
-        # if self.fetching_image or self._cqs_match.image:
-        #     # If we are still trying to fetch an image a loader will show.
-        #     self.gui["title"] = self._cqs_match.display_text
-        #     self.gui["imgLink"] = self._cqs_match.image
-        #     self.gui.show_page("feature_image.qml", override_idle=True)
-        #     self.speak(self._cqs_match.spoken_answer)
-        #     self.gui.release()
-        # else:
-
         # Don't bother with images
-        self.gui["answer"] = self._cqs_match.spoken_answer
-        self.gui.show_page("answer_only.qml", override_idle=True)
-        self.speak(self._cqs_match.spoken_answer, wait=True)
-        self.gui.release()
+        gui = ("answer_only.qml", {"answer": self._cqs_match.spoken_answer})
+        speak = self._cqs_match.spoken_answer
 
-    @intent_handler(AdaptIntent().require("Give").require("Source"))
-    def handle_get_sources(self, _):
-        """Intent handler to request the information source of previous answer."""
-        # TODO deactivate handler when no last query exists.
-        with self.activity():
-            if self._last_query:
-                # Send an email to the account this device is registered to
-                data = {
-                    "query": self._last_query.query,
-                    "answer": self._last_query.spoken_answer,
-                    "url_query": self._last_query.query.replace(" ", "+"),
-                }
+        return speak, gui
 
-                self.send_email(
-                    self.__translate("email.subject", data),
-                    self.__translate("email.body", data),
-                )
-                self.speak_dialog("sent.email", wait=True)
-            else:
-                self.speak_dialog("no.info.to.send", wait=True)
+    # @intent_handler(AdaptIntent().require("Give").require("Source"))
+    # def handle_get_sources(self, _):
+    #     """Intent handler to request the information source of previous answer."""
+    #     # TODO deactivate handler when no last query exists.
+    #     with self.activity():
+    #         if self._last_query:
+    #             # Send an email to the account this device is registered to
+    #             data = {
+    #                 "query": self._last_query.query,
+    #                 "answer": self._last_query.spoken_answer,
+    #                 "url_query": self._last_query.query.replace(" ", "+"),
+    #             }
+
+    #             self.send_email(
+    #                 self.__translate("email.subject", data),
+    #                 self.__translate("email.body", data),
+    #             )
+    #             self.speak_dialog("sent.email", wait=True)
+    #         else:
+    #             self.speak_dialog("no.info.to.send", wait=True)
 
     def shutdown(self):
         super(WolframAlphaSkill, self).shutdown()
