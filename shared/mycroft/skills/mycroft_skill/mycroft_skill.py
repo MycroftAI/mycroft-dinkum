@@ -1700,6 +1700,8 @@ class MycroftSkill:
 
         if gui_clear == "after_speak":
             actions.append({"type": "clear_display"})
+        elif gui_clear == "on_idle":
+            actions.append({"type": "wait_for_idle"})
 
         return actions
 
