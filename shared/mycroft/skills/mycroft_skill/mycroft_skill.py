@@ -1673,8 +1673,7 @@ class MycroftSkill:
                 actions.append(
                     {
                         "type": "show_page",
-                        # "page": "file://" + self.find_resource(gui_page, "ui"),
-                        "page": f"file:///home/pi/mycroft-dinkum/skills/{self.skill_id}/ui/{gui_page}",
+                        "page": "file://" + self.find_resource(gui_page, "ui"),
                         "data": gui_data or {},
                         "namespace": f"{self.skill_id}.{gui_page}",
                     }
