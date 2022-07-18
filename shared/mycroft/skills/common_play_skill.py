@@ -15,6 +15,7 @@
 import re
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
+from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
@@ -60,8 +61,8 @@ class CommonPlaySkill(MycroftSkill, ABC):
 
     def __init__(self, name=None, bus=None):
         super().__init__(name, bus)
-        self.audioservice = None
         self.play_service_string = None
+        self._audio_session_id: Optional[str] = None
 
         # "MusicServiceSkill" -> "Music Service"
         spoken = name or self.__class__.__name__
@@ -205,10 +206,16 @@ class CommonPlaySkill(MycroftSkill, ABC):
         # Inject the user's utterance in case the audio backend wants to
         # interpret it.  E.g. "play some rock at full volume on the stereo"
 
+        self._audio_session_id = self._mycroft_session_id
         self.bus.emit(
             Message(
                 "mycroft.audio.service.play",
-                data={"tracks": tracks, "utterance": utterance, "repeat": repeat},
+                data={
+                    "mycroft_session_id": self._audio_session_id,
+                    "tracks": tracks,
+                    "utterance": utterance,
+                    "repeat": repeat,
+                },
             )
         )
 
@@ -219,15 +226,16 @@ class CommonPlaySkill(MycroftSkill, ABC):
         self.bus.emit(
             Message(
                 "mycroft.audio.service.stop",
-                data={"mycroft_session_id": self._mycroft_session_id},
+                data={"mycroft_session_id": self._audio_session_id},
             )
         )
+        self._audio_session_id = None
 
     def CPS_pause(self):
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",
-                data={"mycroft_session_id": self._mycroft_session_id},
+                data={"mycroft_session_id": self._audio_session_id},
             )
         )
 
@@ -235,7 +243,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",
-                data={"mycroft_session_id": self._mycroft_session_id},
+                data={"mycroft_session_id": self._audio_session_id},
             )
         )
 

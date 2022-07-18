@@ -151,7 +151,12 @@ def _write_skills_target(
         print("BindTo=", MYCROFT_TARGET, ".target", sep="", file=f)
         print("Requires=", " ".join(service_ids), sep="", file=f)
         if after_services:
-            print("After=", " ".join(after_services), sep="", file=f)
+            print(
+                "After=",
+                " ".join(f"mycroft-{id}" for id in after_services),
+                sep="",
+                file=f,
+            )
 
     for skill_path in skill_paths:
         skill_id = skill_path.name

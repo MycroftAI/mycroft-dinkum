@@ -13,14 +13,13 @@
 # limitations under the License.
 #
 """Intent service wrapping padatious."""
-from functools import lru_cache
+from functools import partial
 from os.path import expanduser, isfile
 from subprocess import call
-from threading import Event
+from threading import Event, Thread
 from time import sleep
-from time import time as get_time
+from typing import Optional
 
-from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
 
@@ -127,55 +126,54 @@ class PadatiousService:
         self.container = IntentContainer(intent_cache)
 
         self._bus = bus
-        self.bus.on("padatious:register_intent", self.register_intent)
-        self.bus.on("padatious:register_entity", self.register_entity)
-        self.bus.on("detach_intent", self.handle_detach_intent)
-        self.bus.on("detach_skill", self.handle_detach_skill)
-        self.bus.on("mycroft.skills.initialized", self.train)
-
-        self.finished_training_event = Event()
-        self.finished_initial_train = False
 
         self.train_delay = self.padatious_config["train_delay"]
-        self.train_time = get_time() + self.train_delay
+        self.is_training_needed = True
+        self.train_time_left = self.train_delay
 
         self.registered_intents = []
         self.registered_entities = []
 
-    def train(self, message=None):
+        Thread(target=self.wait_and_train, daemon=True).start()
+
+        self.bus.on("padatious:register_intent", self.register_intent)
+        self.bus.on("padatious:register_entity", self.register_entity)
+        self.bus.on("detach_intent", self.handle_detach_intent)
+        self.bus.on("detach_skill", self.handle_detach_skill)
+        # self.bus.on("mycroft.skills.initialized", self.train)
+
+    def train(self):
         """Perform padatious training.
 
         Args:
             message (Message): optional triggering message
         """
-        padatious_single_thread = Configuration.get()["padatious"]["single_thread"]
-        if message is None:
-            single_thread = padatious_single_thread
-        else:
-            single_thread = message.data.get("single_thread", padatious_single_thread)
+        # padatious_single_thread = Configuration.get()["padatious"]["single_thread"]
+        # if message is None:
+        #     single_thread = padatious_single_thread
+        # else:
+        #     single_thread = message.data.get("single_thread", padatious_single_thread)
+        single_thread = True
 
-        self.finished_training_event.clear()
-
-        LOG.info("Training... (single_thread={})".format(single_thread))
+        LOG.info("Training... (single_thread=%s)", single_thread)
         self.container.train(single_thread=single_thread)
         LOG.info("Training complete.")
 
-        self.finished_training_event.set()
-        if not self.finished_initial_train:
-            self.bus.emit(Message("mycroft.skills.trained"))
-            self.finished_initial_train = True
-
     def wait_and_train(self):
         """Wait for minimum time between training and start training."""
-        if not self.finished_initial_train:
-            return
-        sleep(self.train_delay)
-        if self.train_time < 0.0:
-            return
+        interval = 0.1
+        while True:
+            try:
+                sleep(interval)
+                if not self.is_training_needed:
+                    continue
 
-        if self.train_time <= get_time() + 0.01:
-            self.train_time = -1.0
-            self.train()
+                self.train_time_left -= interval
+                if self.train_time_left <= 0:
+                    self.train()
+                    self.is_training_needed = False
+            except Exception:
+                LOG.exception("Error while training")
 
     def __detach_intent(self, intent_name):
         """Remove an intent if it has been registered.
@@ -221,11 +219,13 @@ class PadatiousService:
 
         if not isfile(file_name):
             LOG.warning("Could not find file " + file_name)
-            return
+            return False
 
         register_func(name, file_name)
-        self.train_time = get_time() + self.train_delay
-        self.wait_and_train()
+        self.train_time_left = self.train_delay
+        self.is_training_needed = True
+
+        return True
 
     def register_intent(self, message):
         """Messagebus handler for registering intents.
@@ -234,8 +234,15 @@ class PadatiousService:
             message (Message): message triggering action
         """
         self.registered_intents.append(message.data["name"])
-        self._register_object(message, "intent", self.container.load_intent)
-        LOG.debug("Registered Padatious intent: %s", message.data["name"])
+        is_registered = self._register_object(
+            message,
+            "intent",
+            partial(self.container.load_intent, must_train=False),
+        )
+        if is_registered:
+            LOG.debug("Registered Padatious intent: %s", message.data["name"])
+        else:
+            LOG.warning("Failed to register Padatious intent: %s", message.data["name"])
 
     def register_entity(self, message):
         """Messagebus handler for registering entities.
@@ -244,7 +251,9 @@ class PadatiousService:
             message (Message): message triggering action
         """
         self.registered_entities.append(message.data)
-        self._register_object(message, "entity", self.container.load_entity)
+        self._register_object(
+            message, "entity", partial(self.container.load_entity, must_train=False)
+        )
 
     def calc_intent(self, utt):
         """Cached version of container calc_intent.

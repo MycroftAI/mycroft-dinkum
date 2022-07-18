@@ -16,7 +16,7 @@
 import time
 from copy import copy
 from dataclasses import dataclass, field
-from threading import Thread, RLock
+from threading import RLock, Thread
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -153,6 +153,7 @@ class IntentService:
         self.bus.on("mycroft.session.continue", self.handle_session_continue)
         self.bus.on("mycroft.session.end", self.handle_session_end)
         self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
+        self.bus.on("mycroft.audio.hal.media.ended", self.handle_media_finished)
         self.bus.on("mycroft.stop", self.handle_stop)
 
         self.bus.on("detach_intent", self.handle_detach_intent)
@@ -501,12 +502,29 @@ class IntentService:
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
             if session is not None:
-                session.has_audio_focus = False
+                # session.has_audio_focus = False
                 # self._abort_conflicting_sessions()
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
-                        LOG.debug(session)
+                        if session.expect_response:
+                            self._trigger_listen(session.id)
+                        elif not session.will_continue:
+                            # Session will not continue
+                            self.end_session(session.id)
+                else:
+                    self.end_session(session.id)
+
+    def handle_media_finished(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("Audio finished: %s", mycroft_session_id)
+
+        with self._session_lock:
+            session = self._sessions.get(mycroft_session_id)
+            if session is not None:
+                if not session.aborted:
+                    waiting_for_action = self.next_session_action(session)
+                    if not waiting_for_action:
                         if session.expect_response:
                             self._trigger_listen(session.id)
                         elif not session.will_continue:
@@ -564,6 +582,16 @@ class IntentService:
                 self.bus.emit(Message("mycroft.gui.idle"))
             elif action_type == "wait_for_idle":
                 self._set_idle_timeout()
+            elif action_type == "audio_alert":
+                self.bus.emit(
+                    Message(
+                        "mycroft.audio.play-sound",
+                        data={"uri": action["uri"], "mycroft_session_id": session.id},
+                    )
+                )
+                if action.get("wait", True):
+                    # Will be called back when audio is finished
+                    return True
 
             self.bus.emit(
                 Message(

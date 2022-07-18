@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 import typing
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import sdl2
@@ -74,6 +75,7 @@ class AudioHAL:
 
         # Media ids by channel
         self._fg_media_ids: typing.Dict[ChannelType, typing.Optional[str]] = {}
+        self._fg_session_ids: typing.Dict[ChannelType, typing.Optional[str]] = {}
         self._bg_media_id: typing.Optional[str] = None
 
         # Background VLC process
@@ -91,7 +93,11 @@ class AudioHAL:
                 self.bus.emit(
                     Message(
                         "mycroft.audio.hal.media.ended",
-                        data={"channel": channel, "media_id": media_id},
+                        data={
+                            "channel": channel,
+                            "media_id": media_id,
+                            "mycroft_session_id": self._fg_session_ids.get(channel),
+                        },
                     )
                 )
 
@@ -236,6 +242,7 @@ class AudioHAL:
         media_id: typing.Optional[str] = None,
         volume: typing.Optional[float] = None,
         cache: bool = False,
+        mycroft_session_id: Optional[str] = None,
     ) -> float:
         """Play an audio file on a foreground channel."""
         file_path_str = str(file_path)
@@ -262,6 +269,7 @@ class AudioHAL:
         )
 
         self._fg_media_ids[channel] = media_id
+        self._fg_session_ids[channel] = mycroft_session_id
 
         # Chunk will be freed after playing it not caching
         self._fg_free[channel] = chunk if not cache else None

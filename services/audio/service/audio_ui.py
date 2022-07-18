@@ -235,7 +235,8 @@ class AudioUserInterface:
         """Handler for skills' play_sound_uri"""
         uri = message.data.get("uri")
         volume = message.data.get("volume")
-        self._play_effect(uri, volume=volume)
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        self._play_effect(uri, volume=volume, mycroft_session_id=mycroft_session_id)
 
     def handle_start_listening(self, _message):
         """Play sound when Mycroft begins recording a command"""
@@ -246,13 +247,22 @@ class AudioUserInterface:
         if self._start_listening_uri:
             self._play_effect(self._start_listening_uri)
 
-    def _play_effect(self, uri: str, volume: typing.Optional[float] = None):
+    def _play_effect(
+        self,
+        uri: str,
+        volume: typing.Optional[float] = None,
+        mycroft_session_id: Optional[str] = None,
+    ):
         """Play sound effect from uri"""
         if uri:
             assert uri.startswith("file://"), "Only file URIs are supported for effects"
             file_path = uri[len("file://") :]
             self._ahal.play_foreground(
-                ForegroundChannel.EFFECT, file_path, cache=True, volume=volume
+                ForegroundChannel.EFFECT,
+                file_path,
+                cache=True,
+                volume=volume,
+                mycroft_session_id=mycroft_session_id,
             )
             LOG.info("Played sound: %s", uri)
 
@@ -284,11 +294,11 @@ class AudioUserInterface:
 
         LOG.info("Queued TTS chunk %s/%s: %s", chunk_index + 1, num_chunks, uri)
 
-    def handle_tts_started(self, message):
+    def handle_tts_started(self, _message: Message):
         # Duck music
         self._ahal.set_background_volume(0.3)
 
-    def handle_tts_finished(self, message):
+    def handle_tts_finished(self, _message: Message):
         # Unduck music
         self._ahal.set_background_volume(1.0)
 
@@ -348,6 +358,7 @@ class AudioUserInterface:
                         ForegroundChannel.SPEECH,
                         file_path,
                         media_id=request.tts_session_id,
+                        mycroft_session_id=request.mycroft_session_id,
                     )
 
                     if duration_sec is not None:
@@ -382,7 +393,6 @@ class AudioUserInterface:
                 ):
                     self._finish_tts_session(
                         session_id=request.tts_session_id,
-                        # skill_id=request.skill_id,
                         mycroft_session_id=request.mycroft_session_id,
                     )
 
@@ -401,7 +411,6 @@ class AudioUserInterface:
                 "mycroft.tts.session.ended",
                 data={
                     "tts_session_id": session_id,
-                    # "skill_id": skill_id,
                     "mycroft_session_id": mycroft_session_id,
                 },
             )
