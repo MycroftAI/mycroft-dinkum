@@ -29,6 +29,8 @@ ONE_HOUR = 3600
 ONE_MINUTE = 60
 TEN_SECONDS = 10
 
+IDLE_PAGE = "mark_ii_idle.qml"
+
 
 class HomescreenSkill(MycroftSkill):
     """Skill to display a home screen (a.k.a. idle screen) on a GUI enabled device.
@@ -44,17 +46,6 @@ class HomescreenSkill(MycroftSkill):
         self.display_time = None
         self.display_date = None
         self.wallpaper = Wallpaper(self.root_dir, self.file_system.path)
-
-    def _check_for_wallpaper_setting_change(self):
-        """Determine if the new settings are related to the wallpaper."""
-        file_name_setting = self.settings.get("wallpaper_file")
-        url_setting = self.settings.get("wallpaper_url")
-        change_wallpaper = (
-            file_name_setting != self.wallpaper.file_name_setting
-            or url_setting != self.wallpaper.url_setting
-        )
-
-        return change_wallpaper
 
     def initialize(self):
         """Performs tasks after instantiation but before loading is complete."""
@@ -151,6 +142,7 @@ class HomescreenSkill(MycroftSkill):
         self._idle_gui_data["homeScreenWeatherCondition"] = event.data[
             "weather_condition"
         ]
+        self._update_gui()
 
     def handle_alarm_status(self, event: Message):
         """Use the alarm data from the event to control visibility of the alarm icon."""
@@ -163,7 +155,9 @@ class HomescreenSkill(MycroftSkill):
         return self.end_session(gui=gui)
 
     def handle_gui_idle(self, _message: Message):
-        self.start_session(gui=self._show_idle_screen, gui_clear="never")
+        self.bus.emit(
+            self.start_session(gui=self._show_idle_screen(), gui_clear="never")
+        )
 
     def _show_idle_screen(self):
         """Populates and shows the resting screen."""
@@ -227,6 +221,7 @@ class HomescreenSkill(MycroftSkill):
             gui_date.extend([day_of_month, month])
 
         self._idle_gui_data["homeScreenDate"] = " ".join(gui_date)
+        self._update_gui()
 
     def update_clock(self):
         """Broadcast the current local time in HH:MM format over the message bus.
@@ -241,12 +236,18 @@ class HomescreenSkill(MycroftSkill):
         if self.display_time != formatted_time:
             self.display_time = formatted_time
             self._idle_gui_data["homeScreenTime"] = self.display_time
+            self._update_gui()
 
     def handle_mute(self, _message=None):
         self._idle_gui_data["isMuted"] = True
+        self._update_gui()
 
     def handle_unmute(self, _message=None):
         self._idle_gui_data["isMuted"] = False
+        self._update_gui()
+
+    def _update_gui(self):
+        self.update_gui_values("mark_ii_idle.qml", self._idle_gui_data)
 
 
 def create_skill():
