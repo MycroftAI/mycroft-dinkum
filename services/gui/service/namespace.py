@@ -45,6 +45,7 @@ from typing import List, Union
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message, MessageBusClient
 from mycroft.util.log import LOG
+
 from .bus import (
     create_gui_service,
     determine_if_gui_connected,

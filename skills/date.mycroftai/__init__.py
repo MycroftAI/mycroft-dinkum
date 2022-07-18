@@ -25,9 +25,6 @@ from mycroft.util.time import now_local
 from .skill import Response, get_speakable_weekend_date, is_leap_year
 from .skill.util import extract_datetime_from_utterance
 
-MARK_I = "mycroft_mark_1"
-MARK_II = "mycroft_mark_2"
-
 
 class DateSkill(MycroftSkill):
     """Mycroft skill to respond to user requests for dates."""
@@ -35,20 +32,6 @@ class DateSkill(MycroftSkill):
     def __init__(self):
         super().__init__("DateSkill")
         self.displayed_time = None
-
-    # TODO: Move to reusable location
-    @property
-    def platform(self):
-        """Get the platform identifier string
-
-        Returns:
-            str: Platform identifier, such as "mycroft_mark_1",
-                 "mycroft_picroft", "mycroft_mark_2".  None for non-standard.
-        """
-        if self.config_core and self.config_core.get("enclosure"):
-            return self.config_core["enclosure"].get("platform")
-        else:
-            return None
 
     def initialize(self):
         """Tasks to perform after constructor but before skill is ready for use."""
@@ -69,11 +52,11 @@ class DateSkill(MycroftSkill):
         today_vocab = self.resources.load_vocabulary_file("today")[0][0]
         today_date = extract_datetime_from_utterance(today_vocab)
         if requested_date is None or requested_date == today_date:
-            result = self._handle_current_date()
+            dialog, gui = self._handle_current_date()
         else:
-            result = self._handle_relative_date(message)
+            dialog, gui = self._handle_relative_date(message)
 
-        return result
+        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
 
     @intent_handler(
         AdaptIntent().require("query").require("relative-day").require("date")
@@ -86,7 +69,8 @@ class DateSkill(MycroftSkill):
         Args:
             request: The request from the user that triggered this intent.
         """
-        return self._handle_relative_date(message)
+        dialog, gui = self._handle_relative_date(message)
+        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
 
     @intent_handler(AdaptIntent().require("query").require("month"))
     def handle_day_for_date(self, message: Message):
@@ -97,7 +81,8 @@ class DateSkill(MycroftSkill):
         Args:
             request: The request from the user that triggered this intent.
         """
-        return self._handle_relative_date(message)
+        dialog, gui = self._handle_relative_date(message)
+        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
 
     @intent_handler(AdaptIntent().require("query").require("leap-year"))
     def handle_next_leap_year_request(self, _message):
@@ -111,7 +96,9 @@ class DateSkill(MycroftSkill):
         while not is_leap_year(year):
             year += 1
 
-        return self.end_session(dialog=("next-leap-year", dict(year=year)))
+        return self.end_session(
+            dialog=("next-leap-year", dict(year=year)), gui_clear="after_speak"
+        )
 
     @intent_handler("date-future-weekend.intent")
     def handle_future_weekend_request(self, _message):
@@ -119,7 +106,9 @@ class DateSkill(MycroftSkill):
         sunday_date = get_speakable_weekend_date("this sunday")
         dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
 
-        return self.end_session(dialog=("date-future-weekend", dialog_data))
+        return self.end_session(
+            dialog=("date-future-weekend", dialog_data), gui_clear="after_speak"
+        )
 
     @intent_handler("date-last-weekend.intent")
     def handle_last_weekend_request(self, _):
@@ -131,7 +120,9 @@ class DateSkill(MycroftSkill):
         sunday_date = get_speakable_weekend_date("last sunday")
         dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
 
-        return self.end_session(dialog=("date-last-weekend", dialog_data))
+        return self.end_session(
+            dialog=("date-last-weekend", dialog_data), gui_clear="after_speak"
+        )
 
     def _handle_current_date(self):
         """Build, speak and display the response to a current date request."""
@@ -145,13 +136,16 @@ class DateSkill(MycroftSkill):
         Args:
             message: The request from the user that triggered this intent.
         """
+        dialog = None
+        gui = None
+
         utterance = message.data["utterance"].lower()
         response = Response()
         response.build_relative_date_response(utterance)
         if response.date_time is not None:
-            return self._respond(response)
+            dialog, gui = self._respond(response)
 
-        return None
+        return dialog, gui
 
     def _respond(self, response: Response):
         """Speak and display the response to a date request.
@@ -159,19 +153,20 @@ class DateSkill(MycroftSkill):
         Args:
             response: Data used by the speak/display logic to communicate the Response
         """
-        return self.end_session(
-            dialog=(
-                response.dialog_name,
-                response.dialog_data,
-            ),
-            gui_page="date-mark-ii.qml",
-            gui_data={
+        dialog = (
+            response.dialog_name,
+            response.dialog_data,
+        )
+        gui = (
+            "date-mark-ii.qml",
+            {
                 "weekdayString": response.date_time.strftime("%A").upper(),
                 "monthString": response.date_time.strftime("%B"),
                 "dayString": response.date_time.strftime("%-d"),
             },
-            gui_clear="after_speak",
         )
+
+        return dialog, gui
 
 
 def create_skill():

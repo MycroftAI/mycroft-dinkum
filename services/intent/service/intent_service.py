@@ -45,6 +45,10 @@ class Session:
     will_continue: bool = False
     expect_response: bool = False
     actions: List[Dict[str, Any]] = field(default_factory=dict)
+    has_audio_focus: bool = False
+    requires_audio_focus: bool = False
+    has_gui_focus: bool = False
+    requires_gui_focus: bool = False
     tick: int = field(default_factory=time.monotonic_ns)
 
 
@@ -441,36 +445,22 @@ class IntentService:
                 msg_data = action.get("data", {})
                 self.bus.emit(Message(msg_type, data=msg_data))
             elif action_type == "show_page":
-                self.bus.emit(
-                    Message("gui.clear.namespace", data={"__from": session.skill_id})
-                )
-                gui_data = action.get("data", {})
-                self.bus.emit(
-                    Message(
-                        "gui.value.set", data={"__from": session.skill_id, **gui_data}
-                    )
-                )
                 gui_page = action.get("page")
+                gui_data = action.get("data", {})
                 if gui_page:
                     self.bus.emit(
                         Message(
                             "gui.page.show",
                             {
-                                "page": [gui_page],
-                                "index": 0,
-                                "__from": session.skill_id,
+                                "namespace": action["namespace"],
+                                "page": gui_page,
+                                "data": gui_data,
+                                "skill_id": session.skill_id,
                             },
                         )
                     )
             elif action_type == "clear_display":
-                self.bus.emit(
-                    Message("gui.clear.namespace", data={"__from": session.skill_id})
-                )
-                self.bus.emit(
-                    Message(
-                        "mycroft.gui.screen.close", data={"skill_id": session.skill_id}
-                    )
-                )
+                self.bus.emit(Message("mycroft.gui.idle"))
 
             self.bus.emit(
                 Message(
