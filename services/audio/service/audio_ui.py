@@ -7,6 +7,7 @@ import typing
 from collections import deque
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Optional
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
@@ -129,9 +130,8 @@ class AudioUserInterface:
                 start_listening
             )
 
-        # self._ignore_session_ids: typing.Deque[str] = deque(maxlen=100)
-
         self._bg_position_timer = RepeatingTimer(1.0, self.send_stream_position)
+        self._stream_session_id: Optional[str] = None
 
         self._speech_queue = queue.Queue()
         self._speech_thread: typing.Optional[threading.Thread] = None
@@ -154,6 +154,7 @@ class AudioUserInterface:
             "mycroft.tts.stop": self.handle_tts_stop,
             "mycroft.tts.chunk.start": self.handle_tts_chunk,
             "mycroft.audio.hal.media.ended": self.handle_media_finished,
+            # stream
             "mycroft.audio.service.play": self.handle_stream_play,
             "mycroft.audio.service.pause": self.handle_stream_pause,
             "mycroft.audio.service.resume": self.handle_stream_resume,
@@ -212,10 +213,8 @@ class AudioUserInterface:
         self._stop_tts()
 
     def _stop_tts(self):
-        LOG.info("Stopping TTS")
-
+        LOG.info("Stopping TTS session: %s", self._tts_session_id)
         self._tts_session_id = None
-
         self._drain_speech_queue()
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
         self._speech_finished.set()
@@ -268,15 +267,17 @@ class AudioUserInterface:
         tts_session_id = message.data.get("tts_session_id", "")
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
-        # skill_id = message.data.get("skill_id")
         mycroft_session_id = message.data.get("mycroft_session_id")
+
+        if tts_session_id != self._tts_session_id:
+            # Stop previous session
+            self._stop_tts()
 
         request = TTSRequest(
             uri=uri,
             tts_session_id=tts_session_id,
             chunk_index=chunk_index,
             num_chunks=num_chunks,
-            # skill_id=skill_id,
             mycroft_session_id=mycroft_session_id,
         )
         self._speech_queue.put(request)
@@ -417,7 +418,7 @@ class AudioUserInterface:
 
     # -------------------------------------------------------------------------
 
-    def handle_stream_play(self, message):
+    def handle_stream_play(self, message: Message):
         """Handler for mycroft.audio.service.play
 
         Play tracks using the background stream.
@@ -440,24 +441,37 @@ class AudioUserInterface:
         # Stop previous stream
         self._ahal.stop_background()
 
-        LOG.info("Playing background stream: %s", uri_playlist)
+        self._stream_session_id = message.data.get("mycroft_session_id")
+        LOG.info(
+            "Playing background stream: %s (session=%s)",
+            uri_playlist,
+            self._stream_session_id,
+        )
         self._ahal.start_background(uri_playlist)
 
-    def handle_stream_pause(self, _message):
+    def handle_stream_pause(self, message: Message):
         """Handler for mycroft.audio.service.pause"""
-        LOG.debug("Pausing background stream")
-        self._ahal.pause_background()
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            LOG.debug("Pausing background stream (session=%s)", mycroft_session_id)
+            self._ahal.pause_background()
 
-    def handle_stream_resume(self, _message):
+    def handle_stream_resume(self, message: Message):
         """Handler for mycroft.audio.service.resume"""
-        LOG.debug("Resuming background stream")
-        self._ahal.resume_background()
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            LOG.debug("Resuming background stream (session=%s)", mycroft_session_id)
+            self._ahal.resume_background()
 
-    def handle_stream_stop(self, _message):
+    def handle_stream_stop(self, message):
         """Handler for mycroft.audio.service.stop"""
-        # Don't ever actually stop the background stream.
-        # This lets us resume it later at any point.
-        self._ahal.pause_background()
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            LOG.debug("Stopping background stream (session=%s)", mycroft_session_id)
+
+            # Don't ever actually stop the background stream.
+            # This lets us resume it later at any point.
+            self._ahal.pause_background()
 
     def send_stream_position(self):
         """Sends out background stream position to skills"""
@@ -468,6 +482,10 @@ class AudioUserInterface:
         if position_ms >= 0:
             self.bus.emit(
                 Message(
-                    "mycroft.audio.service.position", data={"position_ms": position_ms}
+                    "mycroft.audio.service.position",
+                    data={
+                        "mycroft_session_id": self._stream_session_id,
+                        "position_ms": position_ms,
+                    },
                 )
             )

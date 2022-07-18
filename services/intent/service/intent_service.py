@@ -47,11 +47,28 @@ class Session:
     will_continue: bool = False
     expect_response: bool = False
     actions: List[Dict[str, Any]] = field(default_factory=dict)
-    has_audio_focus: bool = False
-    requires_audio_focus: bool = False
-    has_gui_focus: bool = False
-    requires_gui_focus: bool = False
     tick: int = field(default_factory=time.monotonic_ns)
+    aborted: bool = False
+    has_audio_focus: bool = False
+    has_gui_focus: bool = False
+
+    # @property
+    # def actions(self):
+    #     return self._actions
+
+    # @actions.setter
+    # def actions(self, value):
+    #     self._actions = value
+
+    #     self.requires_gui_focus = False
+    #     self.requires_audio_focus = self.expect_response
+
+    #     for action in self._actions:
+    #         action_type = action.get("type")
+    #         if action_type == "speak":
+    #             self.requires_audio_focus = True
+    #         elif action_type == "show_page":
+    #             self.requires_gui_focus = True
 
 
 def _get_message_lang(message):
@@ -136,6 +153,7 @@ class IntentService:
         self.bus.on("mycroft.session.continue", self.handle_session_continue)
         self.bus.on("mycroft.session.end", self.handle_session_end)
         self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
+        self.bus.on("mycroft.stop", self.handle_stop)
 
         self.bus.on("detach_intent", self.handle_detach_intent)
         self.bus.on("detach_skill", self.handle_detach_skill)
@@ -294,6 +312,65 @@ class IntentService:
             % (skill_id, self.active_skills)
         )
 
+    def handle_stop(self, _message: Message):
+        with self._session_lock:
+            self._idle_seconds_left = None
+            sorted_sessions = sorted(
+                self._sessions.values(), key=lambda s: s.tick, reverse=True
+            )
+
+            for session in sorted_sessions:
+                if session.aborted:
+                    continue
+
+                if session.has_audio_focus:
+                    session.has_audio_focus = False
+                    session.aborted = True
+                    self.bus.emit(
+                        Message(
+                            "mycroft.tts.stop", data={"mycroft_session_id": session.id}
+                        )
+                    )
+                    break
+
+            self.bus.emit(Message("mycroft.gui.idle"))
+
+    # def _abort_conflicting_sessions(self):
+    #     with self._session_lock:
+    #         sorted_sessions = sorted(
+    #             self._sessions.values(), key=lambda s: s.tick, reverse=True
+    #         )
+
+    # audio_focus_id: Optional[str] = None
+    # gui_focus_id: Optional[str] = None
+
+    # for session in sorted_sessions:
+    #     if session.aborted:
+    #         continue
+
+    #     if session.has_audio_focus:
+    #         if audio_focus_id is None:
+    #             audio_focus_id = session.id
+    #         else:
+    #             session.aborted = True
+    #             LOG.debug(
+    #                 "Aborted session %s due to audio focus change", session.id
+    #             )
+
+    #     if session.requires_gui_focus:
+    #         if gui_focus_id is None:
+    #             gui_focus_id = session.id
+    #         else:
+    #             session.aborted = True
+    #             LOG.debug(
+    #                 "Aborted session %s due to GUI focus change", session.id
+    #             )
+
+    # if gui_focus_id is not None:
+    #     # Cancel idle timeout
+    #     LOG.debug("Idle timeout cancelled for session %s", gui_focus_id)
+    #     self._idle_seconds_left = None
+
     def start_session(self, mycroft_session_id: str, skill_id: Optional[str] = None):
         LOG.debug("Starting session: %s", mycroft_session_id)
         self._sessions[mycroft_session_id] = Session(
@@ -321,7 +398,7 @@ class IntentService:
             self.bus.emit(
                 Message(
                     "mycroft.session.ended",
-                    data={"mycroft_session_id": mycroft_session_id, "aborted": aborted},
+                    data={"mycroft_session_id": session.id, "aborted": aborted},
                 )
             )
 
@@ -344,8 +421,9 @@ class IntentService:
             skill_id=message.data.get("skill_id"),
             will_continue=message.data.get("continue_session", False),
             expect_response=message.data.get("expect_response", False),
-            actions=message.data.get("actions", []),
         )
+
+        session.actions = message.data.get("actions", [])
 
         with self._session_lock:
             self._sessions[mycroft_session_id] = session
@@ -356,14 +434,18 @@ class IntentService:
                 )
             )
 
-            waiting_for_action = self.next_session_action(session)
+            # self._abort_conflicting_sessions()
+            if not session.aborted:
+                waiting_for_action = self.next_session_action(session)
 
-            if not waiting_for_action:
-                if session.expect_response:
-                    self._trigger_listen(mycroft_session_id)
-                elif not session.will_continue:
-                    # Session is over
-                    self.end_session(mycroft_session_id)
+                if not waiting_for_action:
+                    if session.expect_response:
+                        self._trigger_listen(session.id)
+                    elif not session.will_continue:
+                        # Session is over
+                        self.end_session(session.id)
+            else:
+                self.abort_session(session.id)
 
     def handle_session_continue(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -377,16 +459,20 @@ class IntentService:
                 session.expect_response = message.data.get("expect_response", False)
                 session.actions = message.data.get("actions", [])
 
-                waiting_for_action = self.next_session_action(session)
-                self.bus.emit(
-                    Message(
-                        "mycroft.session.continued",
-                        data={"mycroft_session_id": mycroft_session_id},
+                # self._abort_conflicting_sessions()
+                if not session.aborted:
+                    waiting_for_action = self.next_session_action(session)
+                    self.bus.emit(
+                        Message(
+                            "mycroft.session.continued",
+                            data={"mycroft_session_id": session.id},
+                        )
                     )
-                )
 
-                if (not waiting_for_action) and session.expect_response:
-                    self._trigger_listen(mycroft_session_id)
+                    if (not waiting_for_action) and session.expect_response:
+                        self._trigger_listen(session.id)
+                else:
+                    self.abort_session(session.id)
 
     def handle_session_end(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -400,9 +486,13 @@ class IntentService:
                 session.skill_id = message.data.get("skill_id", session.skill_id)
                 session.actions = message.data.get("actions", [])
 
-                waiting_for_action = self.next_session_action(session)
-                if not waiting_for_action:
-                    self.end_session(mycroft_session_id)
+                # self._abort_conflicting_sessions()
+                if not session.aborted:
+                    waiting_for_action = self.next_session_action(session)
+                    if not waiting_for_action:
+                        self.end_session(session.id)
+                else:
+                    self.abort_session(session.id)
 
     def handle_tts_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -411,14 +501,19 @@ class IntentService:
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
             if session is not None:
-                waiting_for_action = self.next_session_action(session)
-                if not waiting_for_action:
-                    LOG.debug(session)
-                    if session.expect_response:
-                        self._trigger_listen(mycroft_session_id)
-                    elif not session.will_continue:
-                        # Session will not continue
-                        self.end_session(mycroft_session_id)
+                session.has_audio_focus = False
+                # self._abort_conflicting_sessions()
+                if not session.aborted:
+                    waiting_for_action = self.next_session_action(session)
+                    if not waiting_for_action:
+                        LOG.debug(session)
+                        if session.expect_response:
+                            self._trigger_listen(session.id)
+                        elif not session.will_continue:
+                            # Session will not continue
+                            self.end_session(session.id)
+                else:
+                    self.end_session(session.id)
 
     def next_session_action(self, session: Session) -> bool:
         while session.actions:
@@ -481,6 +576,7 @@ class IntentService:
 
     def _set_idle_timeout(self):
         self._idle_seconds_left = IDLE_TIMEOUT
+        LOG.debug("Idle timeout set for %s second(s)", self._idle_seconds_left)
 
     def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills

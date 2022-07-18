@@ -19,7 +19,6 @@ from enum import Enum, IntEnum
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
 
-from .audioservice import AudioService
 from .mycroft_skill import MycroftSkill
 
 
@@ -83,7 +82,6 @@ class CommonPlaySkill(MycroftSkill, ABC):
         """
         if bus:
             super().bind(bus)
-            self.audioservice = AudioService(self.bus)
             self.add_event("play:query", self.__handle_play_query)
             self.add_event("play:start", self.__handle_play_start)
             self.add_event("play:stop", self.__handle_play_stop)
@@ -179,13 +177,6 @@ class CommonPlaySkill(MycroftSkill, ABC):
         phrase = message.data["phrase"]
         data = message.data.get("callback_data")
 
-        # Stop any currently playing audio
-        if self.audioservice.is_playing:
-            self.audioservice.stop()
-
-        # No, bad!
-        # self.bus.emit(message.forward("mycroft.stop"))
-
         # Save for CPS_play() later, e.g. if phrase includes modifiers like
         # "... on the chromecast"
         self.play_service_string = phrase
@@ -200,7 +191,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         # Invoke derived class to provide playback data
         self.CPS_start(phrase, data)
 
-    def CPS_play(self, *args, **kwargs):
+    def CPS_play(self, tracks=None, utterance=None, repeat=None):
         """Begin playback of a media file or stream
 
         Normally this method will be invoked with somthing like:
@@ -213,22 +204,40 @@ class CommonPlaySkill(MycroftSkill, ABC):
         """
         # Inject the user's utterance in case the audio backend wants to
         # interpret it.  E.g. "play some rock at full volume on the stereo"
-        if "utterance" not in kwargs:
-            kwargs["utterance"] = self.play_service_string
-        self.audioservice.play(*args, **kwargs)
-        self.CPS_send_status(uri=args[0], status=CPSTrackStatus.PLAYING_AUDIOSERVICE)
+
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.play",
+                data={"tracks": tracks, "utterance": utterance, "repeat": repeat},
+            )
+        )
+
+        self.CPS_send_status(uri=tracks, status=CPSTrackStatus.PLAYING_AUDIOSERVICE)
 
     def CPS_release_output_focus(self):
         """Stop anything playing on the audioservice."""
-        # audioservice gets confused sometimes
-        # so we unconfuse it here
-        # if self.audioservice.is_playing:
-        # TODO fix me
-        if True:
-            self.audioservice.stop()
-            return True
-        else:
-            return False
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.stop",
+                data={"mycroft_session_id": self._mycroft_session_id},
+            )
+        )
+
+    def CPS_pause(self):
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.pause",
+                data={"mycroft_session_id": self._mycroft_session_id},
+            )
+        )
+
+    def CPS_resume(self):
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.pause",
+                data={"mycroft_session_id": self._mycroft_session_id},
+            )
+        )
 
     def stop(self):
         self.log.warning("Creepy Internal Error 102 - skill missing stop method")

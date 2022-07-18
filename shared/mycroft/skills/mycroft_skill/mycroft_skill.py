@@ -1719,7 +1719,7 @@ class MycroftSkill:
         return Message(
             "mycroft.session.start",
             data={
-                "mycroft_session_id": self._mycroft_session_id,
+                "mycroft_session_id": self._mycroft_session_id or str(uuid4()),
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,

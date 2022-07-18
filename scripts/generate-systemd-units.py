@@ -96,7 +96,7 @@ def main():
                         "ExecStart=", venv_dir, "/bin/python -m service", sep="", file=f
                     )
                     print("Restart=always", file=f)
-                    print("RestartSec=1", file=f)
+                    print("RestartSec=5", file=f)
                     print("TimeoutSec=10", file=f)
                     print("WatchdogSec=5", file=f)
                     print("StandardOutput=journal", file=f)
@@ -185,7 +185,7 @@ def _write_skills_target(
                 file=f,
             )
             print("Restart=always", file=f)
-            print("RestartSec=1", file=f)
+            print("RestartSec=5", file=f)
             print("TimeoutSec=10", file=f)
             print("WatchdogSec=5", file=f)
             print("StandardOutput=journal", file=f)

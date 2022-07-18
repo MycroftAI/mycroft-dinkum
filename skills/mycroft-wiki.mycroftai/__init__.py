@@ -91,20 +91,24 @@ class WikipediaSkill(CommonQuerySkill):
 
         Requires utterance to directly ask for Wikipedia's answer.
         """
+        dialog = None
+        gui = None
+        speak = None
+
         query = self.extract_topic(message.data.get("ArticleTitle", ""))
         # Talk to the user, as this can take a little time...
         # self.speak_dialog("searching", {"query": query})
         try:
-            page, disambiguation_page = self.search_wikipedia(query)
+            page, _disambiguation_page = self.search_wikipedia(query)
             if page is None:
-                self.report_no_match(query)
-                return
-            self.log.info(f"Best result from Wikipedia is: {page.title}")
-            result = self.handle_result(page, query)
+                dialog = self.report_no_match(query)
+            else:
+                self.log.info("Best result from Wikipedia is: %s", page.title)
+                speak, gui = self.handle_result(page, query)
         except CONNECTION_ERRORS:
-            result = self.end_session(dialog="connection-error")
+            dialog = "connection-error"
 
-        return result
+        return self.end_session(speak=speak, dialog=dialog, gui=gui)
 
     @intent_handler("Random.intent")
     def handle_random_intent(self, _):
@@ -192,9 +196,7 @@ class WikipediaSkill(CommonQuerySkill):
 
         return self.end_session(
             speak=summary,
-            gui_page="feature_image.qml",
-            gui_data=self.get_display_data(article),
-            gui_clear="after_speak",
+            gui=("feature_image.qml", self.get_display_data(article)),
         )
 
     def extract_topic(self, query: str) -> str:
@@ -277,10 +279,13 @@ class WikipediaSkill(CommonQuerySkill):
 
     def report_no_match(self, query: str):
         """Answer no match found."""
-        return self.end_session(dialog=("no entry found", {"topic": query}))
+        return ("no entry found", {"topic": query})
 
     def report_match(self, page: MediaWikiPage):
         """Read short summary to user."""
+        speak = None
+        gui = None
+
         if self.wiki is None:
             self.log.error("not connected to wikipedia")
         else:
@@ -289,21 +294,10 @@ class WikipediaSkill(CommonQuerySkill):
             article = Article(page.title, page, summary, num_lines)
             image = self.wiki.get_best_image_url(page, self.max_image_width)
             article = article._replace(image=image)
-            return self.end_session(
-                speak=summary,
-                gui_page="feature_image.qml",
-                gui_data=self.get_display_data(article),
-                gui_clear="after_speak",
-            )
+            speak = summary
+            gui = ("feature_image.qml", self.get_display_data(article))
 
-    def display_article(self, article: Article):
-        """Display the match page on a GUI if connected.
-
-        Arguments:
-            article: Article containing necessary fields
-        """
-        self.update_display_data(article)
-        self.gui.show_page("feature_image.qml", override_idle=True)
+        return speak, gui
 
     def get_display_data(self, article: Article):
         """Update the GUI display data when a page is already being shown.
