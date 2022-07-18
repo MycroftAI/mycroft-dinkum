@@ -15,7 +15,7 @@
 #   play <station name> should find if provided
 #   add to favorites and play favorite
 import subprocess, requests, time
-from typing import Tuple
+from typing import Tuple, Optional
 from mycroft.skills import intent_handler, AdaptIntent
 from mycroft.messagebus import Message
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
@@ -259,7 +259,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     #         self.handle_previous_station(message)
 
     @intent_handler("ListenToRadio.intent")
-    def handle_padacious_intent(self, message):
+    def handle_listen_intent(self, message):
         if message.data:
             self.setup_for_play(message.data.get("utterance", ""))
             speak, gui = self.handle_play_request()
@@ -305,7 +305,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("StopRadio.intent")
     def handle_stop_radio(self, _):
-        self.stop()
+        self.now_playing = None
+        self.CPS_send_status()
+        self.CPS_release_output_focus()
 
     # @intent_handler("TurnOffRadio.intent")
     # def handle_turnoff_intent(self, message):
