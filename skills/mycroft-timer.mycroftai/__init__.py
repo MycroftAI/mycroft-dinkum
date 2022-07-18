@@ -39,8 +39,6 @@ from .skill import (
 ONE_DAY = 86400
 ONE_HOUR = 3600
 ONE_MINUTE = 60
-MARK_I = "mycroft_mark_1"
-MARK_II = "mycroft_mark_2"
 
 StaticResources = namedtuple(
     "StaticResources",
@@ -68,7 +66,6 @@ class TimerSkill(MycroftSkill):
         super().__init__(self.__class__.__name__)
         self.active_timers = []
         self.sound_file_path = Path(__file__).parent.joinpath("sounds", "two-beep.wav")
-        self.platform = self.config_core["enclosure"].get("platform", "unknown")
         self.timer_index = 0
         self.display_group = 0
         self.save_path = Path(self.file_system.path).joinpath("save_timers")
@@ -86,19 +83,16 @@ class TimerSkill(MycroftSkill):
         """Initialization steps to execute after the skill is loaded."""
         self._load_timers()
         self._reset_timer_index()
-        if self.active_timers:
-            if self.skill_service_initializing:
-                self.add_event("mycroft.ready", self.handle_mycroft_ready)
-            else:
-                self._initialize_active_timers()
+        # if self.active_timers:
+        #     if self.skill_service_initializing:
+        #         self.add_event("mycroft.ready", self.handle_mycroft_ready)
+        #     else:
+        #         self._initialize_active_timers()
+        self._initialize_active_timers()
         self._load_resources()
 
         # To prevent beeping while listening
         self.add_event("recognizer_loop:wakeword", self.handle_wake_word_detected)
-        # self.add_event(
-        #     "mycroft.speech.recognition.unknown", self.handle_speech_recognition_unknown
-        # )
-        # self.add_event("speak", self.handle_speak)
         self.add_event("skill.timer.stop", self.handle_timer_stop)
 
     def _load_resources(self):
@@ -126,7 +120,6 @@ class TimerSkill(MycroftSkill):
 
     def _initialize_active_timers(self):
         self.log.info("Loaded {} active timers".format(str(len(self.active_timers))))
-        # self._show_gui()
         self._start_display_update()
         self._start_expiration_check()
 
@@ -160,8 +153,7 @@ class TimerSkill(MycroftSkill):
         timer = self._start_new_timer(duration, name)
         return self.end_session(
             dialog=self._speak_new_timer(timer),
-            gui_page="timer_mark_ii.qml",
-            gui_data=self._get_gui_data(),
+            gui=("timer_mark_ii.qml", self._get_gui_data()),
             gui_clear="never",
         )
 
@@ -178,8 +170,7 @@ class TimerSkill(MycroftSkill):
                 timer = self._start_new_timer(duration, name)
                 return self.end_session(
                     dialog=self._speak_new_timer(timer),
-                    gui_page="timer_mark_ii.qml",
-                    gui_data=self._get_gui_data(),
+                    gui=("timer_mark_ii.qml", self._get_gui_data()),
                     gui_clear="never",
                 )
 
@@ -767,8 +758,7 @@ class TimerSkill(MycroftSkill):
 
     def update_display(self):
         gui_data = self._get_gui_data()
-        for key, value in gui_data.items():
-            self.gui[key] = value
+        self.update_gui_values("timer_mark_ii.qml", gui_data)
 
     def _select_timers_to_display(self, display_max: int) -> List[CountdownTimer]:
         """Determine which timers will populate the display.
@@ -804,32 +794,24 @@ class TimerSkill(MycroftSkill):
         """
         if self.expired_timers:
             # Only call _show_gui once until no more expired timers.
-            if not self.showing_expired_timers and self.gui.connected:
-                self._show_gui()
-                self.showing_expired_timers = True
+            # if not self.showing_expired_timers and self.gui.connected:
+            #     self._show_gui()
+            #     self.showing_expired_timers = True
 
             sound_uri = f"file://{self.sound_file_path}"
             self.play_sound_uri(sound_uri)
 
-            dialog = self._speak_expired_timer(self.expired_timers)
-            if not self.showing_expired_timers:
-                self.start_session(
-                    dialog=dialog,
-                    gui_page="timer_mark_ii.qml",
-                    gui_data=self._get_gui_data(),
-                    gui_clear="never",
-                )
-            else:
-                self.start_session(dialog=dialog)
+            # dialog = self._speak_expired_timer(self.expired_timers)
+            # if not self.showing_expired_timers:
+            #     self.start_session(
+            #         dialog=dialog,
+            #         gui=("timer_mark_ii.qml", self._get_gui_data()),
+            #         gui_clear="never",
+            #     )
+            # else:
+            #     self.start_session(dialog=dialog)
         else:
             self.showing_expired_timers = False
-
-    def _flash_eyes(self):
-        """Flash the eyes (if supported) as a visual indicator that a timer expired."""
-        if 1 <= now_utc().second % 4 <= 2:
-            self.enclosure.eyes_on()
-        else:
-            self.enclosure.eyes_off()
 
     def _speak_expired_timer(self, expired_timers):
         """Announce the expiration of any timers not already announced.
@@ -908,9 +890,6 @@ class TimerSkill(MycroftSkill):
         self._stop_display_update()
         self._stop_expiration_check()
         self.timer_index = 0
-        if self.platform == MARK_I:
-            self.enclosure.eyes_reset()
-            self.enclosure.mouth_reset()
 
     def handle_wake_word_detected(self, _):
         """React to the device detecting the wake word spoken by the user.
@@ -924,19 +903,6 @@ class TimerSkill(MycroftSkill):
         if self.active_timers:
             self._stop_expiration_check()
 
-    def handle_speech_recognition_unknown(self, _):
-        """React to no request being spoken after the wake word is activated.
-
-        When the wake word is detected, but no request is uttered by the user, resume
-        checking for expired timers.
-
-        The Mark I display was being used to show listening and thinking events.
-        Resume showing the active timer(s).
-        """
-        self._start_expiration_check()
-        if self.platform == MARK_I:
-            self._start_display_update()
-
     def _start_display_update(self):
         """Start an event repeating every second to update the timer display."""
         if self.active_timers:
@@ -949,8 +915,6 @@ class TimerSkill(MycroftSkill):
         """Stop the repeating event that updates the timer on the display."""
         self.log.info("stopping repeating event to update timer display")
         self.cancel_scheduled_event("UpdateTimerDisplay")
-        if self.platform == MARK_I:
-            self.enclosure.mouth_reset()
 
     def _start_expiration_check(self):
         """Start an event repeating every two seconds to check for expired timers."""

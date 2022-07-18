@@ -17,22 +17,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from git import Git
 from mycroft.messagebus.message import Message
-from mycroft.skills import AdaptIntent, IdleDisplaySkill, intent_handler
+from mycroft.skills import AdaptIntent, MycroftSkill, intent_handler
 from mycroft.util.format import nice_date, nice_time
 from mycroft.util.time import now_local
 
 from .skill import Wallpaper, WallpaperError
 
 FIFTEEN_MINUTES = 900
-MARK_II = "mycroft_mark_2"
 ONE_HOUR = 3600
 ONE_MINUTE = 60
 TEN_SECONDS = 10
 
 
-class HomescreenSkill(IdleDisplaySkill):
+class HomescreenSkill(MycroftSkill):
     """Skill to display a home screen (a.k.a. idle screen) on a GUI enabled device.
 
     Attributes:
@@ -47,19 +45,6 @@ class HomescreenSkill(IdleDisplaySkill):
         self.display_date = None
         self.wallpaper = Wallpaper(self.root_dir, self.file_system.path)
         self.settings_change_callback = self._handle_settings_change
-
-    @property
-    def platform(self) -> Optional[str]:
-        """The platform from the device configuration (e.g. "mycroft_mark_1")
-
-        Returns:
-            Platform identifier if one is defined, otherwise None.
-        """
-        platform = None
-        if self.config_core and self.config_core.get("enclosure"):
-            platform = self.config_core["enclosure"].get("platform")
-
-        return platform
 
     @property
     def is_development_device(self):
@@ -106,7 +91,6 @@ class HomescreenSkill(IdleDisplaySkill):
         self._schedule_date_update()
         self.schedule_weather_request()
         self.query_active_alarms()
-        self._schedule_skill_datetime_update()
         self.handle_initial_skill_load()
         self._add_event_handlers()
 
@@ -153,27 +137,6 @@ class HomescreenSkill(IdleDisplaySkill):
             self.request_weather, when=datetime.now(), frequency=FIFTEEN_MINUTES
         )
 
-    def _schedule_skill_datetime_update(self):
-        """Schedules an hourly check for skills being updated."""
-        self.schedule_repeating_event(
-            self.update_skill_datetime, when=datetime.now(), frequency=ONE_HOUR
-        )
-
-    def update_skill_datetime(self):
-        """Sets the skill update date for display on the home screen.
-
-        The Mycroft Skills Manager update system sets the modified date of a skill's
-        __init__.py file to the time the skill was updated to force a reload. Leverage
-        this to determine the last time MSM updated any skills.
-        """
-        if self.is_development_device:
-            skills_repo = Git(f"{self.config_core['data_dir']}/.skills-repo")
-            last_commit_timestamp = skills_repo.log("-1", "--format=%ct")
-            last_commit_date_time = datetime.utcfromtimestamp(
-                int(last_commit_timestamp)
-            )
-            self.gui["skillDateTime"] = last_commit_date_time.strftime("%Y-%m-%d %H:%M")
-
     def _add_event_handlers(self):
         """Defines the events this skill will listen for and their handlers."""
         self.add_event("mycroft.skills.initialized", self.handle_initial_skill_load)
@@ -184,6 +147,7 @@ class HomescreenSkill(IdleDisplaySkill):
         )
         self.add_event("mycroft.mic.mute", self.handle_mute)
         self.add_event("mycroft.mic.unmute", self.handle_unmute)
+        self.add_event("mycroft.gui.idle", self.handle_gui_idle)
 
     def handle_initial_skill_load(self):
         """Queries other skills for data to display and shows the resting screen.
@@ -217,8 +181,11 @@ class HomescreenSkill(IdleDisplaySkill):
     @intent_handler(AdaptIntent().require("show").require("home"))
     def show_homescreen(self, _):
         """Handles a user's request to show the home screen."""
-        with self.activity():
-            self._show_idle_screen()
+        gui = self._show_idle_screen()
+        return self.end_session(gui=gui)
+
+    def handle_gui_idle(self, _message: Message):
+        self.start_session(gui=self._show_idle_screen, gui_clear="never")
 
     def _show_idle_screen(self):
         """Populates and shows the resting screen."""
@@ -226,30 +193,7 @@ class HomescreenSkill(IdleDisplaySkill):
         self._init_wallpaper()
         self.update_clock()
         self.update_date()
-        self._set_build_datetime()
-        self._show_page()
-
-    def _set_build_datetime(self):
-        """Sets the build date on the screen from a file, if it exists.
-
-        The build date won't change without a reboot.  This only needs to occur once.
-        """
-        build_datetime = ""
-        build_info_path = Path("/etc/mycroft/build-info.json")
-        if self.is_development_device and build_info_path.is_file():
-            with open(build_info_path) as build_info_file:
-                build_info = json.loads(build_info_file.read())
-                build_datetime = build_info.get("build_date", "")
-
-        self.gui["buildDateTime"] = build_datetime[:-3]
-
-    def _show_page(self):
-        """Show the appropriate home screen based on the device platform."""
-        if self.platform == MARK_II:
-            page = "mark_ii_idle.qml"
-        else:
-            page = "scalable_idle.qml"
-        self.gui.show_page(page)
+        return "mark_ii_idle.qml"
 
     @intent_handler(AdaptIntent().require("change").one_of("background", "wallpaper"))
     def change_wallpaper(self, message):
@@ -258,31 +202,31 @@ class HomescreenSkill(IdleDisplaySkill):
         Each time this intent is executed the next item in the list of collected
         wallpapers will be displayed and the skill setting will be updated.
         """
-        with self.activity():
-            utterance = message.data.get("utterance", "")
-            wallpaper_name = self.wallpaper.extract_wallpaper_name(
-                self.name_regex, utterance
-            )
-            if wallpaper_name:
-                if not self.wallpaper.next_by_alias(wallpaper_name):
-                    self.speak_dialog(
-                        "wallpaper-not-found", data={"name": wallpaper_name}
-                    )
-                    return
-            else:
-                self.wallpaper.next()
+        gui_data = {}
+        utterance = message.data.get("utterance", "")
+        wallpaper_name = self.wallpaper.extract_wallpaper_name(
+            self.name_regex, utterance
+        )
+        if wallpaper_name:
+            if not self.wallpaper.next_by_alias(wallpaper_name):
+                dialog = ("wallpaper-not-found", {"name": wallpaper_name})
+                return self.end_session(dialog=dialog)
+        else:
+            self.wallpaper.next()
 
-            self.settings["wallpaper_file"] = self.wallpaper.file_name_setting
-            self.gui["wallpaperPath"] = str(self.wallpaper.selected)
-            self.bus.emit(
-                Message(
-                    "homescreen.wallpaper.changed",
-                    data={"name": self.wallpaper.file_name_setting},
-                )
+        self.settings["wallpaper_file"] = self.wallpaper.file_name_setting
+        gui_data["wallpaperPath"] = str(self.wallpaper.selected)
+        self.bus.emit(
+            Message(
+                "homescreen.wallpaper.changed",
+                data={"name": self.wallpaper.file_name_setting},
             )
-            self.log.info(
-                "Home screen wallpaper changed to " + str(self.wallpaper.selected.name)
-            )
+        )
+        self.log.info(
+            "Home screen wallpaper changed to %s", self.wallpaper.selected.name
+        )
+
+        return self.end_session(gui=("mark_ii_idle.qml", gui_data), gui_clear="never")
 
     def update_date(self):
         """Formats the datetime object returned from the parser for display purposes."""

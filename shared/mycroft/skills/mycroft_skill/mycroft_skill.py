@@ -1608,6 +1608,14 @@ class MycroftSkill:
 
     # -------------------------------------------------------------------------
 
+    def update_gui_values(self, page: str, data: Dict[str, Any]):
+        self.bus.emit(
+            Message(
+                "gui.value.set",
+                data={"namespace": f"{self.skill_id}.{page}", "data": data},
+            )
+        )
+
     def _build_actions(
         self,
         dialog: Optional[SessionDialogsType] = None,
@@ -1661,7 +1669,7 @@ class MycroftSkill:
                         # "page": "file://" + self.find_resource(gui_page, "ui"),
                         "page": f"file:///home/pi/mycroft-dinkum/skills/{self.skill_id}/ui/{gui_page}",
                         "data": gui_data or {},
-                        "override_idle": gui_clear == "on_idle",
+                        "namespace": f"{self.skill_id}.{gui_page}",
                     }
                 )
 

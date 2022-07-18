@@ -1,4 +1,4 @@
-        // Copyright 2021, Mycroft AI Inc.
+// Copyright 2021, Mycroft AI Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#22A7F0"
         timerInfo: sessionData.activeTimers.timers[0]
         timerCount: sessionData.activeTimerCount
+        visible: sessionData.activeTimerCount > 0
     }
 
     MycroftTimer {
@@ -33,6 +34,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#40DBB0"
         timerInfo: sessionData.activeTimers.timers[1]
         timerCount: sessionData.activeTimerCount
+        visible: sessionData.activeTimerCount > 1
     }
 
     MycroftTimer {
@@ -42,6 +44,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#BDC3C7"
         timerInfo: sessionData.activeTimers.timers[2]
         timerCount: sessionData.activeTimerCount
+        visible: sessionData.activeTimerCount > 2
     }
 
     MycroftTimer {
@@ -53,5 +56,6 @@ Mycroft.CardDelegate {
         backgroundColor: "#4DE0FF"
         timerInfo: sessionData.activeTimers.timers[3]
         timerCount: sessionData.activeTimerCount
+        visible: sessionData.activeTimerCount > 3
     }
 }
