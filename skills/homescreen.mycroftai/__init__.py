@@ -152,7 +152,7 @@ class HomescreenSkill(MycroftSkill):
     def show_homescreen(self, _):
         """Handles a user's request to show the home screen."""
         gui = self._show_idle_screen()
-        return self.end_session(gui=gui)
+        return self.end_session(gui=gui, gui_clear="never")
 
     def handle_gui_idle(self, _message: Message):
         self.bus.emit(
