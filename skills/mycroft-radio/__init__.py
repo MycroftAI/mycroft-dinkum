@@ -14,11 +14,15 @@
 # TODO
 #   play <station name> should find if provided
 #   add to favorites and play favorite
-import subprocess, requests, time
-from typing import Tuple, Optional
-from mycroft.skills import intent_handler, AdaptIntent
+import subprocess
+import time
+from typing import Optional, Tuple
+
+import requests
 from mycroft.messagebus import Message
+from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
+
 from .RadioStations import RadioStations
 
 # Minimum confidence levels

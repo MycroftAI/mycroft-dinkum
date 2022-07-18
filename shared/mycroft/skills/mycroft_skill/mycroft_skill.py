@@ -1622,7 +1622,8 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "on_idle",
+        gui_clear: str = "auto",
+        audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
     ):
         actions = []
@@ -1639,6 +1640,12 @@ class MycroftSkill:
                     },
                 }
             )
+
+        if gui_clear == "at_start":
+            actions.append({"type": "clear_display"})
+
+        if audio_alert:
+            actions.append({"type": "audio_alert", "uri": audio_alert, "wait": True})
 
         guis = []
         if gui is not None:
@@ -1672,6 +1679,9 @@ class MycroftSkill:
                         "namespace": f"{self.skill_id}.{gui_page}",
                     }
                 )
+
+                if gui_clear == "auto":
+                    gui_clear = "on_idle"
 
             if maybe_dialog is not None:
                 if isinstance(maybe_dialog, str):
@@ -1711,7 +1721,8 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "on_idle",
+        gui_clear: str = "auto",
+        audio_alert: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
         continue_session: bool = False,
@@ -1727,6 +1738,7 @@ class MycroftSkill:
                     speak_wait=speak_wait,
                     gui=gui,
                     gui_clear=gui_clear,
+                    audio_alert=audio_alert,
                     message=message,
                 ),
                 "expect_response": expect_response,
@@ -1740,7 +1752,8 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "on_idle",
+        gui_clear: str = "auto",
+        audio_alert: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
     ) -> Message:
@@ -1755,6 +1768,7 @@ class MycroftSkill:
                     speak_wait=speak_wait,
                     gui=gui,
                     gui_clear=gui_clear,
+                    audio_alert=audio_alert,
                     message=message,
                 ),
                 "expect_response": expect_response,
@@ -1767,7 +1781,8 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "on_idle",
+        gui_clear: str = "auto",
+        audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
     ) -> Message:
         return Message(
@@ -1781,6 +1796,7 @@ class MycroftSkill:
                     speak_wait=speak_wait,
                     gui=gui,
                     gui_clear=gui_clear,
+                    audio_alert=audio_alert,
                     message=message,
                 ),
             },
