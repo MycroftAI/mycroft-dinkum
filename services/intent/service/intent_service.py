@@ -16,7 +16,7 @@
 import time
 from copy import copy
 from dataclasses import dataclass, field
-from threading import RLock
+from threading import Thread, RLock
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -36,6 +36,8 @@ from .intent_services import (
     PadatiousService,
     RegexService,
 )
+
+IDLE_TIMEOUT = 15
 
 
 @dataclass
@@ -122,6 +124,9 @@ class IntentService:
         self._response_skill_id: Optional[str] = None
         self._sessions: Dict[str, Session] = {}
         self._session_lock = RLock()
+
+        self._idle_seconds_left: Optional[int] = None
+        Thread(target=self._check_idle_timeout, daemon=True).start()
 
         self.bus.on("register_vocab", self.handle_register_vocab)
         self.bus.on("register_intent", self.handle_register_intent)
@@ -354,7 +359,7 @@ class IntentService:
             waiting_for_action = self.next_session_action(session)
 
             if not waiting_for_action:
-                if self._session_expect_response:
+                if session.expect_response:
                     self._trigger_listen(mycroft_session_id)
                 elif not session.will_continue:
                     # Session is over
@@ -460,7 +465,10 @@ class IntentService:
                         )
                     )
             elif action_type == "clear_display":
+                # Go idle immediately
                 self.bus.emit(Message("mycroft.gui.idle"))
+            elif action_type == "wait_for_idle":
+                self._set_idle_timeout()
 
             self.bus.emit(
                 Message(
@@ -470,6 +478,9 @@ class IntentService:
             )
 
         return False
+
+    def _set_idle_timeout(self):
+        self._idle_seconds_left = IDLE_TIMEOUT
 
     def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills
@@ -599,6 +610,21 @@ class IntentService:
                         break
 
         return handled
+
+    def _check_idle_timeout(self):
+        try:
+            while True:
+                if self._idle_seconds_left is not None:
+                    self._idle_seconds_left -= 1
+                    if self._idle_seconds_left <= 0:
+                        self._idle_seconds_left = None
+                        self.bus.emit(Message("mycroft.gui.idle"))
+
+                time.sleep(1)
+        except Exception:
+            LOG.exception("Error while checking idle timeout")
+
+    # -------------------------------------------------------------------------
 
     def _converse(self, utterances, lang, message):
         """Give active skills a chance at the utterance
