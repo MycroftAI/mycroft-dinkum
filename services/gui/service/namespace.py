@@ -281,250 +281,303 @@ class NamespaceManager:
 
     def _define_message_handlers(self):
         """Assigns methods as handlers for specified message types."""
-        self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
-        self.core_bus.on("gui.event.send", self.handle_send_event)
-        self.core_bus.on("gui.page.delete", self.handle_delete_page)
+        # self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
+        # self.core_bus.on("gui.event.send", self.handle_send_event)
+        # self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.show", self.handle_show_page)
-        self.core_bus.on("gui.status.request", self.handle_status_request)
+        # self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
 
-    def handle_clear_namespace(self, message: Message):
-        """Handles a request to remove a namespace.
-
-        Args:
-            message: the message requesting namespace removal
-        """
-        try:
-            namespace_name = message.data["__from"]
-        except KeyError:
-            LOG.error("Request to delete namespace failed: no namespace specified")
-        else:
-            with namespace_lock:
-                self._remove_namespace(namespace_name)
-
-    @staticmethod
-    def handle_send_event(message: Message):
-        """Handles a request to send a message to the GUI message bus.
-
-        Args:
-            message: the message requesting a message to be sent to the GUI
-                message bus.
-        """
-        try:
-            message = dict(
-                type="mycroft.events.triggered",
-                namespace=message.data.get("__from"),
-                event_name=message.data.get("event_name"),
-                params=message.data.get("params"),
-            )
-            send_message_to_gui(message)
-        except Exception:
-            LOG.exception("Could not send event trigger")
-
-    def handle_delete_page(self, message: Message):
-        """Handles request to remove one or more pages from a namespace.
-
-        Args:
-            message: the message requesting page removal
-        """
-        message_is_valid = _validate_page_message(message)
-        if message_is_valid:
-            namespace_name = message.data["__from"]
-            pages_to_remove = message.data["page"]
-            with namespace_lock:
-                self._remove_pages(namespace_name, pages_to_remove)
-
-    def _remove_pages(self, namespace_name: str, pages_to_remove: List[str]):
-        """Removes one or more pages from a namespace.
-
-        Pages are removed from the bottom of the stack.
-
-        Args:
-            namespace_name: the affected namespace
-            pages_to_remove: names of pages to delete
-        """
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
-            page_positions = []
-            for index, page in enumerate(pages_to_remove):
-                if page in namespace.pages:
-                    page_positions.append(index)
-            page_positions.sort(reverse=True)
-            namespace.remove_pages(page_positions)
-
     def handle_show_page(self, message: Message):
-        """Handles a request to show one or more pages on the screen.
-
-        Args:
-            message: the message containing the page show request
-        """
-        message_is_valid = _validate_page_message(message)
-        if message_is_valid:
-            namespace_name = message.data["__from"]
-            pages_to_show = message.data["page"]
-            persistence = message.data.get("__idle", False)
-            with namespace_lock:
-                self._activate_namespace(namespace_name)
-                self._load_pages(pages_to_show)
-                self._update_namespace_persistence(persistence)
-
-    def _activate_namespace(self, namespace_name: str):
-        """Instructs the GUI to load a namespace and its associated data.
-
-        Args:
-            namespace_name: the name of the namespace to load
-        """
-        namespace = self._ensure_namespace_exists(namespace_name)
-        if namespace in self.active_namespaces:
-            namespace_position = self.active_namespaces.index(namespace)
-            namespace.activate(namespace_position)
-            self.active_namespaces.insert(
-                0, self.active_namespaces.pop(namespace_position)
-            )
-        else:
-            namespace.add()
-            self.active_namespaces.insert(0, namespace)
-        for key, value in namespace.data.items():
-            namespace.load_data(key, value)
-
-        self._emit_namespace_displayed_event()
-
-    def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
-        """Retrieves the requested namespace, creating one if it doesn't exist.
-
-        Args:
-            namespace_name: the name of the namespace being retrieved
-
-        Returns:
-            the requested namespace
-        """
-        # TODO: - Update sync to match.
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is None:
-            namespace = Namespace(namespace_name)
-            self.loaded_namespaces[namespace_name] = namespace
-
-        return namespace
-
-    def _load_pages(self, pages_to_show: str):
-        """Loads the requested pages in the namespace.
-
-        Args:
-            pages_to_show: the pages requested to be loaded
-        """
-        active_namespace = self.active_namespaces[0]
-        active_namespace.load_pages(pages_to_show)
-
-    def _update_namespace_persistence(self, persistence: Union[bool, int]):
-        """Sets the persistence of the namespace being activated.
-
-        A namespace's persistence is the same as the persistence of the
-        most recent pages added to a namespace.  For example, a multi-page
-        namespace could show the first set of pages with a persistence of
-        True (show until removed) and the last page with a persistence of
-        15 seconds.  This would ensure that the namespace isn't removed while
-        the skill is showing the pages.
-
-        Args:
-            persistence: length of time the namespace should be displayed
-        """
-        for position, namespace in enumerate(self.active_namespaces):
-            if position:
-                if not namespace.persistent:
-                    self._remove_namespace(namespace.name)
-            else:
-                if namespace.name == self.idle_display_skill:
-                    namespace.set_persistence(True)
-                else:
-                    namespace.set_persistence(persistence)
-                if not namespace.persistent:
-                    self._schedule_namespace_removal(namespace)
-
-    def _schedule_namespace_removal(self, namespace: Namespace):
-        """Uses a timer thread to remove the namespace.
-
-        Args:
-            namespace: the namespace to be removed
-        """
-        remove_namespace_timer = Timer(
-            namespace.duration, self._remove_namespace_via_timer, args=(namespace.name,)
-        )
-        remove_namespace_timer.start()
-        self.remove_namespace_timers[namespace.name] = remove_namespace_timer
-
-    def _remove_namespace_via_timer(self, namespace_name: str):
-        """Removes a namespace and the corresponding timer instance."""
-        self._remove_namespace(namespace_name)
         try:
-            del self.remove_namespace_timers[namespace_name]
-        except KeyError:
-            LOG.warning(
-                f"{namespace_name} not found in "
-                "remove_namespace_timers dict during removal."
+            namespace = message.data["namespace"]
+            send_message_to_gui(
+                {
+                    "type": "mycroft.session.list.remove",
+                    "namespace": "mycroft.system.active_skills",
+                    "from": 0,
+                    "to": 0,
+                    "items_number": 1,
+                }
             )
-
-    def _remove_namespace(self, namespace_name: str):
-        """Removes a namespace from the active namespace stack.
-
-        Args:
-            namespace_name: namespace to remove
-        """
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
-            namespace_position = self.active_namespaces.index(namespace)
-            namespace.remove(namespace_position)
-            self.active_namespaces.remove(namespace)
-        self._emit_namespace_displayed_event()
-
-    def _emit_namespace_displayed_event(self):
-        if self.active_namespaces:
-            displaying_namespace = self.active_namespaces[0]
-            message_data = dict(skill_id=displaying_namespace.name)
-            self.core_bus.emit(Message("gui.namespace.displayed", data=message_data))
-
-    def handle_status_request(self, message: Message):
-        """Handles a GUI status request by replying with the connection status.
-
-        Args:
-            message: the request for status of the GUI
-        """
-        gui_connected = determine_if_gui_connected()
-        reply = message.reply(
-            "gui.status.request.response", dict(connected=gui_connected)
-        )
-        self.core_bus.emit(reply)
+            send_message_to_gui(
+                {
+                    "type": "mycroft.session.list.insert",
+                    "namespace": "mycroft.system.active_skills",
+                    "position": 0,
+                    "data": [{"skill_id": namespace}],
+                }
+            )
+            data = message.data.get("data", {})
+            send_message_to_gui(
+                {"type": "mycroft.session.set", "namespace": namespace, "data": data}
+            )
+            page = message.data["page"]
+            send_message_to_gui(
+                {
+                    "type": "mycroft.gui.list.insert",
+                    "namespace": namespace,
+                    "data": [{"url": page}],
+                }
+            )
+            LOG.debug(
+                "Showing page %s on namespace %s with data %s", page, namespace, data
+            )
+        except Exception:
+            LOG.exception("Unexpected error showing GUI page")
 
     def handle_set_value(self, message: Message):
-        """Handles a request to set the value of namespace data attributes.
-
-        Args:
-            message: the request to set attribute values
-        """
         try:
-            namespace_name = message.data["__from"]
-        except KeyError:
-            LOG.error(
-                "Request to set gui attribute value failed: no " "namespace specified"
+            namespace = message.data["namespace"]
+            data = message.data.get("data", {})
+            send_message_to_gui(
+                {
+                    "type": "mycroft.session.set",
+                    "namespace": namespace,
+                    "data": message.data.get("data", {}),
+                }
             )
-        else:
-            with namespace_lock:
-                self._update_namespace_data(namespace_name, message.data)
+            LOG.debug("Setting values for namespace %s to %s", namespace, data)
+        except Exception:
+            LOG.exception("Unexpected error showing GUI page")
 
-    def _update_namespace_data(self, namespace_name: str, data: dict):
-        """Updates the values of namespace data attributes, unless unchanged.
+    # def handle_clear_namespace(self, message: Message):
+    #     """Handles a request to remove a namespace.
 
-        Args:
-            namespace_name: the name of the namespace to update
-            data: the name and new value of one or more data attributes
-        """
-        namespace = self._ensure_namespace_exists(namespace_name)
-        for key, value in data.items():
-            if key not in RESERVED_KEYS and namespace.data.get(key) != value:
-                LOG.debug(f"Setting {key} to {value} in namespace {namespace.name}")
-                namespace.data[key] = value
-                if namespace in self.active_namespaces:
-                    namespace.load_data(key, value)
+    #     Args:
+    #         message: the message requesting namespace removal
+    #     """
+    #     try:
+    #         namespace_name = message.data["__from"]
+    #     except KeyError:
+    #         LOG.error("Request to delete namespace failed: no namespace specified")
+    #     else:
+    #         with namespace_lock:
+    #             self._remove_namespace(namespace_name)
+
+    # @staticmethod
+    # def handle_send_event(message: Message):
+    #     """Handles a request to send a message to the GUI message bus.
+
+    #     Args:
+    #         message: the message requesting a message to be sent to the GUI
+    #             message bus.
+    #     """
+    #     try:
+    #         message = dict(
+    #             type="mycroft.events.triggered",
+    #             namespace=message.data.get("__from"),
+    #             event_name=message.data.get("event_name"),
+    #             params=message.data.get("params"),
+    #         )
+    #         send_message_to_gui(message)
+    #     except Exception:
+    #         LOG.exception("Could not send event trigger")
+
+    # def handle_delete_page(self, message: Message):
+    #     """Handles request to remove one or more pages from a namespace.
+
+    #     Args:
+    #         message: the message requesting page removal
+    #     """
+    #     message_is_valid = _validate_page_message(message)
+    #     if message_is_valid:
+    #         namespace_name = message.data["__from"]
+    #         pages_to_remove = message.data["page"]
+    #         with namespace_lock:
+    #             self._remove_pages(namespace_name, pages_to_remove)
+
+    # def _remove_pages(self, namespace_name: str, pages_to_remove: List[str]):
+    #     """Removes one or more pages from a namespace.
+
+    #     Pages are removed from the bottom of the stack.
+
+    #     Args:
+    #         namespace_name: the affected namespace
+    #         pages_to_remove: names of pages to delete
+    #     """
+    #     namespace = self.loaded_namespaces.get(namespace_name)
+    #     if namespace is not None and namespace in self.active_namespaces:
+    #         page_positions = []
+    #         for index, page in enumerate(pages_to_remove):
+    #             if page in namespace.pages:
+    #                 page_positions.append(index)
+    #         page_positions.sort(reverse=True)
+    #         namespace.remove_pages(page_positions)
+
+    # def handle_show_page(self, message: Message):
+    #     """Handles a request to show one or more pages on the screen.
+
+    #     Args:
+    #         message: the message containing the page show request
+    #     """
+    #     message_is_valid = _validate_page_message(message)
+    #     if message_is_valid:
+    #         namespace_name = message.data["__from"]
+    #         pages_to_show = message.data["page"]
+    #         persistence = message.data.get("__idle", False)
+    #         with namespace_lock:
+    #             self._activate_namespace(namespace_name)
+    #             self._load_pages(pages_to_show)
+    #             self._update_namespace_persistence(persistence)
+
+    # def _activate_namespace(self, namespace_name: str):
+    #     """Instructs the GUI to load a namespace and its associated data.
+
+    #     Args:
+    #         namespace_name: the name of the namespace to load
+    #     """
+    #     namespace = self._ensure_namespace_exists(namespace_name)
+    #     if namespace in self.active_namespaces:
+    #         namespace_position = self.active_namespaces.index(namespace)
+    #         namespace.activate(namespace_position)
+    #         self.active_namespaces.insert(
+    #             0, self.active_namespaces.pop(namespace_position)
+    #         )
+    #     else:
+    #         namespace.add()
+    #         self.active_namespaces.insert(0, namespace)
+    #     for key, value in namespace.data.items():
+    #         namespace.load_data(key, value)
+
+    #     self._emit_namespace_displayed_event()
+
+    # def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
+    #     """Retrieves the requested namespace, creating one if it doesn't exist.
+
+    #     Args:
+    #         namespace_name: the name of the namespace being retrieved
+
+    #     Returns:
+    #         the requested namespace
+    #     """
+    #     # TODO: - Update sync to match.
+    #     namespace = self.loaded_namespaces.get(namespace_name)
+    #     if namespace is None:
+    #         namespace = Namespace(namespace_name)
+    #         self.loaded_namespaces[namespace_name] = namespace
+
+    #     return namespace
+
+    # def _load_pages(self, pages_to_show: str):
+    #     """Loads the requested pages in the namespace.
+
+    #     Args:
+    #         pages_to_show: the pages requested to be loaded
+    #     """
+    #     active_namespace = self.active_namespaces[0]
+    #     active_namespace.load_pages(pages_to_show)
+
+    # def _update_namespace_persistence(self, persistence: Union[bool, int]):
+    #     """Sets the persistence of the namespace being activated.
+
+    #     A namespace's persistence is the same as the persistence of the
+    #     most recent pages added to a namespace.  For example, a multi-page
+    #     namespace could show the first set of pages with a persistence of
+    #     True (show until removed) and the last page with a persistence of
+    #     15 seconds.  This would ensure that the namespace isn't removed while
+    #     the skill is showing the pages.
+
+    #     Args:
+    #         persistence: length of time the namespace should be displayed
+    #     """
+    #     for position, namespace in enumerate(self.active_namespaces):
+    #         if position:
+    #             if not namespace.persistent:
+    #                 self._remove_namespace(namespace.name)
+    #         else:
+    #             if namespace.name == self.idle_display_skill:
+    #                 namespace.set_persistence(True)
+    #             else:
+    #                 namespace.set_persistence(persistence)
+    #             if not namespace.persistent:
+    #                 self._schedule_namespace_removal(namespace)
+
+    # def _schedule_namespace_removal(self, namespace: Namespace):
+    #     """Uses a timer thread to remove the namespace.
+
+    #     Args:
+    #         namespace: the namespace to be removed
+    #     """
+    #     remove_namespace_timer = Timer(
+    #         namespace.duration, self._remove_namespace_via_timer, args=(namespace.name,)
+    #     )
+    #     remove_namespace_timer.start()
+    #     self.remove_namespace_timers[namespace.name] = remove_namespace_timer
+
+    # def _remove_namespace_via_timer(self, namespace_name: str):
+    #     """Removes a namespace and the corresponding timer instance."""
+    #     self._remove_namespace(namespace_name)
+    #     try:
+    #         del self.remove_namespace_timers[namespace_name]
+    #     except KeyError:
+    #         LOG.warning(
+    #             f"{namespace_name} not found in "
+    #             "remove_namespace_timers dict during removal."
+    #         )
+
+    # def _remove_namespace(self, namespace_name: str):
+    #     """Removes a namespace from the active namespace stack.
+
+    #     Args:
+    #         namespace_name: namespace to remove
+    #     """
+    #     namespace = self.loaded_namespaces.get(namespace_name)
+    #     if namespace is not None and namespace in self.active_namespaces:
+    #         namespace_position = self.active_namespaces.index(namespace)
+    #         namespace.remove(namespace_position)
+    #         self.active_namespaces.remove(namespace)
+    #     self._emit_namespace_displayed_event()
+
+    # def _emit_namespace_displayed_event(self):
+    #     if self.active_namespaces:
+    #         displaying_namespace = self.active_namespaces[0]
+    #         message_data = dict(skill_id=displaying_namespace.name)
+    #         self.core_bus.emit(Message("gui.namespace.displayed", data=message_data))
+
+    # def handle_status_request(self, message: Message):
+    #     """Handles a GUI status request by replying with the connection status.
+
+    #     Args:
+    #         message: the request for status of the GUI
+    #     """
+    #     gui_connected = determine_if_gui_connected()
+    #     reply = message.reply(
+    #         "gui.status.request.response", dict(connected=gui_connected)
+    #     )
+    #     self.core_bus.emit(reply)
+
+    # def handle_set_value(self, message: Message):
+    #     """Handles a request to set the value of namespace data attributes.
+
+    #     Args:
+    #         message: the request to set attribute values
+    #     """
+    #     try:
+    #         namespace_name = message.data["__from"]
+    #     except KeyError:
+    #         LOG.error(
+    #             "Request to set gui attribute value failed: no " "namespace specified"
+    #         )
+    #     else:
+    #         with namespace_lock:
+    #             self._update_namespace_data(namespace_name, message.data)
+
+    # def _update_namespace_data(self, namespace_name: str, data: dict):
+    #     """Updates the values of namespace data attributes, unless unchanged.
+
+    #     Args:
+    #         namespace_name: the name of the namespace to update
+    #         data: the name and new value of one or more data attributes
+    #     """
+    #     namespace = self._ensure_namespace_exists(namespace_name)
+    #     for key, value in data.items():
+    #         if key not in RESERVED_KEYS and namespace.data.get(key) != value:
+    #             LOG.debug(f"Setting {key} to {value} in namespace {namespace.name}")
+    #             namespace.data[key] = value
+    #             if namespace in self.active_namespaces:
+    #                 namespace.load_data(key, value)
 
     def handle_client_connected(self, message: Message):
         """Handles an event from the GUI indicating it is connected to the bus.
