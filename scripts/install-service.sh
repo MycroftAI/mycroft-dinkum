@@ -51,7 +51,13 @@ fi
 : "${XDG_CONFIG_HOME:=${HOME}/.config}"
 
 # User-writable directory where virtual environment is stored
-service_config_dir="${XDG_CONFIG_HOME}/mycroft/services/${service_id}"
+if [ -n "${DINKUM_SHARED_VENV}" ]; then
+    # Shared virtual enviroment
+    service_config_dir="${XDG_CONFIG_HOME}/mycroft"
+else
+    # Isolated service virtual enviroment
+    service_config_dir="${XDG_CONFIG_HOME}/mycroft/services/${service_id}"
+fi
 
 echo "Installing ${service_id} to ${service_config_dir}"
 mkdir -p "${service_config_dir}"

@@ -23,7 +23,7 @@ from mycroft.configuration import Configuration
 from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
-from .enclosure.mark2 import EnclosureMark2
+# from .enclosure.mark2 import EnclosureMark2
 
 SERVICE_ID = "enclosure"
 LOG = logging.getLogger(SERVICE_ID)
@@ -46,8 +46,8 @@ def main():
         config = Configuration.get()
         bus = _connect_to_bus(config)
 
-        enclosure = EnclosureMark2(bus, config)
-        enclosure.run()
+        # enclosure = EnclosureMark2(bus, config)
+        # enclosure.run()
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -55,6 +55,9 @@ def main():
         # Inform systemd that we successfully started
         NOTIFIER.notify("READY=1")
         bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
+
+        # HACK
+        bus.emit(Message("mycroft.gui.idle"))
 
         try:
             # Wait for exit signal

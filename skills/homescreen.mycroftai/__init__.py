@@ -155,9 +155,7 @@ class HomescreenSkill(MycroftSkill):
         return self.end_session(gui=gui, gui_clear="never")
 
     def handle_gui_idle(self, _message: Message):
-        self.bus.emit(
-            self.start_session(gui=self._show_idle_screen(), gui_clear="never")
-        )
+        self.emit_start_session(gui=self._show_idle_screen(), gui_clear="never")
 
     def _show_idle_screen(self):
         """Populates and shows the resting screen."""

@@ -1714,7 +1714,7 @@ class MycroftSkill:
 
         return actions
 
-    def start_session(
+    def emit_start_session(
         self,
         dialog: Optional[SessionDialogsType] = None,
         speak: Optional[str] = None,
@@ -1725,11 +1725,12 @@ class MycroftSkill:
         expect_response: bool = False,
         message: Optional[Message] = None,
         continue_session: bool = False,
-    ) -> Message:
-        return Message(
+    ) -> str:
+        mycroft_session_id = str(uuid4())
+        message = Message(
             "mycroft.session.start",
             data={
-                "mycroft_session_id": self._mycroft_session_id or str(uuid4()),
+                "mycroft_session_id": mycroft_session_id,
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,
@@ -1744,6 +1745,9 @@ class MycroftSkill:
                 "continue_session": continue_session,
             },
         )
+        self.bus.emit(message)
+
+        return mycroft_session_id
 
     def continue_session(
         self,

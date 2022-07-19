@@ -23,7 +23,15 @@ def main():
     parser.add_argument(
         "--skill", action="append", default=[], help="Path to skill directory"
     )
+    parser.add_argument(
+        "--shared-venv",
+        action="store_true",
+        help="Services and skills shared a virtual environment",
+    )
     args = parser.parse_args()
+
+    if os.environ.get("DINKUM_SHARED_VENV"):
+        args.shared_venv = True
 
     config_home = Path(
         os.environ.get("XDG_CONFIG_HOME", Path("~/.config").expanduser())
@@ -61,9 +69,16 @@ def main():
             else:
                 service_path = Path(service_dir)
                 service_id = f"{service_path.name}.service"
-                venv_dir = (
-                    config_home / "mycroft" / "services" / service_path.name / ".venv"
-                )
+                if args.shared_venv:
+                    venv_dir = config_home / "mycroft" / ".venv"
+                else:
+                    venv_dir = (
+                        config_home
+                        / "mycroft"
+                        / "services"
+                        / service_path.name
+                        / ".venv"
+                    )
                 service_paths.append(service_path)
                 service_ids.add(service_id)
 
@@ -74,7 +89,8 @@ def main():
                     print(
                         "Description=", "Mycroft service ", service_id, sep="", file=f
                     )
-                    print("BindTo=", MYCROFT_TARGET, ".target", sep="", file=f)
+                    # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
+                    print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
                     if after_services:
                         print(
                             "After=",
@@ -102,9 +118,9 @@ def main():
                     print("StandardOutput=journal", file=f)
                     print("StandardError=journal", file=f)
 
-                    print("", file=f)
-                    print("[Install]", file=f)
-                    print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
+                    # print("", file=f)
+                    # print("[Install]", file=f)
+                    # print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
 
         after_services = service_ids
         all_service_ids.update(service_ids)
@@ -117,6 +133,7 @@ def main():
             skills_after_services,
             config_home,
             unit_dir,
+            shared_venv=args.shared_venv,
         )
 
     _write_mycroft_target(all_service_ids, unit_dir)
@@ -140,6 +157,7 @@ def _write_skills_target(
     after_services: Set[str],
     config_home: Path,
     unit_dir: Path,
+    shared_venv: bool = False,
 ):
     skill_paths = [Path(d) for d in skill_dirs]
     skill_ids = {p.name for p in skill_paths}
@@ -148,7 +166,8 @@ def _write_skills_target(
     with open(unit_dir / f"mycroft-{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
         print("[Unit]", file=f)
         print("Description=", "Mycroft skills", sep="", file=f)
-        print("BindTo=", MYCROFT_TARGET, ".target", sep="", file=f)
+        # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
+        # print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
         print("Requires=", " ".join(service_ids), sep="", file=f)
         if after_services:
             print(
@@ -157,15 +176,22 @@ def _write_skills_target(
                 sep="",
                 file=f,
             )
+        print("", file=f)
+        print("[Install]", file=f)
+        print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
 
     for skill_path in skill_paths:
         skill_id = skill_path.name
-        venv_dir = config_home / "mycroft" / "skills" / skill_id / ".venv"
+        if shared_venv:
+            venv_dir = config_home / "mycroft" / ".venv"
+        else:
+            venv_dir = config_home / "mycroft" / "skills" / skill_id / ".venv"
         with open(
             unit_dir / f"mycroft-skill-{skill_id}.service", "w", encoding="utf-8"
         ) as f:
             print("[Unit]", file=f)
-            print("BindTo=", "mycroft-", SKILLS_TARGET, ".target", sep="", file=f)
+            # print("BindsTo=", "mycroft-", SKILLS_TARGET, ".target", sep="", file=f)
+            # print("PartOf=", SKILLS_TARGET, ".target", sep="", file=f)
             print("Description=", "Mycroft skill ", skill_id, sep="", file=f)
 
             print("", file=f)
@@ -196,9 +222,9 @@ def _write_skills_target(
             print("StandardOutput=journal", file=f)
             print("StandardError=journal", file=f)
 
-            print("", file=f)
-            print("[Install]", file=f)
-            print("WantedBy=", SKILLS_TARGET, ".target", sep="", file=f)
+            # print("", file=f)
+            # print("[Install]", file=f)
+            # print("WantedBy=", SKILLS_TARGET, ".target", sep="", file=f)
 
 
 if __name__ == "__main__":

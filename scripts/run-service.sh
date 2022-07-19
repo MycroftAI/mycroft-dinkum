@@ -48,7 +48,14 @@ fi
 : "${XDG_CONFIG_HOME:=${HOME}/.config}"
 
 # User-writable directory where virtual environment is stored
-service_config_dir="${XDG_CONFIG_HOME}/mycroft/services/${service_id}"
+if [ -z "${DINKUM_SHARED_VENV}" ]; then
+    # Shared virtual enviroment
+    service_config_dir="${XDG_CONFIG_HOME}/mycroft"
+else
+    # Isolated service virtual enviroment
+    service_config_dir="${XDG_CONFIG_HOME}/mycroft/services/${service_id}"
+fi
+
 venv_dir="${service_config_dir}/.venv"
 
 if [ ! -d "${venv_dir}" ]; then
