@@ -26,7 +26,7 @@ from mycroft_bus_client import Message, MessageBusClient
 
 from .intent_service import IntentService
 
-SERVICE_ID = "skills"
+SERVICE_ID = "intent"
 LOG = logging.getLogger(SERVICE_ID)
 NOTIFIER = sdnotify.SystemdNotifier()
 WATCHDOG_DELAY = 0.5
@@ -72,6 +72,7 @@ def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
     bus = create_client(config)
     bus.run_in_thread()
     bus.connected_event.wait()
+    bus.on(f"{SERVICE_ID}.service.connected", lambda m: bus.emit(m.response()))
     bus.emit(Message(f"{SERVICE_ID}.initialize.started"))
     LOG.info("Connected to Mycroft Core message bus")
 

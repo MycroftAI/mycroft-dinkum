@@ -70,7 +70,10 @@ def main():
 
             if service_id == SKILLS_TARGET:
                 skills_service_path = service_path
-                service_ids.add(f"{SKILLS_TARGET}.target")
+                # service_ids.add(f"{SKILLS_TARGET}.target")
+                for skill_dir in args.skill:
+                    skill_id = Path(skill_dir).name
+                    service_ids.add(f"skill-{skill_id}.service")
                 skills_after_services = set(after_services)
             else:
                 service_path = Path(service_dir)
@@ -120,7 +123,7 @@ def main():
                     )
                     print("Restart=always", file=f)
                     print("RestartSec=5", file=f)
-                    print("TimeoutSec=10", file=f)
+                    print("TimeoutStartSec=30", file=f)
                     print("WatchdogSec=5", file=f)
                     print("StandardOutput=journal", file=f)
                     print("StandardError=journal", file=f)
@@ -176,22 +179,22 @@ def _write_skills_target(
     skill_ids = {p.name for p in skill_paths}
     service_ids = [f"{SERVICE_PREFIX}skill-{id}.service" for id in skill_ids]
 
-    with open(unit_dir / f"{SERVICE_PREFIX}{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
-        print("[Unit]", file=f)
-        print("Description=", "Mycroft skills", sep="", file=f)
-        # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
-        # print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
-        print("Requires=", " ".join(service_ids), sep="", file=f)
-        if after_services:
-            print(
-                "After=",
-                " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
-                sep="",
-                file=f,
-            )
-        print("", file=f)
-        print("[Install]", file=f)
-        print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
+    # with open(unit_dir / f"{SERVICE_PREFIX}{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
+    #     print("[Unit]", file=f)
+    #     print("Description=", "Mycroft skills", sep="", file=f)
+    #     # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
+    #     print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
+    #     print("Requires=", " ".join(service_ids), sep="", file=f)
+    #     if after_services:
+    #         print(
+    #             "After=",
+    #             " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
+    #             sep="",
+    #             file=f,
+    #         )
+    # print("", file=f)
+    # print("[Install]", file=f)
+    # print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
 
     for skill_path in skill_paths:
         skill_id = skill_path.name
@@ -200,12 +203,22 @@ def _write_skills_target(
         else:
             venv_dir = config_home / "mycroft" / ".venv"
         with open(
-            unit_dir / f"{SERVICE_PREFIX}skill-{skill_id}.service", "w", encoding="utf-8"
+            unit_dir / f"{SERVICE_PREFIX}skill-{skill_id}.service",
+            "w",
+            encoding="utf-8",
         ) as f:
             print("[Unit]", file=f)
-            # print("BindsTo=", "{SERVICE_PREFIX}", SKILLS_TARGET, ".target", sep="", file=f)
-            # print("PartOf=", SKILLS_TARGET, ".target", sep="", file=f)
+            # print("BindsTo=", SERVICE_PREFIX, SKILLS_TARGET, ".target", sep="", file=f)
+            # print("PartOf=", SERVICE_PREFIX, SKILLS_TARGET, ".target", sep="", file=f)
+            print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
             print("Description=", "Mycroft skill ", skill_id, sep="", file=f)
+            if after_services:
+                print(
+                    "After=",
+                    " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
+                    sep="",
+                    file=f,
+                )
 
             print("", file=f)
             print("[Service]", file=f)
@@ -231,7 +244,7 @@ def _write_skills_target(
             )
             print("Restart=always", file=f)
             print("RestartSec=5", file=f)
-            print("TimeoutSec=10", file=f)
+            print("TimeoutStartSec=30", file=f)
             print("WatchdogSec=5", file=f)
             print("StandardOutput=journal", file=f)
             print("StandardError=journal", file=f)
