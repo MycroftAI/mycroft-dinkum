@@ -57,16 +57,17 @@ def main():
         _load_language(config)
 
         # Wait for intent service
-        # LOG.debug("Waiting for intent service...")
-        # while True:
-        #     response = bus.wait_for_response("intent.service.connected")
-        #     if response:
-        #         break
+        LOG.debug("Waiting for intent service...")
+        while True:
+            response = bus.wait_for_response(Message("intent.service.connected"))
+            if response:
+                break
 
-        #     time.sleep(0.5)
+            time.sleep(0.5)
 
-        # LOG.debug("Intent service connected")
+        LOG.debug("Intent service connected")
 
+        # Load the skill
         skill_module = load_skill_source(args.skill_directory, args.skill_id)
         assert (
             skill_module is not None

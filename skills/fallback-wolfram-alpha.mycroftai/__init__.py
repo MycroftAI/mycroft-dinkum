@@ -142,10 +142,10 @@ class WolframAlphaSkill(CommonQuerySkill):
         except HTTPError as e:
             if e.response.status_code == 401:
                 self.bus.emit(Message("mycroft.not.paired"))
-            return True
         except Exception as e:
             self.log.exception(e)
-            return False
+
+        return None
 
     def CQS_action(self, phrase, data):
         """Display result if selected by Common Query to answer.
@@ -173,7 +173,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         self.log.debug("Setting information for follow up query")
         self._last_query = self._cqs_match
 
-        return self.end_session(speak=speak, gui=gui)
+        return self.end_session(speak=speak, gui=gui, gui_clear="after_speak")
 
     def _get_cqs_match_image(self):
         """Fetch the image for a CQS answer.

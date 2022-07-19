@@ -736,7 +736,7 @@ class TimerSkill(MycroftSkill):
                     )
                     dialog = (timer_dialog.name, timer_dialog.data)
                     self.bus.emit(
-                        self.start_session(
+                        self.emit_start_session(
                             audio_alert=sound_uri,
                             dialog=dialog,
                             gui=gui,
@@ -747,7 +747,7 @@ class TimerSkill(MycroftSkill):
 
             # self.play_sound_uri(sound_uri)
             self.bus.emit(
-                self.start_session(
+                self.emit_start_session(
                     audio_alert=sound_uri,
                     gui=gui,
                     gui_clear="never",

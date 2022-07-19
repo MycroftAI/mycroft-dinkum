@@ -80,6 +80,7 @@ class QuestionsAnswersSkill(FallbackSkill):
             speak_wait=False,
             message=Message("question:query", data={"phrase": utt}),
             gui="SearchingForAnswers.qml",
+            gui_clear="never",
         )
 
     def handle_query_response(self, message):

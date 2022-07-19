@@ -59,6 +59,26 @@ def main():
 
         # enclosure = EnclosureMark2(bus, config)
         # enclosure.run()
+        bus.on(
+            "recognizer_loop:awoken",
+            lambda m: bus.emit(
+                Message("mycroft.hal.set-leds", data={"pattern": "pulse"})
+            ),
+        )
+        bus.on(
+            "recognizer_loop:utterance",
+            lambda m: bus.emit(
+                Message("mycroft.hal.set-leds", data={"pattern": "chase"})
+            ),
+        )
+        bus.on(
+            "mycroft.gui.idle",
+            lambda m: bus.emit(
+                Message(
+                    "mycroft.hal.set-leds", data={"pattern": "solid", "rgb": [0, 0, 0]}
+                )
+            ),
+        )
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -67,7 +87,7 @@ def main():
         NOTIFIER.notify("READY=1")
         bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
 
-        # HACK
+        # HACK: Show home screen
         bus.emit(Message("mycroft.gui.idle"))
 
         try:

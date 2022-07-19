@@ -108,7 +108,9 @@ class WikipediaSkill(CommonQuerySkill):
         except CONNECTION_ERRORS:
             dialog = "connection-error"
 
-        return self.end_session(speak=speak, dialog=dialog, gui=gui)
+        return self.end_session(
+            speak=speak, dialog=dialog, gui=gui, gui_clear="after_speak"
+        )
 
     @intent_handler("Random.intent")
     def handle_random_intent(self, _):
@@ -197,6 +199,7 @@ class WikipediaSkill(CommonQuerySkill):
         return self.end_session(
             speak=summary,
             gui=("feature_image.qml", self.get_display_data(article)),
+            gui_clear="after_speak",
         )
 
     def extract_topic(self, query: str) -> str:

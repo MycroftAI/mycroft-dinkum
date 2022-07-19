@@ -49,26 +49,6 @@ class Session:
     actions: List[Dict[str, Any]] = field(default_factory=dict)
     tick: int = field(default_factory=time.monotonic_ns)
     aborted: bool = False
-    has_audio_focus: bool = False
-    has_gui_focus: bool = False
-
-    # @property
-    # def actions(self):
-    #     return self._actions
-
-    # @actions.setter
-    # def actions(self, value):
-    #     self._actions = value
-
-    #     self.requires_gui_focus = False
-    #     self.requires_audio_focus = self.expect_response
-
-    #     for action in self._actions:
-    #         action_type = action.get("type")
-    #         if action_type == "speak":
-    #             self.requires_audio_focus = True
-    #         elif action_type == "show_page":
-    #             self.requires_gui_focus = True
 
 
 def _get_message_lang(message):
@@ -141,6 +121,11 @@ class IntentService:
         self._response_skill_id: Optional[str] = None
         self._sessions: Dict[str, Session] = {}
         self._session_lock = RLock()
+
+        self._last_gui_session: Optional[Session] = None
+        self._last_tts_session: Optional[Session] = None
+        self._last_music_session: Optional[Session] = None
+        self._last_alert_session: Optional[Session] = None
 
         self._idle_seconds_left: Optional[int] = None
         Thread(target=self._check_idle_timeout, daemon=True).start()
@@ -314,63 +299,20 @@ class IntentService:
         )
 
     def handle_stop(self, _message: Message):
+        # Always stop TTS
+        self.bus.emit(Message("mycroft.tts.stop"))
+
+        # Determine target skill
+        skill_id: Optional[str] = None
         with self._session_lock:
-            self._idle_seconds_left = None
-            sorted_sessions = sorted(
-                self._sessions.values(), key=lambda s: s.tick, reverse=True
-            )
+            if self._last_gui_session is not None:
+                skill_id = self._last_gui_session.skill_id
+            else:
+                pass
 
-            for session in sorted_sessions:
-                if session.aborted:
-                    continue
-
-                if session.has_audio_focus:
-                    session.has_audio_focus = False
-                    session.aborted = True
-                    self.bus.emit(
-                        Message(
-                            "mycroft.tts.stop", data={"mycroft_session_id": session.id}
-                        )
-                    )
-                    break
-
-            self.bus.emit(Message("mycroft.gui.idle"))
-
-    # def _abort_conflicting_sessions(self):
-    #     with self._session_lock:
-    #         sorted_sessions = sorted(
-    #             self._sessions.values(), key=lambda s: s.tick, reverse=True
-    #         )
-
-    # audio_focus_id: Optional[str] = None
-    # gui_focus_id: Optional[str] = None
-
-    # for session in sorted_sessions:
-    #     if session.aborted:
-    #         continue
-
-    #     if session.has_audio_focus:
-    #         if audio_focus_id is None:
-    #             audio_focus_id = session.id
-    #         else:
-    #             session.aborted = True
-    #             LOG.debug(
-    #                 "Aborted session %s due to audio focus change", session.id
-    #             )
-
-    #     if session.requires_gui_focus:
-    #         if gui_focus_id is None:
-    #             gui_focus_id = session.id
-    #         else:
-    #             session.aborted = True
-    #             LOG.debug(
-    #                 "Aborted session %s due to GUI focus change", session.id
-    #             )
-
-    # if gui_focus_id is not None:
-    #     # Cancel idle timeout
-    #     LOG.debug("Idle timeout cancelled for session %s", gui_focus_id)
-    #     self._idle_seconds_left = None
+        # Return GUI to idle
+        self._idle_seconds_left = None
+        self.bus.emit(Message("mycroft.gui.idle"))
 
     def start_session(self, mycroft_session_id: str, skill_id: Optional[str] = None):
         LOG.debug("Starting session: %s", mycroft_session_id)
@@ -435,7 +377,6 @@ class IntentService:
                 )
             )
 
-            # self._abort_conflicting_sessions()
             if not session.aborted:
                 waiting_for_action = self.next_session_action(session)
 
@@ -460,7 +401,6 @@ class IntentService:
                 session.expect_response = message.data.get("expect_response", False)
                 session.actions = message.data.get("actions", [])
 
-                # self._abort_conflicting_sessions()
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     self.bus.emit(
@@ -487,7 +427,6 @@ class IntentService:
                 session.skill_id = message.data.get("skill_id", session.skill_id)
                 session.actions = message.data.get("actions", [])
 
-                # self._abort_conflicting_sessions()
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
@@ -502,8 +441,11 @@ class IntentService:
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
             if session is not None:
-                # session.has_audio_focus = False
-                # self._abort_conflicting_sessions()
+                if (self._last_tts_session is not None) and (
+                    self._last_tts_session.id == session.id
+                ):
+                    self._last_tts_session = None
+
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
@@ -534,6 +476,9 @@ class IntentService:
                     self.end_session(session.id)
 
     def next_session_action(self, session: Session) -> bool:
+        # Clear idle timeout
+        self._idle_seconds_left = None
+
         while session.actions:
             action = session.actions[0] or {}
             session.actions = session.actions[1:]
@@ -541,23 +486,25 @@ class IntentService:
             action_type = action.get("type")
             if action_type == "speak":
                 utterance = action.get("utterance", "")
-                self.bus.emit(
-                    Message(
-                        "speak",
-                        data={
-                            "mycroft_session_id": session.id,
-                            "utterance": utterance,
-                            "meta": {
-                                "dialog": action.get("dialog"),
-                                "skill_id": session.skill_id,
+                if utterance:
+                    self._last_tts_session = session
+                    self.bus.emit(
+                        Message(
+                            "speak",
+                            data={
+                                "mycroft_session_id": session.id,
+                                "utterance": utterance,
+                                "meta": {
+                                    "dialog": action.get("dialog"),
+                                    "skill_id": session.skill_id,
+                                },
                             },
-                        },
+                        )
                     )
-                )
 
-                if action.get("wait", True):
-                    # Will be called back when TTS is finished
-                    return True
+                    if action.get("wait", True):
+                        # Will be called back when TTS is finished
+                        return True
             elif action_type == "message":
                 msg_type = action["message_type"]
                 msg_data = action.get("data", {})
@@ -566,6 +513,7 @@ class IntentService:
                 gui_page = action.get("page")
                 gui_data = action.get("data", {})
                 if gui_page:
+                    self._last_gui_session = session
                     self.bus.emit(
                         Message(
                             "gui.page.show",
@@ -579,19 +527,37 @@ class IntentService:
                     )
             elif action_type == "clear_display":
                 # Go idle immediately
+                self._last_gui_session = None
                 self.bus.emit(Message("mycroft.gui.idle"))
             elif action_type == "wait_for_idle":
                 self._set_idle_timeout()
             elif action_type == "audio_alert":
-                self.bus.emit(
-                    Message(
-                        "mycroft.audio.play-sound",
-                        data={"uri": action["uri"], "mycroft_session_id": session.id},
+                alert_uri = action.get("uri")
+                if alert_uri:
+                    self._last_alert_session = session
+                    self.bus.emit(
+                        Message(
+                            "mycroft.audio.play-sound",
+                            data={"uri": alert_uri, "mycroft_session_id": session.id},
+                        )
                     )
-                )
-                if action.get("wait", True):
-                    # Will be called back when audio is finished
-                    return True
+                    if action.get("wait", True):
+                        # Will be called back when audio is finished
+                        return True
+
+            elif action_type == "stream_music":
+                alert_uri = action.get("uri")
+                if alert_uri:
+                    self._last_music_session = session
+                    self.bus.emit(
+                        Message(
+                            "mycroft.audio.service.play",
+                            data={
+                                "tracks": [alert_uri],
+                                "mycroft_session_id": session.id,
+                            },
+                        )
+                    )
 
             self.bus.emit(
                 Message(
@@ -742,6 +708,7 @@ class IntentService:
                     self._idle_seconds_left -= 1
                     if self._idle_seconds_left <= 0:
                         self._idle_seconds_left = None
+                        self._last_gui_session = None
                         self.bus.emit(Message("mycroft.gui.idle"))
 
                 time.sleep(1)
