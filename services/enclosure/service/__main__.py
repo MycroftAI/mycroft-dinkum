@@ -46,6 +46,17 @@ def main():
         config = Configuration.get()
         bus = _connect_to_bus(config)
 
+        # Wait for GUI connected
+        LOG.debug("Waiting for GUI...")
+        while True:
+            response = bus.wait_for_response(Message("gui.status.request"))
+            if response.data.get("connected", False):
+                break
+
+            time.sleep(0.5)
+
+        LOG.debug("GUI connected")
+
         # enclosure = EnclosureMark2(bus, config)
         # enclosure.run()
 

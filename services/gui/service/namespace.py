@@ -286,7 +286,7 @@ class NamespaceManager:
         # self.core_bus.on("gui.event.send", self.handle_send_event)
         # self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.show", self.handle_show_page)
-        # self.core_bus.on("gui.status.request", self.handle_status_request)
+        self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
 
@@ -537,17 +537,17 @@ class NamespaceManager:
     #         message_data = dict(skill_id=displaying_namespace.name)
     #         self.core_bus.emit(Message("gui.namespace.displayed", data=message_data))
 
-    # def handle_status_request(self, message: Message):
-    #     """Handles a GUI status request by replying with the connection status.
+    def handle_status_request(self, message: Message):
+        """Handles a GUI status request by replying with the connection status.
 
-    #     Args:
-    #         message: the request for status of the GUI
-    #     """
-    #     gui_connected = determine_if_gui_connected()
-    #     reply = message.reply(
-    #         "gui.status.request.response", dict(connected=gui_connected)
-    #     )
-    #     self.core_bus.emit(reply)
+        Args:
+            message: the request for status of the GUI
+        """
+        gui_connected = determine_if_gui_connected()
+        reply = message.reply(
+            "gui.status.request.response", dict(connected=gui_connected)
+        )
+        self.core_bus.emit(reply)
 
     # def handle_set_value(self, message: Message):
     #     """Handles a request to set the value of namespace data attributes.

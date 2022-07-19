@@ -6,7 +6,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set
 
-MYCROFT_TARGET = "mycroft"
+SERVICE_PREFIX = "dinkum-"
+MYCROFT_TARGET = "dinkum"
 SKILLS_TARGET = "skills"
 
 
@@ -24,25 +25,30 @@ def main():
         "--skill", action="append", default=[], help="Path to skill directory"
     )
     parser.add_argument(
-        "--shared-venv",
+        "--no-shared-venv",
         action="store_true",
-        help="Services and skills shared a virtual environment",
+        help="Services and skills should not share a virtual environment",
+    )
+    parser.add_argument(
+        "--user",
+        required=True,
+        help="User to run service as",
+    )
+    parser.add_argument(
+        "--unit-dir",
+        default="/etc/systemd/system",
+        help="Directory to write unit files",
     )
     args = parser.parse_args()
 
-    if os.environ.get("DINKUM_SHARED_VENV"):
-        args.shared_venv = True
-
-    config_home = Path(
-        os.environ.get("XDG_CONFIG_HOME", Path("~/.config").expanduser())
-    )
+    config_home = Path("/home") / args.user / ".config"
 
     # Directory to write systemd unit files
-    unit_dir = config_home / "systemd" / "user"
+    unit_dir = Path(args.unit_dir)
     unit_dir.mkdir(parents=True, exist_ok=True)
 
     # Remove previous service files
-    for unit_file in unit_dir.glob("mycroft*.*"):
+    for unit_file in unit_dir.glob("dinkum*.*"):
         if unit_file.is_file():
             unit_file.unlink()
 
@@ -69,9 +75,7 @@ def main():
             else:
                 service_path = Path(service_dir)
                 service_id = f"{service_path.name}.service"
-                if args.shared_venv:
-                    venv_dir = config_home / "mycroft" / ".venv"
-                else:
+                if args.no_shared_venv:
                     venv_dir = (
                         config_home
                         / "mycroft"
@@ -79,11 +83,13 @@ def main():
                         / service_path.name
                         / ".venv"
                     )
+                else:
+                    venv_dir = config_home / "mycroft" / ".venv"
                 service_paths.append(service_path)
                 service_ids.add(service_id)
 
                 with open(
-                    unit_dir / f"mycroft-{service_id}", "w", encoding="utf-8"
+                    unit_dir / f"{SERVICE_PREFIX}{service_id}", "w", encoding="utf-8"
                 ) as f:
                     print("[Unit]", file=f)
                     print(
@@ -94,7 +100,7 @@ def main():
                     if after_services:
                         print(
                             "After=",
-                            " ".join(f"mycroft-{id}" for id in after_services),
+                            " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
                             sep="",
                             file=f,
                         )
@@ -102,6 +108,7 @@ def main():
                     print("", file=f)
                     print("[Service]", file=f)
                     print("Type=notify", file=f)
+                    print("User=", args.user, sep="", file=f)
                     print(
                         "Environment=PYTHONPATH=",
                         service_path.absolute(),
@@ -133,7 +140,8 @@ def main():
             skills_after_services,
             config_home,
             unit_dir,
-            shared_venv=args.shared_venv,
+            args.user,
+            no_shared_venv=args.no_shared_venv,
         )
 
     _write_mycroft_target(all_service_ids, unit_dir)
@@ -145,10 +153,14 @@ def _write_mycroft_target(service_ids: Set[str], unit_dir: Path):
         print("Description=", MYCROFT_TARGET, ".target", sep="", file=f)
         print(
             "Requires=",
-            " ".join(f"mycroft-{id}" for id in service_ids),
+            " ".join(f"{SERVICE_PREFIX}{id}" for id in service_ids),
             sep="",
             file=f,
         )
+        # print("After=graphical.target systemd-user-sessions.service", file=f)
+        print("", file=f)
+        print("[Install]", file=f)
+        print("WantedBy=mycroft-plasma.service", sep="", file=f)
 
 
 def _write_skills_target(
@@ -157,13 +169,14 @@ def _write_skills_target(
     after_services: Set[str],
     config_home: Path,
     unit_dir: Path,
-    shared_venv: bool = False,
+    user: str,
+    no_shared_venv: bool = False,
 ):
     skill_paths = [Path(d) for d in skill_dirs]
     skill_ids = {p.name for p in skill_paths}
-    service_ids = [f"mycroft-skill-{id}.service" for id in skill_ids]
+    service_ids = [f"{SERVICE_PREFIX}skill-{id}.service" for id in skill_ids]
 
-    with open(unit_dir / f"mycroft-{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
+    with open(unit_dir / f"{SERVICE_PREFIX}{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
         print("[Unit]", file=f)
         print("Description=", "Mycroft skills", sep="", file=f)
         # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
@@ -172,7 +185,7 @@ def _write_skills_target(
         if after_services:
             print(
                 "After=",
-                " ".join(f"mycroft-{id}" for id in after_services),
+                " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
                 sep="",
                 file=f,
             )
@@ -182,21 +195,22 @@ def _write_skills_target(
 
     for skill_path in skill_paths:
         skill_id = skill_path.name
-        if shared_venv:
-            venv_dir = config_home / "mycroft" / ".venv"
-        else:
+        if no_shared_venv:
             venv_dir = config_home / "mycroft" / "skills" / skill_id / ".venv"
+        else:
+            venv_dir = config_home / "mycroft" / ".venv"
         with open(
-            unit_dir / f"mycroft-skill-{skill_id}.service", "w", encoding="utf-8"
+            unit_dir / f"{SERVICE_PREFIX}skill-{skill_id}.service", "w", encoding="utf-8"
         ) as f:
             print("[Unit]", file=f)
-            # print("BindsTo=", "mycroft-", SKILLS_TARGET, ".target", sep="", file=f)
+            # print("BindsTo=", "{SERVICE_PREFIX}", SKILLS_TARGET, ".target", sep="", file=f)
             # print("PartOf=", SKILLS_TARGET, ".target", sep="", file=f)
             print("Description=", "Mycroft skill ", skill_id, sep="", file=f)
 
             print("", file=f)
             print("[Service]", file=f)
             print("Type=notify", file=f)
+            print("User=", user, sep="", file=f)
             print(
                 "Environment=PYTHONPATH=",
                 skills_service_path.absolute(),
