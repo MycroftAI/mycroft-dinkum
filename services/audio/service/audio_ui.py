@@ -283,6 +283,7 @@ class AudioUserInterface:
             # Stop previous session
             self._stop_tts()
 
+        self._tts_session_id = tts_session_id
         request = TTSRequest(
             uri=uri,
             tts_session_id=tts_session_id,
@@ -325,68 +326,68 @@ class AudioUserInterface:
                 if request is None:
                     break
 
-                self._tts_session_id = request.tts_session_id
-                if request.is_first_chunk:
+                if self._tts_session_id == request.tts_session_id:
+                    if request.is_first_chunk:
+                        self.bus.emit(
+                            Message(
+                                "recognizer_loop:audio_output_start",
+                                data={"mycroft_session_id": request.mycroft_session_id},
+                            )
+                        )
+
+                    # TODO: Support other URI types
+                    assert request.uri.startswith("file://")
+                    file_path = request.uri[len("file://") :]
+
                     self.bus.emit(
                         Message(
-                            "recognizer_loop:audio_output_start",
-                            data={"mycroft_session_id": request.mycroft_session_id},
+                            "mycroft.tts.chunk.started",
+                            data={
+                                "mycroft_session_id": request.mycroft_session_id,
+                                "tts_session_id": request.tts_session_id,
+                                "chunk_index": request.chunk_index,
+                                "num_chunks": request.num_chunks,
+                                "uri": request.uri,
+                            },
                         )
                     )
 
-                # TODO: Support other URI types
-                assert request.uri.startswith("file://")
-                file_path = request.uri[len("file://") :]
-
-                self.bus.emit(
-                    Message(
-                        "mycroft.tts.chunk.started",
-                        data={
-                            "mycroft_session_id": request.mycroft_session_id,
-                            "tts_session_id": request.tts_session_id,
-                            "chunk_index": request.chunk_index,
-                            "num_chunks": request.num_chunks,
-                            "uri": request.uri,
-                        },
-                    )
-                )
-
-                # Play TTS chunk
-                self._speech_finished.clear()
-                if os.path.isfile(file_path):
-                    duration_sec = self._ahal.play_foreground(
-                        ForegroundChannel.SPEECH,
-                        file_path,
-                        media_id=request.tts_session_id,
-                        mycroft_session_id=request.mycroft_session_id,
-                    )
-
-                    if duration_sec is not None:
-                        LOG.info(
-                            "Speaking TTS chunk %s/%s for %s sec from session %s",
-                            request.chunk_index + 1,
-                            request.num_chunks,
-                            duration_sec,
-                            request.tts_session_id,
+                    # Play TTS chunk
+                    self._speech_finished.clear()
+                    if os.path.isfile(file_path):
+                        duration_sec = self._ahal.play_foreground(
+                            ForegroundChannel.SPEECH,
+                            file_path,
+                            media_id=request.tts_session_id,
+                            mycroft_session_id=request.mycroft_session_id,
                         )
 
-                        # Wait at most a half second after TTS should have been finished.
-                        # This event is set whenever TTS is cleared.
-                        timeout = duration_sec + 0.5
-                        self._speech_finished.wait(timeout=timeout)
+                        if duration_sec is not None:
+                            LOG.info(
+                                "Speaking TTS chunk %s/%s for %s sec from session %s",
+                                request.chunk_index + 1,
+                                request.num_chunks,
+                                duration_sec,
+                                request.tts_session_id,
+                            )
 
-                self.bus.emit(
-                    Message(
-                        "mycroft.tts.chunk.ended",
-                        data={
-                            "mycroft_session_id": request.mycroft_session_id,
-                            "tts_session_id": request.tts_session_id,
-                            "chunk_index": request.chunk_index,
-                            "num_chunks": request.num_chunks,
-                            "uri": request.uri,
-                        },
+                            # Wait at most a half second after TTS should have been finished.
+                            # This event is set whenever TTS is cleared.
+                            timeout = duration_sec + 0.5
+                            self._speech_finished.wait(timeout=timeout)
+
+                    self.bus.emit(
+                        Message(
+                            "mycroft.tts.chunk.ended",
+                            data={
+                                "mycroft_session_id": request.mycroft_session_id,
+                                "tts_session_id": request.tts_session_id,
+                                "chunk_index": request.chunk_index,
+                                "num_chunks": request.num_chunks,
+                                "uri": request.uri,
+                            },
+                        )
                     )
-                )
 
                 if request.is_last_chunk or (
                     self._tts_session_id != request.tts_session_id

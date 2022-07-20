@@ -16,7 +16,7 @@ import logging
 import sys
 import time
 from threading import Event, Thread
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import sdnotify
 from mycroft.configuration import Configuration
@@ -29,6 +29,8 @@ SERVICE_ID = "enclosure"
 LOG = logging.getLogger(SERVICE_ID)
 NOTIFIER = sdnotify.SystemdNotifier()
 WATCHDOG_DELAY = 0.5
+
+IDLE_SKILL_ID = "homescreen.mycroftai"
 
 
 def main():
@@ -59,26 +61,46 @@ def main():
 
         # enclosure = EnclosureMark2(bus, config)
         # enclosure.run()
-        bus.on(
-            "recognizer_loop:awoken",
-            lambda m: bus.emit(
-                Message("mycroft.hal.set-leds", data={"pattern": "pulse"})
-            ),
-        )
-        bus.on(
-            "recognizer_loop:utterance",
-            lambda m: bus.emit(
-                Message("mycroft.hal.set-leds", data={"pattern": "chase"})
-            ),
-        )
-        bus.on(
-            "mycroft.gui.idle",
-            lambda m: bus.emit(
-                Message(
-                    "mycroft.hal.set-leds", data={"pattern": "solid", "rgb": [0, 0, 0]}
+        led_session_id: Optional[str] = None
+
+        def handle_wake(message):
+            nonlocal led_session_id
+            led_session_id = message.data.get("mycroft_session_id")
+
+            # Stop speaking and clear LEDs
+            bus.emit(Message("mycroft.tts.stop"))
+            bus.emit(Message("mycroft.hal.set-leds", data={"pattern": "pulse"}))
+
+        def handle_session_started(message):
+            nonlocal led_session_id
+            if message.data.get("skill_id") != IDLE_SKILL_ID:
+                led_session_id = message.data.get("mycroft_session_id")
+                bus.emit(Message("mycroft.hal.set-leds", data={"pattern": "chase"}))
+
+        def handle_session_ended(message):
+            nonlocal led_session_id
+            if led_session_id == message.data.get("mycroft_session_id"):
+                bus.emit(
+                    Message(
+                        "mycroft.hal.set-leds",
+                        data={"pattern": "solid", "rgb": [0, 0, 0]},
+                    )
                 )
-            ),
-        )
+
+        def handle_idle(message):
+            nonlocal led_session_id
+            led_session_id = None
+            bus.emit(
+                Message(
+                    "mycroft.hal.set-leds",
+                    data={"pattern": "solid", "rgb": [0, 0, 0]},
+                )
+            )
+
+        bus.on("recognizer_loop:awoken", handle_wake)
+        bus.on("mycroft.session.started", handle_session_started)
+        bus.on("mycroft.session.ended", handle_session_ended)
+        bus.on("mycroft.gui.idle", handle_idle)
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()

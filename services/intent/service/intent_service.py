@@ -37,6 +37,7 @@ from .intent_services import (
     RegexService,
 )
 
+# Seconds before home screen is shown again (mycroft.gui.idle event)
 IDLE_TIMEOUT = 15
 
 
@@ -49,49 +50,6 @@ class Session:
     actions: List[Dict[str, Any]] = field(default_factory=dict)
     tick: int = field(default_factory=time.monotonic_ns)
     aborted: bool = False
-
-
-def _get_message_lang(message):
-    """Get the language from the message or the default language.
-
-    Args:
-        message: message to check for language code.
-
-    Returns:
-        The languge code from the message or the default language.
-    """
-    default_lang = Configuration.get().get("lang", "en-us")
-    return message.data.get("lang", default_lang).lower()
-
-
-def _normalize_all_utterances(utterances):
-    """Create normalized versions and pair them with the original utterance.
-
-    This will create a list of tuples with the original utterance as the
-    first item and if normalizing changes the utterance the normalized version
-    will be set as the second item in the tuple, if normalization doesn't
-    change anything the tuple will only have the "raw" original utterance.
-
-    Args:
-        utterances (list): list of utterances to normalize
-
-    Returns:
-        list of tuples, [(original utterance, normalized) ... ]
-    """
-    # normalize() changes "it's a boy" to "it is a boy", etc.
-    norm_utterances = [normalize(u.lower(), remove_articles=False) for u in utterances]
-
-    # Create pairs of original and normalized counterparts for each entry
-    # in the input list.
-    combined = []
-    for utt, norm in zip(utterances, norm_utterances):
-        if utt == norm:
-            combined.append((utt,))
-        else:
-            combined.append((utt, norm))
-
-    LOG.debug("Utterances: {}".format(combined))
-    return combined
 
 
 class IntentService:
@@ -143,41 +101,10 @@ class IntentService:
 
         self.bus.on("detach_intent", self.handle_detach_intent)
         self.bus.on("detach_skill", self.handle_detach_skill)
-        # Context related handlers
-        self.bus.on("add_context", self.handle_add_context)
-        self.bus.on("remove_context", self.handle_remove_context)
-        self.bus.on("clear_context", self.handle_clear_context)
-
-        # Converse method
-        self.bus.on("mycroft.speech.recognition.unknown", self.reset_converse)
-        self.bus.on("mycroft.skills.loaded", self.update_skill_name_dict)
-        self.bus.on("mycroft.skills.list", self.update_skill_list)
-
-        def add_active_skill_handler(message):
-            category = "undefined"
-            if message.data.get("skill_cat") is not None:
-                category = message.data["skill_cat"]
-
-            self.add_active_skill(message.data["skill_id"], category)
-
-        def remove_active_skill_handler(message):
-            self.remove_active_skill(message.data["skill_id"])
-            LOG.debug(
-                "IntentSvc:After remove_skill %s, active_skills=%s"
-                % (message.data["skill_id"], self.active_skills)
-            )
-
-        self.bus.on("active_skill_request", add_active_skill_handler)
-        self.bus.on("deactivate_skill_request", remove_active_skill_handler)
-        self.active_skills = []  # [skill_id , timestamp, category]
-
-        self.converse_timeout = 5  # minutes to prune active_skills
 
         # Intents API
         self.registered_vocab = []
         self.bus.on("intent.service.intent.get", self.handle_get_intent)
-        self.bus.on("intent.service.skills.get", self.handle_get_skills)
-        self.bus.on("intent.service.active_skills.get", self.handle_get_active_skills)
         self.bus.on("intent.service.adapt.get", self.handle_get_adapt)
         self.bus.on("intent.service.adapt.manifest.get", self.handle_adapt_manifest)
         self.bus.on(
@@ -218,86 +145,6 @@ class IntentService:
         """
         return self.skill_names.get(skill_id, skill_id)
 
-    def reset_converse(self, message):
-        """Let skills know there was a problem with speech recognition"""
-        lang = _get_message_lang(message)
-        set_default_lf_lang(lang)
-        for skill in copy(self.active_skills):
-            self.do_converse(None, skill[0], lang, message)
-
-    def do_converse(self, utterances, skill_id, lang, message):
-        """Call skill and ask if they want to process the utterance.
-
-        Args:
-            utterances (list of tuples): utterances paired with normalized
-                                         versions.
-            skill_id: skill to query.
-            lang (str): current language
-            message (Message): message containing interaction info.
-        """
-        LOG.debug(
-            "do_converse()-utterances:%s, active_skills=%s"
-            % (utterances, self.active_skills)
-        )
-        converse_msg = message.reply(
-            "skill.converse.request",
-            {"skill_id": skill_id, "utterances": utterances, "lang": lang},
-        )
-        result = self.bus.wait_for_response(converse_msg, "skill.converse.response")
-        if result and "error" in result.data:
-            self.handle_converse_error(result)
-            ret = False
-        elif result is not None:
-            ret = result.data.get("result", False)
-        else:
-            ret = False
-        return ret
-
-    def handle_converse_error(self, message):
-        """Handle error in converse system.
-
-        Args:
-            message (Message): info about the error.
-        """
-        skill_id = message.data["skill_id"]
-        error_msg = message.data["error"]
-        LOG.error("{}: {}".format(skill_id, error_msg))
-        if message.data["error"] == "skill id does not exist":
-            self.remove_active_skill(skill_id)
-
-    def remove_active_skill(self, skill_id):
-        """Remove a skill from being targetable by converse.
-
-        Args:
-            skill_id (str): skill to remove
-        """
-        for skill in copy(self.active_skills):
-            if skill[0] == skill_id:
-                self.active_skills.remove(skill)
-
-    def add_active_skill(self, skill_id, category="undefined"):
-        """Add a skill or update the position of an active skill.
-
-        The skill is added to the front of the list, if it's already in the
-        list it's removed so there is only a single entry of it.
-
-        Args:
-            skill_id (str): identifier of skill to be added.
-        """
-        # search the list for an existing entry that already contains it
-        # and remove that reference
-        if skill_id != "":
-            self.remove_active_skill(skill_id)
-            # add skill with timestamp to start of skill_list
-            self.active_skills.insert(0, [skill_id, time.time(), category])
-        else:
-            LOG.warning("Skill ID was empty, won't add to list of " "active skills.")
-
-        LOG.debug(
-            "Exit add active skill_id:%s, active_skills=%s"
-            % (skill_id, self.active_skills)
-        )
-
     def handle_stop(self, _message: Message):
         # Always stop TTS
         self.bus.emit(Message("mycroft.tts.stop"))
@@ -307,8 +154,10 @@ class IntentService:
         with self._session_lock:
             if self._last_gui_session is not None:
                 skill_id = self._last_gui_session.skill_id
-            else:
-                pass
+
+        if skill_id:
+            # TODO: Call skill handler
+            LOG.debug("Stopping skill: %s", skill_id)
 
         # Return GUI to idle
         self._idle_seconds_left = None
@@ -326,7 +175,7 @@ class IntentService:
         self.bus.emit(
             Message(
                 "mycroft.session.started",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": mycroft_session_id, "skill_id": skill_id},
             )
         )
 
@@ -373,7 +222,10 @@ class IntentService:
             self.bus.emit(
                 Message(
                     "mycroft.session.started",
-                    data={"mycroft_session_id": mycroft_session_id},
+                    data={
+                        "mycroft_session_id": mycroft_session_id,
+                        "skill_id": session.skill_id,
+                    },
                 )
             )
 
@@ -580,7 +432,7 @@ class IntentService:
         or other method of injecting a 'user utterance' into the system.
 
         Utterances then work through this sequence to be handled:
-        1) Active skills attempt to handle using converse()
+        1) A skill expecting a response from continue_session is given priority
         2) Padatious high match intents (conf > 0.95)
         3) Adapt intent handlers
         5) High Priority Fallbacks
@@ -604,8 +456,9 @@ class IntentService:
                 self.start_session(mycroft_session_id)
 
         LOG.debug(
-            "Enter handle utterance: message.data:%s, active_skills:%s, session_id:%s"
-            % (message.data, self.active_skills, mycroft_session_id)
+            "Enter handle utterance: message.data:%s, session_id:%s",
+            message.data,
+            mycroft_session_id,
         )
         try:
 
@@ -702,6 +555,7 @@ class IntentService:
         return handled
 
     def _check_idle_timeout(self):
+        """Runs in a daemon thread, checking if the idle timeout has been reached"""
         try:
             while True:
                 if self._idle_seconds_left is not None:
@@ -716,43 +570,6 @@ class IntentService:
             LOG.exception("Error while checking idle timeout")
 
     # -------------------------------------------------------------------------
-
-    def _converse(self, utterances, lang, message):
-        """Give active skills a chance at the utterance
-
-        Args:
-            utterances (list):  list of utterances
-            lang (string):      4 letter ISO language code
-            message (Message):  message to use to generate reply
-
-        Returns:
-            IntentMatch if handled otherwise None.
-        """
-        utterances = [item for tup in utterances for item in tup]
-        # check for conversation time-out
-        self.active_skills = [
-            skill
-            for skill in self.active_skills
-            if time.time() - skill[1] <= self.converse_timeout * 60
-        ]
-
-        # first check for system levl skills
-        tmp_active_skills = copy(self.active_skills)
-        for skill in tmp_active_skills:
-            if skill[2] == "system":
-                if self.do_converse(utterances, skill[0], lang, message):
-                    # update timestamp, or there will be a timeout where
-                    # intent stops conversing whether its being used or not
-                    return IntentMatch("Converse", None, None, skill[0])
-
-        # check if any skill wants to handle utterance
-        for skill in tmp_active_skills:
-            if self.do_converse(utterances, skill[0], lang, message):
-                # update timestamp, or there will be a timeout where
-                # intent stops conversing whether its being used or not
-                return IntentMatch("Converse", None, None, skill[0])
-
-        return None
 
     def send_complete_intent_failure(self, mycroft_session_id: str, message):
         """Send a message that no skill could handle the utterance.
@@ -818,41 +635,6 @@ class IntentService:
         skill_id = message.data.get("skill_id")
         self.adapt_service.detach_skill(skill_id)
 
-    def handle_add_context(self, message):
-        """Add context
-
-        Args:
-            message: data contains the 'context' item to add
-                     optionally can include 'word' to be injected as
-                     an alias for the context item.
-        """
-        entity = {"confidence": 1.0}
-        context = message.data.get("context")
-        word = message.data.get("word") or ""
-        origin = message.data.get("origin") or ""
-        # if not a string type try creating a string from it
-        if not isinstance(word, str):
-            word = str(word)
-        entity["data"] = [(word, context)]
-        entity["match"] = word
-        entity["key"] = word
-        entity["origin"] = origin
-        self.adapt_service.context_manager.inject_context(entity)
-
-    def handle_remove_context(self, message):
-        """Remove specific context
-
-        Args:
-            message: data contains the 'context' item to remove
-        """
-        context = message.data.get("context")
-        if context:
-            self.adapt_service.context_manager.remove_context(context)
-
-    def handle_clear_context(self, _):
-        """Clears all keywords from context"""
-        self.adapt_service.context_manager.clear_context()
-
     def handle_get_intent(self, message):
         """Get intent from either adapt or padatious.
 
@@ -898,28 +680,6 @@ class IntentService:
 
         # signal intent failure
         self.bus.emit(message.reply("intent.service.intent.reply", {"intent": None}))
-
-    def handle_get_skills(self, message):
-        """Send registered skills to caller.
-
-        Argument:
-            message: query message to reply to.
-        """
-        self.bus.emit(
-            message.reply("intent.service.skills.reply", {"skills": self.skill_names})
-        )
-
-    def handle_get_active_skills(self, message):
-        """Send active skills to caller.
-
-        Argument:
-            message: query message to reply to.
-        """
-        self.bus.emit(
-            message.reply(
-                "intent.service.active_skills.reply", {"skills": self.active_skills}
-            )
-        )
 
     def handle_get_adapt(self, message):
         """handler getting the adapt response for an utterance.
@@ -1028,3 +788,46 @@ def _update_keyword_message(message):
     """
     message.data["entity_value"] = message.data["start"]
     message.data["entity_type"] = message.data["end"]
+
+
+def _get_message_lang(message):
+    """Get the language from the message or the default language.
+
+    Args:
+        message: message to check for language code.
+
+    Returns:
+        The languge code from the message or the default language.
+    """
+    default_lang = Configuration.get().get("lang", "en-us")
+    return message.data.get("lang", default_lang).lower()
+
+
+def _normalize_all_utterances(utterances):
+    """Create normalized versions and pair them with the original utterance.
+
+    This will create a list of tuples with the original utterance as the
+    first item and if normalizing changes the utterance the normalized version
+    will be set as the second item in the tuple, if normalization doesn't
+    change anything the tuple will only have the "raw" original utterance.
+
+    Args:
+        utterances (list): list of utterances to normalize
+
+    Returns:
+        list of tuples, [(original utterance, normalized) ... ]
+    """
+    # normalize() changes "it's a boy" to "it is a boy", etc.
+    norm_utterances = [normalize(u.lower(), remove_articles=False) for u in utterances]
+
+    # Create pairs of original and normalized counterparts for each entry
+    # in the input list.
+    combined = []
+    for utt, norm in zip(utterances, norm_utterances):
+        if utt == norm:
+            combined.append((utt,))
+        else:
+            combined.append((utt, norm))
+
+    LOG.debug("Utterances: {}".format(combined))
+    return combined
