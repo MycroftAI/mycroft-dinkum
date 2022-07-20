@@ -91,10 +91,25 @@ def main():
                 )
             )
 
+        def handle_switch_state(message):
+            name = message.data.get("name")
+            state = message.data.get("state")
+            if name == "mute":
+                # This looks wrong, but the off/inactive state of the switch
+                # means muted.
+                if state == "off":
+                    bus.emit(Message("mycroft.mic.mute"))
+                else:
+                    bus.emit(Message("mycroft.mic.unmute"))
+
         bus.on("recognizer_loop:awoken", handle_wake)
         bus.on("mycroft.session.started", handle_session_started)
         bus.on("mycroft.session.ended", handle_session_ended)
         bus.on("mycroft.gui.idle", handle_idle)
+        bus.on("mycroft.switch.state", handle_switch_state)
+
+        # Return to idle screen if GUI reconnects
+        bus.on("gui.initialize.ended", lambda m: bus.emit(Message("mycroft.gui.idle")))
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()

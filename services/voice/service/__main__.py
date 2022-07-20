@@ -1,4 +1,4 @@
-# Copyright 2017 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
-import sys
-import time
-from threading import Thread
-from typing import Any, Dict
-
-import sdnotify
-from mycroft.configuration import Configuration
-from mycroft.messagebus.client import create_client
-from mycroft_bus_client import Message, MessageBusClient
+from mycroft.service import DinkumService
 
 from .voice_loop import (
     load_hotword_module,
@@ -30,62 +21,59 @@ from .voice_loop import (
     voice_loop,
 )
 
-SERVICE_ID = "voice"
-LOG = logging.getLogger(SERVICE_ID)
-NOTIFIER = sdnotify.SystemdNotifier()
-WATCHDOG_DELAY = 0.5
+
+class VoiceService(DinkumService):
+    """
+    Service for handling user voice input.
+
+    Performs the following tasks:
+    * Recording audio from microphone
+    * Hotword detection
+    * Voice activity detection (silence at end of voice command)
+    * Speech to text
+
+    Input messages:
+    * mycroft.mic.mute
+    * mycroft.mic.unmute
+    * mycroft.mic.listen
+
+    Output messages:
+    * recognizer_loop:awoken
+    * recognizer_loop:utterance
+    * recognizer_loop:speech.recognition.unknown
+
+    Service messages:
+    * voice.service.connected
+    * voice.service.connected.response
+    * voice.initialize.started
+    * voice.initialize.ended
+
+    """
+
+    def __init__(self):
+        super().__init__(service_id="voice")
+
+    def start(self):
+        self.hotword = load_hotword_module(self.config)
+        self.vad = load_vad_detector()
+        self.stt = load_stt_module(self.config, self.bus)
+
+    def run(self):
+        voice_loop(
+            config=self.config,
+            bus=self.bus,
+            hotword=self.hotword,
+            vad=self.vad,
+            stt=self.stt,
+        )
+
+    def stop(self):
+        pass
 
 
 def main():
     """Service entry point"""
-    logging.basicConfig(level=logging.DEBUG)
-    LOG.info("Starting service...")
-
-    try:
-        config = Configuration.get()
-        bus = _connect_to_bus(config)
-        hotword = load_hotword_module(config)
-        vad = load_vad_detector()
-        stt = load_stt_module(config, bus)
-
-        # Start watchdog thread
-        Thread(target=_watchdog, daemon=True).start()
-
-        # Inform systemd that we successfully started
-        NOTIFIER.notify("READY=1")
-        bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
-
-        try:
-            voice_loop(config=config, bus=bus, hotword=hotword, vad=vad, stt=stt)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            bus.close()
-
-        LOG.info("Service is shutting down...")
-    except Exception:
-        LOG.exception("Service failed to start")
-
-
-def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
-    bus = create_client(config)
-    bus.run_in_thread()
-    bus.connected_event.wait()
-    bus.on(f"{SERVICE_ID}.service.connected", lambda m: bus.emit(m.response()))
-    bus.emit(Message(f"{SERVICE_ID}.initialize.started"))
-    LOG.info("Connected to Mycroft Core message bus")
-
-    return bus
-
-
-def _watchdog():
-    try:
-        while True:
-            # Prevent systemd from restarting service
-            NOTIFIER.notify("WATCHDOG=1")
-            time.sleep(WATCHDOG_DELAY)
-    except Exception:
-        LOG.exception("Unexpected error in watchdog thread")
+    VoiceService().main()
 
 
 if __name__ == "__main__":

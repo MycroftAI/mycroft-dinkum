@@ -85,47 +85,47 @@ class GUIWebsocketHandler(WebSocketHandler):
     def open(self):
         GUIWebsocketHandler.clients.append(self)
         LOG.info("New Connection opened!")
-        self.synchronize()
+        self.application.enclosure.synchronize()
 
     def on_close(self):
         LOG.info("Closing {}".format(id(self)))
         GUIWebsocketHandler.clients.remove(self)
 
-    def synchronize(self):
-        """Upload namespaces, pages and data to the last connected."""
-        namespace_pos = 0
-        enclosure = self.application.enclosure
+    # def synchronize(self):
+    #     """Upload namespaces, pages and data to the last connected."""
+    #     namespace_pos = 0
+    #     enclosure = self.application.enclosure
 
-        for namespace in enclosure.active_namespaces:
-            LOG.info("Sync {}".format(namespace.name))
-            # Insert namespace
-            self.send(
-                {
-                    "type": "mycroft.session.list.insert",
-                    "namespace": "mycroft.system.active_skills",
-                    "position": namespace_pos,
-                    "data": [{"skill_id": namespace.name}],
-                }
-            )
-            # Insert pages
-            self.send(
-                {
-                    "type": "mycroft.gui.list.insert",
-                    "namespace": namespace.name,
-                    "position": 0,
-                    "data": [{"url": p} for p in namespace.pages],
-                }
-            )
-            # Insert data
-            for key, value in namespace.data.items():
-                self.send(
-                    {
-                        "type": "mycroft.session.set",
-                        "namespace": namespace.name,
-                        "data": {key: value},
-                    }
-                )
-            namespace_pos += 1
+    #     for namespace in enclosure.active_namespaces:
+    #         LOG.info("Sync {}".format(namespace.name))
+    #         # Insert namespace
+    #         self.send(
+    #             {
+    #                 "type": "mycroft.session.list.insert",
+    #                 "namespace": "mycroft.system.active_skills",
+    #                 "position": namespace_pos,
+    #                 "data": [{"skill_id": namespace.name}],
+    #             }
+    #         )
+    #         # Insert pages
+    #         self.send(
+    #             {
+    #                 "type": "mycroft.gui.list.insert",
+    #                 "namespace": namespace.name,
+    #                 "position": 0,
+    #                 "data": [{"url": p} for p in namespace.pages],
+    #             }
+    #         )
+    #         # Insert data
+    #         for key, value in namespace.data.items():
+    #             self.send(
+    #                 {
+    #                     "type": "mycroft.session.set",
+    #                     "namespace": namespace.name,
+    #                     "data": {key: value},
+    #                 }
+    #             )
+    #         namespace_pos += 1
 
     def on_message(self, message):
         LOG.info("Received: {}".format(message))

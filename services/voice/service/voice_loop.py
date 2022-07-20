@@ -10,7 +10,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 import numpy as np
-# import websockets
+
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT
 from mycroft.util.plugins import load_plugin
@@ -25,8 +25,6 @@ AUDIO_CHUNK_SIZE = 2048
 VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
 VAD_THRESHOLD = 0.2
 CHUNKS_TO_BUFFER = 2
-
-# logging.getLogger("websockets.client").setLevel(logging.INFO)
 
 
 def voice_loop(
@@ -96,6 +94,7 @@ def voice_loop(
         assert chunk, "Empty audio chunk"
 
         if muted:
+            chunk_buffer.clear()
             chunk = bytes(len(chunk))
 
         # TODO: Use config
@@ -106,7 +105,7 @@ def voice_loop(
         chunk_buffer.append(chunk)
         if not is_recording:
             hotword.update(chunk)
-            if hotword.found_wake_word(None):
+            if hotword.found_wake_word(None) and (not muted):
                 LOG.info("Hotword detected!")
                 do_listen()
         else:
@@ -118,20 +117,20 @@ def voice_loop(
             is_speech = vad(chunk_array) >= VAD_THRESHOLD
             if command.process(is_speech, seconds):
                 is_recording = False
-                text = stt.stop()
+                text = stt.stop() or ""
                 LOG.info("STT: %s", text)
 
-                if text:
-                    bus.emit(
-                        Message(
-                            "recognizer_loop:utterance",
-                            {
-                                "utterances": [text],
-                                "mycroft_session_id": mycroft_session_id,
-                            },
-                        )
+                bus.emit(
+                    Message(
+                        "recognizer_loop:utterance",
+                        {
+                            "utterances": [text],
+                            "mycroft_session_id": mycroft_session_id,
+                        },
                     )
-                else:
+                )
+
+                if not text:
                     bus.emit(Message("recognizer_loop:speech.recognition.unknown"))
 
 
