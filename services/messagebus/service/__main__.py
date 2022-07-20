@@ -37,13 +37,7 @@ WATCHDOG_DELAY = 0.5
 
 def main():
     """Service entry point"""
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[
-            logging.FileHandler("/var/log/mycroft/messagebus.log", mode="a"),
-            logging.StreamHandler(sys.stdout),
-        ],
-    )
+    logging.basicConfig(level=logging.DEBUG)
     LOG.info("Starting message bus service...")
 
     try:

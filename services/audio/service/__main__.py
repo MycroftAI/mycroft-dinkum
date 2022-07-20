@@ -34,13 +34,7 @@ WATCHDOG_DELAY = 0.5
 
 def main():
     """Service entry point"""
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[
-            logging.FileHandler(f"/var/log/mycroft/{SERVICE_ID}.log"),
-            logging.StreamHandler(sys.stdout),
-        ],
-    )
+    logging.basicConfig(level=logging.DEBUG)
     LOG.info("Starting service...")
 
     try:

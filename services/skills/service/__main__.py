@@ -42,13 +42,7 @@ def main():
     parser.add_argument("--skill-id", required=True, help="Mycroft skill id")
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[
-            logging.FileHandler(f"/var/log/mycroft/{SERVICE_ID}.log", mode="a"),
-            logging.StreamHandler(sys.stdout),
-        ],
-    )
+    logging.basicConfig(level=logging.DEBUG)
     LOG.info("Starting service...")
 
     try:
