@@ -184,29 +184,29 @@ Item {
             onClicked: Mycroft.MycroftController.start();
         }
 
-        Rectangle {
-            id: networkingArea
-            anchors.fill: parent
+        //Rectangle {
+        //    id: networkingArea
+        //    anchors.fill: parent
 
-            visible: Mark2SystemAccess.networkConfigurationVisible
+        //    visible: Mark2SystemAccess.networkConfigurationVisible
 
-            Kirigami.Theme.inherit: false
-            Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
-            color: Kirigami.Theme.backgroundColor
+        //    Kirigami.Theme.inherit: false
+        //    Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
+        //    color: Kirigami.Theme.backgroundColor
 
-            PlasmaCore.ColorScope {
-                anchors {
-                    fill: parent
-                    bottomMargin: virtualKeyboard.state == "visible" ? virtualKeyboard.height : 0
-                }
-                colorGroup: PlasmaCore.Theme.ComplementaryColorGroup
+        //    PlasmaCore.ColorScope {
+        //        anchors {
+        //            fill: parent
+        //            bottomMargin: virtualKeyboard.state == "visible" ? virtualKeyboard.height : 0
+        //        }
+        //        colorGroup: PlasmaCore.Theme.ComplementaryColorGroup
 
-                NetworkingLoader {
-                    id: networkingLoader
-                    anchors.fill: parent
-                }
-            }
-        }
+        //        NetworkingLoader {
+        //            id: networkingLoader
+        //            anchors.fill: parent
+        //        }
+        //    }
+        //}
 
         Item {
             anchors {
