@@ -70,7 +70,6 @@ def main():
 
             if service_id == SKILLS_TARGET:
                 skills_service_path = service_path
-                # service_ids.add(f"{SKILLS_TARGET}.target")
                 for skill_dir in args.skill:
                     skill_id = Path(skill_dir).name
                     service_ids.add(f"skill-{skill_id}.service")
@@ -98,7 +97,6 @@ def main():
                     print(
                         "Description=", "Mycroft service ", service_id, sep="", file=f
                     )
-                    # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
                     print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
                     if after_services:
                         print(
@@ -128,10 +126,6 @@ def main():
                     print("StandardOutput=journal", file=f)
                     print("StandardError=journal", file=f)
 
-                    # print("", file=f)
-                    # print("[Install]", file=f)
-                    # print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
-
         after_services = service_ids
         all_service_ids.update(service_ids)
 
@@ -160,7 +154,7 @@ def _write_mycroft_target(service_ids: Set[str], unit_dir: Path):
             sep="",
             file=f,
         )
-        # print("After=graphical.target systemd-user-sessions.service", file=f)
+        print("After=graphical.target systemd-user-sessions.service", file=f)
         print("", file=f)
         print("[Install]", file=f)
         print("WantedBy=mycroft-plasma.service", sep="", file=f)
@@ -179,23 +173,6 @@ def _write_skills_target(
     skill_ids = {p.name for p in skill_paths}
     service_ids = [f"{SERVICE_PREFIX}skill-{id}.service" for id in skill_ids]
 
-    # with open(unit_dir / f"{SERVICE_PREFIX}{SKILLS_TARGET}.target", "w", encoding="utf-8") as f:
-    #     print("[Unit]", file=f)
-    #     print("Description=", "Mycroft skills", sep="", file=f)
-    #     # print("BindsTo=", MYCROFT_TARGET, ".target", sep="", file=f)
-    #     print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
-    #     print("Requires=", " ".join(service_ids), sep="", file=f)
-    #     if after_services:
-    #         print(
-    #             "After=",
-    #             " ".join(f"{SERVICE_PREFIX}{id}" for id in after_services),
-    #             sep="",
-    #             file=f,
-    #         )
-    # print("", file=f)
-    # print("[Install]", file=f)
-    # print("WantedBy=", MYCROFT_TARGET, ".target", sep="", file=f)
-
     for skill_path in skill_paths:
         skill_id = skill_path.name
         if no_shared_venv:
@@ -208,8 +185,6 @@ def _write_skills_target(
             encoding="utf-8",
         ) as f:
             print("[Unit]", file=f)
-            # print("BindsTo=", SERVICE_PREFIX, SKILLS_TARGET, ".target", sep="", file=f)
-            # print("PartOf=", SERVICE_PREFIX, SKILLS_TARGET, ".target", sep="", file=f)
             print("PartOf=", MYCROFT_TARGET, ".target", sep="", file=f)
             print("Description=", "Mycroft skill ", skill_id, sep="", file=f)
             if after_services:
@@ -248,10 +223,6 @@ def _write_skills_target(
             print("WatchdogSec=5", file=f)
             print("StandardOutput=journal", file=f)
             print("StandardError=journal", file=f)
-
-            # print("", file=f)
-            # print("[Install]", file=f)
-            # print("WantedBy=", SKILLS_TARGET, ".target", sep="", file=f)
 
 
 if __name__ == "__main__":
