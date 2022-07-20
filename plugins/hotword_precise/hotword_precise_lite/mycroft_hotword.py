@@ -38,8 +38,8 @@ class TFLiteHotWordEngine(HotWordEngine):
         config=None,
         lang="en-us",
         local_model_file: Optional[Union[str, Path]] = None,
-        sensitivity: float = 0.5,
-        trigger_level: int = 3,
+        sensitivity: float = 0.8,
+        trigger_level: int = 4,
         chunk_size: int = 2048,
     ):
         super().__init__(key_phrase, config, lang)
