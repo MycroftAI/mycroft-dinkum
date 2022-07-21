@@ -57,11 +57,19 @@ class SpeakHandler:
 
     def _synthesize(self, text: str) -> Path:
         text_hash = hash_sentence(text)
+
+        # Check preloaded static cache
+        if text_hash in self.tts.cache:
+            audio_file, _phonemes_file = self.tts.cache.cached_sentences[text_hash]
+            return audio_file.path
+
+        # Check temporary dynamic cache
         for cache_dir in self._cache_dirs:
             cache_path = Path.joinpath(cache_dir, f"{text_hash}.wav")
             if cache_path.is_file():
                 return cache_path
 
+        # Not in cache, need to synthesize
         LOG.debug("Synthesizing: %s", text)
         self.tts.get_tts(text, str(cache_path))
         return cache_path

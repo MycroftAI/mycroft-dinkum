@@ -1,6 +1,7 @@
 import os
 from abc import ABCMeta, abstractmethod
 
+from .cache import TextToSpeechCache
 
 class TTS(metaclass=ABCMeta):
     def __init__(
@@ -91,9 +92,3 @@ class TTSValidator(metaclass=ABCMeta):
         """Return TTS class that this validator is for."""
 
 
-class TextToSpeechCache:
-    def clear(self):
-        pass
-
-    def curate(self):
-        pass
