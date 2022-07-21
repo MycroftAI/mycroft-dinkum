@@ -31,6 +31,7 @@ from threading import Event, Lock, Timer
 from typing import Any, Dict, List, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
+from enum import Enum
 
 import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder
@@ -65,6 +66,14 @@ SessionDialogsType = Union[SessionDialogType, List[SessionDialogType]]
 SessionGuiDataType = Optional[Dict[str, Any]]
 SessionGuiType = Union[str, Tuple[str, SessionGuiDataType]]
 SessionGuisType = Union[SessionGuiType, List[SessionGuiType]]
+
+
+class GuiClear(str, Enum):
+    AUTO = "auto"
+    ON_IDLE = "on_idle"
+    NEVER = "never"
+    AFTER_SPEAK = "after_speak"
+    AT_START = "at_start"
 
 
 def simple_trace(stack_trace):
@@ -1622,12 +1631,20 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
     ):
+        # Action ordering is fixed:
+        # 1. Send message
+        # 2. Clear gui (if "at_start")
+        # 3. Play audio alert
+        # 4. Show gui page(s)
+        # 5. Speak dialog(s) or text
+        # 6. Clear gui or set idle timeout
         actions = []
 
+        # 1. Send message
         if message is not None:
             actions.append(
                 {
@@ -1641,12 +1658,15 @@ class MycroftSkill:
                 }
             )
 
-        if gui_clear == "at_start":
+        # 2. Clear gui (if "at_start")
+        if gui_clear == GuiClear.AT_START:
             actions.append({"type": "clear_display"})
 
+        # 3. Play audio alert
         if audio_alert:
             actions.append({"type": "audio_alert", "uri": audio_alert, "wait": True})
 
+        # 4. Show gui page(s)
         guis = []
         if gui is not None:
             if isinstance(gui, (str, tuple)):
@@ -1655,6 +1675,7 @@ class MycroftSkill:
             else:
                 guis = list(gui)
 
+        # 5. Speak dialog(s) or text
         dialogs = []
         if dialog is not None:
             if isinstance(dialog, (str, tuple)):
@@ -1663,6 +1684,7 @@ class MycroftSkill:
             else:
                 dialogs = list(dialog)
 
+        # Interleave dialog/gui pages
         for maybe_dialog, maybe_gui in itertools.zip_longest(dialogs, guis):
             if maybe_gui is not None:
                 if isinstance(maybe_gui, str):
@@ -1678,9 +1700,6 @@ class MycroftSkill:
                         "namespace": f"{self.skill_id}.{gui_page}",
                     }
                 )
-
-                if gui_clear == "auto":
-                    gui_clear = "on_idle"
 
             if maybe_dialog is not None:
                 if isinstance(maybe_dialog, str):
@@ -1698,6 +1717,10 @@ class MycroftSkill:
                     }
                 )
 
+                if gui_clear == GuiClear.AUTO:
+                    gui_clear = GuiClear.AFTER_SPEAK
+
+
         if speak is not None:
             actions.append(
                 {
@@ -1707,9 +1730,16 @@ class MycroftSkill:
                 }
             )
 
-        if gui_clear == "after_speak":
+            if gui_clear == GuiClear.AUTO:
+                gui_clear = GuiClear.AFTER_SPEAK
+
+        # No TTS, so time out on idle
+        if gui_clear == GuiClear.AUTO:
+            gui_clear = GuiClear.ON_IDLE
+
+        if gui_clear == GuiClear.AFTER_SPEAK:
             actions.append({"type": "clear_display"})
-        elif gui_clear == "on_idle":
+        elif gui_clear == GuiClear.ON_IDLE:
             actions.append({"type": "wait_for_idle"})
 
         return actions
@@ -1720,7 +1750,7 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
@@ -1755,7 +1785,7 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
@@ -1784,7 +1814,7 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
     ) -> Message:
@@ -1810,16 +1840,12 @@ class MycroftSkill:
         message.data["aborted"] = True
         return message
 
-    # def _handle_session_started(self, message: Message):
-    #     self._mycroft_session_id = message.data.get("mycroft_session_id")
-
-    # def _handle_session_ended(self, _message: Message):
-    #     self._mycroft_session_id = None
-
     def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
+        """Callback when expect_response=True in continue_session"""
         return None
 
     def _handle_skill_response(self, message: Message):
+        """Verifies that raw utteranc is for this skill"""
         if (message.data.get("skill_id") == self.skill_id) and (
             message.data.get("mycroft_session_id") == self._mycroft_session_id
         ):
@@ -1833,4 +1859,5 @@ class MycroftSkill:
 
             if result_message is None:
                 result_message = self.end_session()
+
             self.bus.emit(result_message)

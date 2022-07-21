@@ -17,9 +17,8 @@ import time
 from typing import Optional
 
 from mycroft.messagebus.message import Message
+from mycroft.skills import GuiClear
 from mycroft.skills.fallback_skill import FallbackSkill
-
-EXTENSION_TIME = 10
 
 
 class QuestionsAnswersSkill(FallbackSkill):
@@ -67,6 +66,12 @@ class QuestionsAnswersSkill(FallbackSkill):
         if not self.valid_question(utt):
             return False
 
+        # Query flow
+        # 1. We continue the current session, sending the 'question:query' message to Common Query skills
+        # 2. Until the timeout is reached, we track the best answer so far in handle_query_response
+        # 3. When the timeout occurs, the skill with the best answer is sent a 'question:action' message
+        # 4. That skill performs the action in CQS_action and returns an end_session message from it
+
         self.answer_message = None
         self.schedule_event(
             self._query_timeout,
@@ -80,7 +85,7 @@ class QuestionsAnswersSkill(FallbackSkill):
             speak_wait=False,
             message=Message("question:query", data={"phrase": utt}),
             gui="SearchingForAnswers.qml",
-            gui_clear="never",
+            gui_clear=GuiClear.NEVER,
         )
 
     def handle_query_response(self, message):

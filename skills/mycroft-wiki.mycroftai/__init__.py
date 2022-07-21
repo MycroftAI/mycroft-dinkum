@@ -15,7 +15,7 @@
 import typing
 from collections import namedtuple
 
-from mycroft.skills import AdaptIntent, intent_handler
+from mycroft.skills import AdaptIntent, intent_handler, GuiClear
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from requests.exceptions import ConnectionError, ReadTimeout
 from urllib3.exceptions import HTTPError
@@ -109,23 +109,8 @@ class WikipediaSkill(CommonQuerySkill):
             dialog = "connection-error"
 
         return self.end_session(
-            speak=speak, dialog=dialog, gui=gui, gui_clear="after_speak"
+            speak=speak, dialog=dialog, gui=gui, gui_clear=GuiClear.AFTER_SPEAK
         )
-
-    @intent_handler("Random.intent")
-    def handle_random_intent(self, _):
-        """Get a random wiki page.
-
-        Uses the Special:Random page of wikipedia
-        """
-        if self.wiki is None:
-            self.log.error("not connected to wikipedia")
-        else:
-            self.log.info("Fetching random Wikipedia page")
-            lang = self.translate_namedvalues("wikipedia_lang")["code"]
-            page = self.wiki.get_random_page(lang=lang)
-            self.log.info("Random page selected: %s", page.title)
-            return self.handle_result(page, "random page")
 
     def CQS_match_query_phrase(
         self, query: str
@@ -199,7 +184,7 @@ class WikipediaSkill(CommonQuerySkill):
         return self.end_session(
             speak=summary,
             gui=("feature_image.qml", self.get_display_data(article)),
-            gui_clear="after_speak",
+            gui_clear=GuiClear.AFTER_SPEAK,
         )
 
     def extract_topic(self, query: str) -> str:

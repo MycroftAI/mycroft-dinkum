@@ -46,9 +46,6 @@ class UnknownSkill(FallbackSkill):
             ]
 
     def handle_fallback(self, message):
-        # TODO
-        # self.gui_show(self.last_utterances)
-
         utterance = message.data["utterance"].lower()
         for key, vocab in self.question_vocab.items():
             for line in vocab:
@@ -64,7 +61,7 @@ class UnknownSkill(FallbackSkill):
     def handle_unknown_recognition(self, message):
         """Called when no transcription is returned from STT"""
         self.log.info("Unknown recognition")
-        return self.end_session(dialog="unknown")
+        return self.end_session(dialog="unknown", gui=self.gui_show())
 
     def handle_utterance(self, message):
         utterances = message.data.get("utterances")
@@ -74,18 +71,16 @@ class UnknownSkill(FallbackSkill):
     @intent_handler(AdaptIntent().require("show").require("utterance"))
     def show_last_utterance(self, _):
         """Handles a user's request to show the most recent utterance."""
-        # TODO
-        # with self.activity():
-        #     self.gui_show(self.last_utterances)
-        #     time.sleep(5)
-        #     self.gui.release()
+        return self.end_session(gui=self.gui_show())
 
-    def gui_show(self, utterances: typing.Iterable[str]):
+    def gui_show(self):
         """Show speech to text utterance for debugging"""
-        for utt_idx, utt in enumerate(reversed(utterances)):
-            self.gui[f"utterance{utt_idx+1}"] = utt
+        gui_data = {
+            f"utterance{utt_idx+1}": utt
+            for utt_idx, utt in enumerate(reversed(self.last_utterances))
+        }
 
-        self.gui.replace_page("utterance.qml", override_idle=True)
+        return ("utterance.qml", gui_data)
 
 
 def create_skill():

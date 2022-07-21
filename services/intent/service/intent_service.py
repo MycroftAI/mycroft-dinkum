@@ -160,7 +160,7 @@ class IntentService:
             LOG.debug("Stopping skill: %s", skill_id)
 
         # Return GUI to idle
-        self._idle_seconds_left = None
+        self._disable_idle_timeout()
         self.bus.emit(Message("mycroft.gui.idle"))
 
     def start_session(self, mycroft_session_id: str, skill_id: Optional[str] = None):
@@ -328,8 +328,7 @@ class IntentService:
                     self.end_session(session.id)
 
     def next_session_action(self, session: Session) -> bool:
-        # Clear idle timeout
-        self._idle_seconds_left = None
+        self._disable_idle_timeout()
 
         while session.actions:
             action = session.actions[0] or {}
@@ -553,6 +552,9 @@ class IntentService:
                         break
 
         return handled
+
+    def _disable_idle_timeout(self):
+        self._idle_seconds_left = None
 
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""
