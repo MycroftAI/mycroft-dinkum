@@ -16,6 +16,7 @@ from mycroft.service import DinkumService
 
 from .leds import Mark2LedClient
 from .switch import Mark2SwitchClient
+from .volume import Mark2VolumeClient
 
 
 class HalService(DinkumService):
@@ -29,9 +30,13 @@ class HalService(DinkumService):
         self._switch_client = Mark2SwitchClient(self.bus)
         self._switch_client.start()
 
+        self._volume_client = Mark2VolumeClient(self.bus)
+        self._volume_client.start()
+
     def stop(self):
         self._led_client.stop()
         self._switch_client.stop()
+        self._volume_client.stop()
 
 
 def main():
