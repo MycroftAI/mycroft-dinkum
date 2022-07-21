@@ -1,0 +1,3 @@
+RPi.GPIO
+smbus2
+sdnotify~=0.3.0

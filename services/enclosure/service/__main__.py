@@ -61,35 +61,29 @@ def main():
             nonlocal led_session_id
             led_session_id = message.data.get("mycroft_session_id")
 
-            # Stop speaking and clear LEDs
+            # Stop speaking
             bus.emit(Message("mycroft.tts.stop"))
-            bus.emit(Message("mycroft.hal.set-leds", data={"pattern": "pulse"}))
+            bus.emit(Message("mycroft.feedback.set-state", data={"state": "awake"}))
 
         def handle_session_started(message):
             nonlocal led_session_id
             if message.data.get("skill_id") != IDLE_SKILL_ID:
                 led_session_id = message.data.get("mycroft_session_id")
-                bus.emit(Message("mycroft.hal.set-leds", data={"pattern": "chase"}))
+                bus.emit(
+                    Message("mycroft.feedback.set-state", data={"state": "thinking"})
+                )
 
         def handle_session_ended(message):
             nonlocal led_session_id
             if led_session_id == message.data.get("mycroft_session_id"):
                 bus.emit(
-                    Message(
-                        "mycroft.hal.set-leds",
-                        data={"pattern": "solid", "rgb": [0, 0, 0]},
-                    )
+                    Message("mycroft.feedback.set-state", data={"state": "asleep"})
                 )
 
         def handle_idle(message):
             nonlocal led_session_id
             led_session_id = None
-            bus.emit(
-                Message(
-                    "mycroft.hal.set-leds",
-                    data={"pattern": "solid", "rgb": [0, 0, 0]},
-                )
-            )
+            bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
 
         def handle_switch_state(message):
             name = message.data.get("name")
