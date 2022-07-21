@@ -51,16 +51,28 @@ class Mark2SwitchClient:
             GPIO.add_event_detect(
                 pin,
                 GPIO.BOTH,
-                callback=functools.partial(self.handle_event, name, pin),
+                callback=functools.partial(self._handle_gpio_event, name, pin),
                 bouncetime=DEBOUNCE,
             )
+
+        self.bus.on("mycroft.switch.report-states", self._handle_get_state)
+
+    def _handle_get_state(self, message: Message):
+        """Report the state of all switches"""
+        for name, pin in PINS.items():
+            value = GPIO.input(pin)
+            self._report_state(name, value)
 
     def stop(self):
         pass
 
-    def handle_event(self, name, pin, _channel):
+    def _handle_gpio_event(self, name, pin, _channel):
+        """Read and report the state of a switch that has changed state"""
         time.sleep(WAIT_SEC)
         value = GPIO.input(pin)
+        self._report_state(name, value)
+
+    def _report_state(self, name: str, value: int):
         state = SWITCH_ON if value == ACTIVE else SWITCH_OFF
         self.bus.emit(
             Message("mycroft.switch.state", data={"name": name, "state": state})

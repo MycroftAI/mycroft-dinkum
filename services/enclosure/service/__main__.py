@@ -115,6 +115,9 @@ def main():
         # HACK: Show home screen
         bus.emit(Message("mycroft.gui.idle"))
 
+        # Request switch states so mute is correctly shown
+        bus.emit(Message("mycroft.switch.report-states"))
+
         try:
             # Wait for exit signal
             Event().wait()
