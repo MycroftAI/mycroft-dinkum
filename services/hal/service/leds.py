@@ -16,11 +16,12 @@ import logging
 import itertools
 import time
 from threading import Thread
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from mycroft_bus_client import Message, MessageBusClient
 from smbus2 import SMBus
 
+from .led_animation.animation import Animation
 from .led_animation.animation.solid import Solid
 from .led_animation.animation.blink import Blink
 from .led_animation.animation.pulse import Pulse
@@ -56,13 +57,14 @@ class Mark2LedClient:
 
         # pixel_object
         self.auto_write = False
-        self._pixels = [color.BLACK] * NUM_LEDS
+        self._pixels: List[Tuple[int, int, int]] = [color.BLACK] * NUM_LEDS
 
+        self._asleep_color = color.BLACK
         self._is_running = True
-        self._animation = Solid(self, color.BLACK)
-        self._brightness = 1.0
+        self._animation: Optional[Animation] = None
+        self._brightness: float = 0.5
 
-        self._state: str = ""
+        self._state: Optional[str] = None
 
     def start(self):
         self._state: str = "asleep"
@@ -71,6 +73,8 @@ class Mark2LedClient:
         Thread(target=self._animate, daemon=True).start()
 
         self.bus.on("mycroft.feedback.set-state", self._handle_set_state)
+        self.bus.on("mycroft.mic.mute", self._handle_mute)
+        self.bus.on("mycroft.mic.unmute", self._handle_unmute)
 
     def _handle_set_state(self, message: Message):
         state = message.data.get("state")
@@ -84,14 +88,26 @@ class Mark2LedClient:
             elif state == "thinking":
                 self.thinking()
 
+    def _handle_mute(self, _message: Message):
+        self._asleep_color = MycroftColor.RED
+
+        if self._state == "asleep":
+            self.asleep()
+
+    def _handle_unmute(self, _message: Message):
+        self._asleep_color = color.BLACK
+
+        if self._state == "asleep":
+            self.asleep()
+
     def stop(self):
-        self._state = ""
+        self._state = None
         self._animation = None
         self.fill(color.BLACK)
         self.show()
 
     def asleep(self, _message=None):
-        self._animation = Solid(self, color=color.BLACK)
+        self._animation = Solid(self, color=self._asleep_color)
 
     def awake(self, _message=None):
         self._animation = Pulse(self, speed=0.05, color=MycroftColor.GREEN, period=2)
