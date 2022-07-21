@@ -19,7 +19,7 @@ from subprocess import CalledProcessError, check_output
 
 from adapt.intent import IntentBuilder
 from ifaddr import get_adapters
-from mycroft.skills import MycroftSkill, intent_handler
+from mycroft.skills import MycroftSkill, intent_handler, GuiClear
 
 
 def speakable_name(iface_name: str):
@@ -113,7 +113,7 @@ class IPSkill(MycroftSkill):
                     )
                 )
 
-        return self.end_session(dialog=dialog, gui=gui)
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.ON_IDLE)
 
     def handle_SSID_query(self, _):
         dialog = None
@@ -139,7 +139,7 @@ class IPSkill(MycroftSkill):
                 else:
                     dialog = "ethernet.connection"
 
-        return self.end_session(dialog=dialog, speak=speak)
+        return self.end_session(dialog=dialog, speak=speak, gui_clear=GuiClear.ON_IDLE)
 
     @intent_handler(
         IntentBuilder("")
@@ -174,7 +174,7 @@ class IPSkill(MycroftSkill):
                 # Ok now I don't know, I'll just report them all
                 dialog, gui = self.speak_multiple_last_digits(addr)
 
-        return self.end_session(dialog=dialog, gui=gui)
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.ON_IDLE)
 
     def gui_show(self, ip):
         return ("ip-address.qml", {"ip": ip})

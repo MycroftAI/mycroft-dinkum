@@ -66,7 +66,7 @@ class TimeSkill(MycroftSkill):
             request: Data from the intent parser regarding the user's voice request.
         """
         dialog, gui = self._handle_current_time(message)
-        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
+        return self.end_session(dialog=dialog, gui=gui)
 
     @intent_handler("what-time-is-it.intent")
     def handle_current_time_padatious(self, message: Message):
@@ -95,7 +95,7 @@ class TimeSkill(MycroftSkill):
             request: Data from the intent parser regarding the user's voice request.
         """
         dialog, gui = self._handle_future_time(message)
-        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
+        return self.end_session(dialog=dialog, gui=gui)
 
     @intent_handler("what-time-will-it-be.intent")
     def handle_future_time_padatious(self, message: Message):

@@ -81,9 +81,6 @@ class IntentService:
         self._session_lock = RLock()
 
         self._last_gui_session: Optional[Session] = None
-        self._last_tts_session: Optional[Session] = None
-        self._last_music_session: Optional[Session] = None
-        self._last_alert_session: Optional[Session] = None
 
         self._idle_seconds_left: Optional[int] = None
         Thread(target=self._check_idle_timeout, daemon=True).start()
@@ -293,11 +290,6 @@ class IntentService:
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
             if session is not None:
-                if (self._last_tts_session is not None) and (
-                    self._last_tts_session.id == session.id
-                ):
-                    self._last_tts_session = None
-
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
@@ -310,6 +302,11 @@ class IntentService:
                     self.end_session(session.id)
 
     def handle_media_finished(self, message: Message):
+        channel = message.data.get("channel")
+        if channel != 0:
+            # Only handle sound effects here (channel 0)
+            return
+
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Audio finished: %s", mycroft_session_id)
 
@@ -338,7 +335,6 @@ class IntentService:
             if action_type == "speak":
                 utterance = action.get("utterance", "")
                 if utterance:
-                    self._last_tts_session = session
                     self.bus.emit(
                         Message(
                             "speak",
@@ -378,14 +374,13 @@ class IntentService:
                     )
             elif action_type == "clear_display":
                 # Go idle immediately
-                self._last_gui_session = None
+                self._disable_idle_timeout()
                 self.bus.emit(Message("mycroft.gui.idle"))
             elif action_type == "wait_for_idle":
                 self._set_idle_timeout()
             elif action_type == "audio_alert":
                 alert_uri = action.get("uri")
                 if alert_uri:
-                    self._last_alert_session = session
                     self.bus.emit(
                         Message(
                             "mycroft.audio.play-sound",
@@ -399,7 +394,6 @@ class IntentService:
             elif action_type == "stream_music":
                 alert_uri = action.get("uri")
                 if alert_uri:
-                    self._last_music_session = session
                     self.bus.emit(
                         Message(
                             "mycroft.audio.service.play",

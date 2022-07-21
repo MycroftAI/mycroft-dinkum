@@ -108,9 +108,7 @@ class WikipediaSkill(CommonQuerySkill):
         except CONNECTION_ERRORS:
             dialog = "connection-error"
 
-        return self.end_session(
-            speak=speak, dialog=dialog, gui=gui, gui_clear=GuiClear.AFTER_SPEAK
-        )
+        return self.end_session(speak=speak, dialog=dialog, gui=gui)
 
     def CQS_match_query_phrase(
         self, query: str
@@ -182,9 +180,7 @@ class WikipediaSkill(CommonQuerySkill):
         article = Article(title, page, summary, num_lines, image)
 
         return self.end_session(
-            speak=summary,
-            gui=("feature_image.qml", self.get_display_data(article)),
-            gui_clear=GuiClear.AFTER_SPEAK,
+            speak=summary, gui=("feature_image.qml", self.get_display_data(article))
         )
 
     def extract_topic(self, query: str) -> str:

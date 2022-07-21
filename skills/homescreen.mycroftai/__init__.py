@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import AdaptIntent, MycroftSkill, intent_handler
+from mycroft.skills import AdaptIntent, MycroftSkill, intent_handler, GuiClear
 from mycroft.util.format import nice_date, nice_time
 from mycroft.util.time import now_local
 
@@ -152,10 +152,10 @@ class HomescreenSkill(MycroftSkill):
     def show_homescreen(self, _):
         """Handles a user's request to show the home screen."""
         gui = self._show_idle_screen()
-        return self.end_session(gui=gui, gui_clear="never")
+        return self.end_session(gui=gui, gui_clear=GuiClear.NEVER)
 
     def handle_gui_idle(self, _message: Message):
-        self.emit_start_session(gui=self._show_idle_screen(), gui_clear="never")
+        self.emit_start_session(gui=self._show_idle_screen(), gui_clear=GuiClear.NEVER)
 
     def _show_idle_screen(self):
         """Populates and shows the resting screen."""
@@ -196,7 +196,9 @@ class HomescreenSkill(MycroftSkill):
             "Home screen wallpaper changed to %s", self.wallpaper.selected.name
         )
 
-        return self.end_session(gui=("mark_ii_idle.qml", gui_data), gui_clear="never")
+        return self.end_session(
+            gui=("mark_ii_idle.qml", gui_data), gui_clear=GuiClear.NEVER
+        )
 
     def update_date(self):
         """Formats the datetime object returned from the parser for display purposes."""

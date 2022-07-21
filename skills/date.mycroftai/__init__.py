@@ -56,7 +56,7 @@ class DateSkill(MycroftSkill):
         else:
             dialog, gui = self._handle_relative_date(message)
 
-        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
+        return self.end_session(dialog=dialog, gui=gui)
 
     @intent_handler(
         AdaptIntent().require("query").require("relative-day").require("date")
@@ -70,7 +70,7 @@ class DateSkill(MycroftSkill):
             request: The request from the user that triggered this intent.
         """
         dialog, gui = self._handle_relative_date(message)
-        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
+        return self.end_session(dialog=dialog, gui=gui)
 
     @intent_handler(AdaptIntent().require("query").require("month"))
     def handle_day_for_date(self, message: Message):
@@ -82,7 +82,7 @@ class DateSkill(MycroftSkill):
             request: The request from the user that triggered this intent.
         """
         dialog, gui = self._handle_relative_date(message)
-        return self.end_session(dialog=dialog, gui=gui, gui_clear="after_speak")
+        return self.end_session(dialog=dialog, gui=gui)
 
     @intent_handler(AdaptIntent().require("query").require("leap-year"))
     def handle_next_leap_year_request(self, _message):
@@ -96,9 +96,7 @@ class DateSkill(MycroftSkill):
         while not is_leap_year(year):
             year += 1
 
-        return self.end_session(
-            dialog=("next-leap-year", dict(year=year)), gui_clear="after_speak"
-        )
+        return self.end_session(dialog=("next-leap-year", dict(year=year)))
 
     @intent_handler("date-future-weekend.intent")
     def handle_future_weekend_request(self, _message):
@@ -106,9 +104,7 @@ class DateSkill(MycroftSkill):
         sunday_date = get_speakable_weekend_date("this sunday")
         dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
 
-        return self.end_session(
-            dialog=("date-future-weekend", dialog_data), gui_clear="after_speak"
-        )
+        return self.end_session(dialog=("date-future-weekend", dialog_data))
 
     @intent_handler("date-last-weekend.intent")
     def handle_last_weekend_request(self, _):
@@ -120,9 +116,7 @@ class DateSkill(MycroftSkill):
         sunday_date = get_speakable_weekend_date("last sunday")
         dialog_data = dict(saturday_date=saturday_date, sunday_date=sunday_date)
 
-        return self.end_session(
-            dialog=("date-last-weekend", dialog_data), gui_clear="after_speak"
-        )
+        return self.end_session(dialog=("date-last-weekend", dialog_data))
 
     def _handle_current_date(self):
         """Build, speak and display the response to a current date request."""
