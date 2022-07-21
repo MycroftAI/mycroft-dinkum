@@ -250,7 +250,7 @@ class DuckduckgoSkill(CommonQuerySkill):
 
         gui = self.display_answer(self._cqs_match)
         speak = self._cqs_match.text
-        return self.end_session(speak=speak, gui=gui, gui_clear="after_speak")
+        return self.end_session(speak=speak, gui=gui)
 
     @intent_handler(AdaptIntent("AskDucky").require("DuckDuckGo"))
     def handle_ask_ducky(self, message):
@@ -281,9 +281,7 @@ class DuckduckgoSkill(CommonQuerySkill):
             else:
                 dialog = ("no-answer", {"query": utt})
 
-        return self.end_session(
-            speak=speak, dialog=dialog, gui=gui, gui_clear="after_speak"
-        )
+        return self.end_session(speak=speak, dialog=dialog, gui=gui)
 
     def display_answer(self, answer: Answer):
         """Display the result page on a GUI if connected.

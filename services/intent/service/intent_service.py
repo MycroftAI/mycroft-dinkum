@@ -40,6 +40,9 @@ from .intent_services import (
 # Seconds before home screen is shown again (mycroft.gui.idle event)
 IDLE_TIMEOUT = 15
 
+# Seconds after speaking before going idle
+IDLE_QUICK_TIMEOUT = 5
+
 
 @dataclass
 class Session:
@@ -373,10 +376,11 @@ class IntentService:
                         )
                     )
             elif action_type == "clear_display":
-                # Go idle immediately
-                self._disable_idle_timeout()
+                # Go idle after a brief pause
+                self._set_idle_timeout(IDLE_QUICK_TIMEOUT)
                 self.bus.emit(Message("mycroft.gui.idle"))
             elif action_type == "wait_for_idle":
+                # Go idle after default timeout
                 self._set_idle_timeout()
             elif action_type == "audio_alert":
                 alert_uri = action.get("uri")
@@ -413,8 +417,11 @@ class IntentService:
 
         return False
 
-    def _set_idle_timeout(self):
-        self._idle_seconds_left = IDLE_TIMEOUT
+    def _set_idle_timeout(self, idle_seconds: Optional[int] = None):
+        if idle_seconds is None:
+            idle_seconds = IDLE_TIMEOUT
+
+        self._idle_seconds_left = idle_seconds
         LOG.debug("Idle timeout set for %s second(s)", self._idle_seconds_left)
 
     def handle_utterance(self, message: Message):

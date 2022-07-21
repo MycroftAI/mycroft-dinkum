@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import tempfile
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -8,6 +7,7 @@ from uuid import uuid4
 import pysbd
 from mycroft.tts import TTS
 from mycroft.tts.dummy_tts import DummyTTS
+from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import Message, MessageBusClient
 
@@ -20,8 +20,10 @@ class SpeakHandler:
         self.bus = bus
         self.tts = tts
 
-        self._temp_dir = tempfile.TemporaryDirectory()
-        self._cache_dirs = [Path(self._temp_dir.name)]
+        tts_name = self.config["tts"]["module"]
+        cache_dir = Path(get_cache_directory(), "tts", tts_name)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_dirs = [cache_dir]
 
         self._segmenter: Optional[pysbd.Segmenter] = None
         self._load_segmenter()

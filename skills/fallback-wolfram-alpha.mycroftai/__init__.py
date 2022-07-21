@@ -173,7 +173,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         self.log.debug("Setting information for follow up query")
         self._last_query = self._cqs_match
 
-        return self.end_session(speak=speak, gui=gui, gui_clear="after_speak")
+        return self.end_session(speak=speak, gui=gui)
 
     def _get_cqs_match_image(self):
         """Fetch the image for a CQS answer.
@@ -209,27 +209,6 @@ class WolframAlphaSkill(CommonQuerySkill):
         speak = self._cqs_match.spoken_answer
 
         return speak, gui
-
-    # @intent_handler(AdaptIntent().require("Give").require("Source"))
-    # def handle_get_sources(self, _):
-    #     """Intent handler to request the information source of previous answer."""
-    #     # TODO deactivate handler when no last query exists.
-    #     with self.activity():
-    #         if self._last_query:
-    #             # Send an email to the account this device is registered to
-    #             data = {
-    #                 "query": self._last_query.query,
-    #                 "answer": self._last_query.spoken_answer,
-    #                 "url_query": self._last_query.query.replace(" ", "+"),
-    #             }
-
-    #             self.send_email(
-    #                 self.__translate("email.subject", data),
-    #                 self.__translate("email.body", data),
-    #             )
-    #             self.speak_dialog("sent.email", wait=True)
-    #         else:
-    #             self.speak_dialog("no.info.to.send", wait=True)
 
     def shutdown(self):
         super(WolframAlphaSkill, self).shutdown()
