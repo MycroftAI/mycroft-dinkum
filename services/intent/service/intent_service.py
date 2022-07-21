@@ -41,7 +41,7 @@ from .intent_services import (
 IDLE_TIMEOUT = 15
 
 # Seconds after speaking before going idle
-IDLE_QUICK_TIMEOUT = 5
+IDLE_QUICK_TIMEOUT = 2
 
 
 @dataclass
@@ -378,7 +378,6 @@ class IntentService:
             elif action_type == "clear_display":
                 # Go idle after a brief pause
                 self._set_idle_timeout(IDLE_QUICK_TIMEOUT)
-                self.bus.emit(Message("mycroft.gui.idle"))
             elif action_type == "wait_for_idle":
                 # Go idle after default timeout
                 self._set_idle_timeout()
