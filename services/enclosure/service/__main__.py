@@ -73,12 +73,12 @@ def main():
                     Message("mycroft.feedback.set-state", data={"state": "thinking"})
                 )
 
-        def handle_session_ended(message):
-            nonlocal led_session_id
-            if led_session_id == message.data.get("mycroft_session_id"):
-                bus.emit(
-                    Message("mycroft.feedback.set-state", data={"state": "asleep"})
-                )
+        # def handle_session_ended(message):
+        #     nonlocal led_session_id
+        #     if led_session_id == message.data.get("mycroft_session_id"):
+        #         bus.emit(
+        #             Message("mycroft.feedback.set-state", data={"state": "asleep"})
+        #         )
 
         def handle_idle(message):
             nonlocal led_session_id
@@ -98,7 +98,7 @@ def main():
 
         bus.on("recognizer_loop:awoken", handle_wake)
         bus.on("mycroft.session.started", handle_session_started)
-        bus.on("mycroft.session.ended", handle_session_ended)
+        # bus.on("mycroft.session.ended", handle_session_ended)
         bus.on("mycroft.gui.idle", handle_idle)
         bus.on("mycroft.switch.state", handle_switch_state)
 
@@ -117,6 +117,8 @@ def main():
 
         # Request switch states so mute is correctly shown
         bus.emit(Message("mycroft.switch.report-states"))
+
+        bus.emit(Message("mycroft.ready"))
 
         try:
             # Wait for exit signal
