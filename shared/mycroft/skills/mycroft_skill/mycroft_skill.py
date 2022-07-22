@@ -76,6 +76,11 @@ class GuiClear(str, Enum):
     AT_START = "at_start"
 
 
+class MessageSend(str, Enum):
+    AT_START = "at_start"
+    AT_END = "at_end"
+
+
 def simple_trace(stack_trace):
     """Generate a simplified traceback.
 
@@ -1559,6 +1564,7 @@ class MycroftSkill:
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
     ):
         # Action ordering is fixed:
         # 1. Send message
@@ -1570,7 +1576,7 @@ class MycroftSkill:
         actions = []
 
         # 1. Send message
-        if message is not None:
+        if (message is not None) and (message_send == MessageSend.AT_START):
             actions.append(
                 {
                     "type": "message",
@@ -1657,6 +1663,19 @@ class MycroftSkill:
             if gui_clear == GuiClear.AUTO:
                 gui_clear = GuiClear.AFTER_SPEAK
 
+        if (message is not None) and (message_send == MessageSend.AT_END):
+            actions.append(
+                {
+                    "type": "message",
+                    "message_type": message.msg_type,
+                    "data": {
+                        # Automatically add session id
+                        "mycroft_session_id": self._mycroft_session_id,
+                        **message.data,
+                    },
+                }
+            )
+
         # No TTS, so time out on idle
         if gui_clear == GuiClear.AUTO:
             gui_clear = GuiClear.ON_IDLE
@@ -1679,6 +1698,7 @@ class MycroftSkill:
         expect_response: bool = False,
         message: Optional[Message] = None,
         continue_session: bool = False,
+        message_send: MessageSend = MessageSend.AT_START,
     ) -> str:
         mycroft_session_id = str(uuid4())
         message = Message(
@@ -1694,6 +1714,7 @@ class MycroftSkill:
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
                     message=message,
+                    message_send=message_send,
                 ),
                 "expect_response": expect_response,
                 "continue_session": continue_session,
@@ -1713,6 +1734,7 @@ class MycroftSkill:
         audio_alert: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
     ) -> Message:
         return Message(
             "mycroft.session.continue",
@@ -1727,6 +1749,7 @@ class MycroftSkill:
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
                     message=message,
+                    message_send=message_send,
                 ),
                 "expect_response": expect_response,
             },
@@ -1741,6 +1764,7 @@ class MycroftSkill:
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
     ) -> Message:
         return Message(
             "mycroft.session.end",
@@ -1755,6 +1779,7 @@ class MycroftSkill:
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
                     message=message,
+                    message_send=message_send,
                 ),
             },
         )
