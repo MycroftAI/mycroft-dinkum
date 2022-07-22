@@ -34,6 +34,9 @@ def voice_loop(
     vad: SileroVoiceActivityDetector,
     stt: StreamingSTT,
 ):
+    # Name reported in recognizer_loop:wakeword
+    wake_word_name = config.get("listener", {}).get("wake_word", "hey mycroft")
+
     queue: "Queue[bytes]" = Queue()
     Thread(target=_audio_input, args=(queue,), daemon=True).start()
 
@@ -54,6 +57,20 @@ def voice_loop(
             Message(
                 "recognizer_loop:awoken",
                 data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
+        bus.emit(
+            Message(
+                "recognizer_loop:wakeword",
+                data={"utterance": wake_word_name, "session": mycroft_session_id},
+            )
+        )
+        bus.emit(
+            Message(
+                "recognizer_loop:record_begin",
+                {
+                    "mycroft_session_id": mycroft_session_id,
+                },
             )
         )
 
@@ -120,6 +137,14 @@ def voice_loop(
                 text = stt.stop() or ""
                 LOG.info("STT: %s", text)
 
+                bus.emit(
+                    Message(
+                        "recognizer_loop:record_end",
+                        {
+                            "mycroft_session_id": mycroft_session_id,
+                        },
+                    )
+                )
                 bus.emit(
                     Message(
                         "recognizer_loop:utterance",

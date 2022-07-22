@@ -943,6 +943,7 @@ class MycroftSkill:
             self._mycroft_session_id = message.data.get("mycroft_session_id")
             result_message: Optional[Message] = None
             try:
+                self.acknowledge()
                 message = unmunge_message(message, self.skill_id)
                 result_message = handler(message)
             except Exception:
@@ -1314,7 +1315,7 @@ class MycroftSkill:
         if acknowledge:
             audio_file = resolve_resource_file(acknowledge)
 
-            if audio_file:
+            if not audio_file:
                 LOG.warning("Could not find 'acknowledge' audio file!")
                 return
 
@@ -1524,65 +1525,6 @@ class MycroftSkill:
         """Cancel any repeating events started by the skill."""
         return self.event_scheduler.cancel_all_repeating_events()
 
-    # def activity_started(self):
-    #     """Indicate that a skill activity has started.
-
-    #     This will flush the TTS cache and keep LED animations going.
-    #     """
-    #     self._activity_id = str(uuid4())
-    #     self.bus.emit(
-    #         Message(
-    #             "skill.started",
-    #             data={
-    #                 "skill_id": self.skill_id,
-    #                 "activity_id": self._activity_id,
-    #                 "mycroft_session_id": self._mycroft_session_id,
-    #             },
-    #         )
-    #     )
-    #     LOG.info(
-    #         "%s started (skill=%s, activity=%s)",
-    #         self.name,
-    #         self.skill_id,
-    #         self._activity_id,
-    #     )
-
-    #     self.acknowledge()
-
-    # def activity_ended(self):
-    #     """Indicate that a skill activity has ended.
-
-    #     This will stop LED animations.
-    #     """
-    #     self.bus.emit(
-    #         Message(
-    #             "skill.ended",
-    #             data={
-    #                 "skill_id": self.skill_id,
-    #                 "activity_id": self._activity_id,
-    #                 "mycroft_session_id": self._mycroft_session_id,
-    #             },
-    #         )
-    #     )
-    #     LOG.info(
-    #         "%s ended (skill=%s, activity=%s)",
-    #         self.name,
-    #         self.skill_id,
-    #         self._activity_id,
-    #     )
-
-    # @contextmanager
-    # def activity(self):
-    #     """Return a context manager that calls activity started/ended.
-
-    #     Yields the activity id.
-    #     """
-    #     self.activity_started()
-    #     try:
-    #         yield self._activity_id
-    #     finally:
-    #         self.activity_ended()
-
     def play_sound_uri(self, uri: str):
         self.bus.emit(
             Message(
@@ -1590,30 +1532,6 @@ class MycroftSkill:
                 data={"uri": uri, "mycroft_session_id": self._mycroft_session_id},
             )
         )
-
-    # def wait_while_speaking(self, timeout=60):
-    #     if self._tts_session_id:
-    #         self._tts_speak_finished.wait(timeout=timeout)
-
-    # def _handle_speaking_finished(self, message: Message):
-    #     session_id = message.data.get("session_id")
-    #     if session_id == self._tts_session_id:
-    #         self._tts_session_id = None
-    #         self._tts_speak_finished.set()
-
-    # def stop_speaking(self):
-    #     self.bus.emit(Message("mycroft.tts.stop"))
-
-    # def _handle_skill_response(self, message: Message):
-    #     """Catch responses intended for a specific skill"""
-    #     skill_id = message.data.get("skill_id")
-    #     if skill_id == self.skill_id:
-    #         # Intended for this skill
-    #         utterances = message.data.get("utterances")
-    #         utterance = utterances[0] if utterances else None
-    #         LOG.debug("Handling response in skill: %s", utterance)
-    #         self._response_queue.put_nowait(utterance)
-    #         self._bus.emit(message.response())
 
     # -------------------------------------------------------------------------
 
@@ -1707,7 +1625,7 @@ class MycroftSkill:
                 else:
                     dialog_name, dialog_data = maybe_dialog
 
-                utterance = mycroft.dialog.get(dialog_name, self.lang, dialog_data)
+                utterance = self.dialog_renderer.render(dialog_name, dialog_data)
                 actions.append(
                     {
                         "type": "speak",
@@ -1844,7 +1762,7 @@ class MycroftSkill:
         return None
 
     def _handle_skill_response(self, message: Message):
-        """Verifies that raw utteranc is for this skill"""
+        """Verifies that raw utterance is for this skill"""
         if (message.data.get("skill_id") == self.skill_id) and (
             message.data.get("mycroft_session_id") == self._mycroft_session_id
         ):
@@ -1852,6 +1770,7 @@ class MycroftSkill:
             utterance = utterances[0] if utterances else None
             result_message = None
             try:
+                self.acknowledge()
                 result_message = self.raw_utterance(utterance)
             except Exception:
                 LOG.exception("Unexpected error in raw_utterance")
