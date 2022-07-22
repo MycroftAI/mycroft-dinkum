@@ -204,6 +204,7 @@ class IntentService:
         self.bus.on("mycroft.session.start", self.handle_session_start)
         self.bus.on("mycroft.session.continue", self.handle_session_continue)
         self.bus.on("mycroft.session.end", self.handle_session_end)
+        self.bus.on("mycroft.session.ended", self.handle_session_ended)
         self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
         self.bus.on("mycroft.audio.hal.media.ended", self.handle_media_finished)
         self.bus.on("mycroft.stop", self.handle_stop)
@@ -379,6 +380,11 @@ class IntentService:
                         self.end_session(session.id)
                 else:
                     self.abort_session(session.id)
+
+    def handle_session_ended(self, message: Message):
+        with self._session_lock:
+            if not self._sessions:
+                self.bus.emit(Message("mycroft.session.no-active-sessions"))
 
     def handle_tts_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]

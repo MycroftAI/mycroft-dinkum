@@ -48,6 +48,8 @@ class Mark2VolumeClient:
 
     def start(self):
         self.bus.on("mycroft.switch.state", self._handle_switch_state)
+        self.bus.on("mycroft.volume.set", self._handle_volume_set)
+        self.bus.on("mycroft.volume.get", self._handle_volume_get)
         self.set_volume(self._current_volume)
 
     def _handle_switch_state(self, message: Message):
@@ -57,11 +59,9 @@ class Mark2VolumeClient:
 
             if (name in {"volume_down", "volume_up"}) and (state == "on"):
                 if name == "volume_up":
-                    volume = self.set_volume(self._current_volume + self._volume_step)
+                    self.set_volume(self._current_volume + self._volume_step)
                 else:
-                    volume = self.set_volume(self._current_volume - self._volume_step)
-
-                self._current_volume = volume
+                    self.set_volume(self._current_volume - self._volume_step)
 
                 if self._beep_uri:
                     # Play short beep
@@ -74,15 +74,32 @@ class Mark2VolumeClient:
         except Exception:
             self.log.exception("Error while setting volume")
 
+    def _handle_volume_set(self, message: Message):
+        try:
+            # Not really a percent: actually in [0,1]
+            percent = float(message.data["percent"])
+            volume = self._volume_min + (
+                percent * (self._volume_max - self._volume_min)
+            )
+            self.set_volume(volume)
+        except Exception:
+            self.log.exception("Error while setting volume")
+
+    def _handle_volume_get(self, message: Message):
+        # Not really a percent: actually in [0,1]
+        percent = self._current_volume / (self._volume_max - self._volume_min)
+        self.bus.emit(message.response(data={"percent": percent}))
+
     def stop(self):
         pass
 
     def set_volume(self, volume: int):
+        """Sets the hardware volume using the I2C bus"""
         volume = min(self._volume_max, max(self._volume_min, volume))
         tas_volume = self._calc_log_y(volume)
         self.i2c_bus.write_byte_data(DEVICE_ADDRESS, VOLUME_ADDRESS, tas_volume)
-
-        return volume
+        self._current_volume = volume
+        self.log.debug("Volume set to %s (hw=%s)", volume, tas_volume)
 
     def _calc_log_y(self, x):
         """given x produce y. takes in an int
