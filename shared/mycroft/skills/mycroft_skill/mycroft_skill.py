@@ -1565,6 +1565,7 @@ class MycroftSkill:
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        expect_response: bool = False,
     ):
         # Action ordering is fixed:
         # 1. Send message
@@ -1574,6 +1575,10 @@ class MycroftSkill:
         # 5. Speak dialog(s) or text
         # 6. Clear gui or set idle timeout
         actions = []
+
+        if expect_response and (gui_clear == GuiClear.AUTO):
+            # Don't clear GUI if a response is needed from the user
+            gui_clear = GuiClear.NEVER
 
         # 1. Send message
         if (message is not None) and (message_send == MessageSend.AT_START):
@@ -1676,6 +1681,9 @@ class MycroftSkill:
                 }
             )
 
+        if expect_response:
+            actions.append({"type": "get_response"})
+
         # No TTS, so time out on idle
         if gui_clear == GuiClear.AUTO:
             gui_clear = GuiClear.ON_IDLE
@@ -1715,8 +1723,8 @@ class MycroftSkill:
                     audio_alert=audio_alert,
                     message=message,
                     message_send=message_send,
+                    expect_response=expect_response,
                 ),
-                "expect_response": expect_response,
                 "continue_session": continue_session,
             },
         )
@@ -1735,11 +1743,16 @@ class MycroftSkill:
         expect_response: bool = False,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        mycroft_session_id: Optional[str] = None,
     ) -> Message:
+        if mycroft_session_id is None:
+            # Use session from latest intent handler
+            mycroft_session_id = self._mycroft_session_id
+
         return Message(
             "mycroft.session.continue",
             data={
-                "mycroft_session_id": self._mycroft_session_id,
+                "mycroft_session_id": mycroft_session_id,
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,
@@ -1750,8 +1763,8 @@ class MycroftSkill:
                     audio_alert=audio_alert,
                     message=message,
                     message_send=message_send,
+                    expect_response=expect_response,
                 ),
-                "expect_response": expect_response,
             },
         )
 
@@ -1765,11 +1778,16 @@ class MycroftSkill:
         audio_alert: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        mycroft_session_id: Optional[str] = None,
     ) -> Message:
+        if mycroft_session_id is None:
+            # Use session from latest intent handler
+            mycroft_session_id = self._mycroft_session_id
+
         return Message(
             "mycroft.session.end",
             data={
-                "mycroft_session_id": self._mycroft_session_id,
+                "mycroft_session_id": mycroft_session_id,
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,

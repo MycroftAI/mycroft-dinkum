@@ -18,9 +18,10 @@ from collections import namedtuple
 from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
+from enum import Enum
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import MycroftSkill, intent_handler
+from mycroft.skills import MycroftSkill, intent_handler, GuiClear
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import join_list, nice_duration, pronounce_number
 from mycroft.util.parse import extract_duration
@@ -60,6 +61,13 @@ class TimerValidationException(Exception):
     pass
 
 
+class State(str, Enum):
+    """State used to process raw_utterance"""
+
+    STARTING_TIMER = "starting_timer"
+    CANCELLING_TIMER = "cancelling_timer"
+
+
 class TimerSkill(MycroftSkill):
     def __init__(self):
         """Constructor"""
@@ -73,7 +81,9 @@ class TimerSkill(MycroftSkill):
         self.save_path = Path(self.file_system.path).joinpath("save_timers")
         self.showing_expired_timers = False
 
-        self._state: Optional[str] = None
+        self._expired_session_id: Optional[str] = None
+
+        self._state: Optional[State] = None
         self._partial_timer = {}
         self._cancel_matches = None
 
@@ -96,6 +106,10 @@ class TimerSkill(MycroftSkill):
         # To prevent beeping while listening
         self.add_event("recognizer_loop:wakeword", self.handle_wake_word_detected)
         # self.add_event("skill.timer.stop", self.handle_timer_stop)
+        self.add_event(
+            "mycroft.session.actions-completed", self.handle_session_actions_completed
+        )
+        self.add_event("mycroft.session.ended", self.handle_session_ended)
 
     def _load_resources(self):
         """Gets a set of static words in the language specified in the configuration."""
@@ -125,6 +139,40 @@ class TimerSkill(MycroftSkill):
         self._start_display_update()
         self._start_expiration_check()
 
+    def handle_session_actions_completed(self, message: Message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._expired_session_id:
+            if self.expired_timers:
+                # Beep again
+                dialog = None
+                for timer in self.expired_timers:
+                    if not timer.expiration_announced:
+                        timer.expiration_announced = True
+                        timer_dialog = TimerDialog(timer, self.lang)
+                        timer_dialog.build_expiration_announcement_dialog(
+                            len(self.active_timers)
+                        )
+                        dialog = (timer_dialog.name, timer_dialog.data)
+
+                        # Only speak one timer at time
+                        break
+
+                self.bus.emit(
+                    self.continue_session(
+                        mycroft_session_id=self._expired_session_id,
+                        audio_alert=sound_uri,
+                        dialog=dialog,
+                        gui_clear=GuiClear.NEVER,
+                    )
+                )
+            else:
+                self._expired_session_id = None
+
+    def handle_session_ended(self, message: Message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._expired_session_id:
+            self._expired_session_id = None
+
     # -------------------------------------------------------------------------
 
     @intent_handler(
@@ -149,14 +197,14 @@ class TimerSkill(MycroftSkill):
 
         if duration is None:
             self._partial_timer = {"name": name}
-            self._state = "starting-timer"
+            self._state = State.STARTING_TIMER
             return self.continue_session(dialog="ask-how-long", expect_response=True)
 
         timer = self._start_new_timer(duration, name)
         return self.end_session(
             dialog=self._speak_new_timer(timer),
             gui=("timer_mark_ii.qml", self._get_gui_data()),
-            gui_clear="never",
+            gui_clear=GuiClear.NEVER,
         )
 
     def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
@@ -164,7 +212,7 @@ class TimerSkill(MycroftSkill):
             self.log.debug("Cancelled duration request")
             return
 
-        if self._state == "starting-timer":
+        if self._state == State.STARTING_TIMER:
             # Start timer command that's missing a duration
             name = self._partial_timer.pop("name", None)
             duration, _rest = self._determine_timer_duration(utterance)
@@ -173,11 +221,11 @@ class TimerSkill(MycroftSkill):
                 return self.end_session(
                     dialog=self._speak_new_timer(timer),
                     gui=("timer_mark_ii.qml", self._get_gui_data()),
-                    gui_clear="never",
+                    gui_clear=GuiClear.NEVER,
                 )
 
             self.log.debug("Invalid duration '%s' in '%s'", duration, utterance)
-        elif self._state == "cancelling-timer":
+        elif self._state == State.CANCELLING_TIMER:
             # Cancel timer command that needs disambiguation
             matcher = TimerMatcher(utterance, self.active_timers, self.static_resources)
             if matcher.no_match_criteria:
@@ -275,7 +323,7 @@ class TimerSkill(MycroftSkill):
                         self.active_timers, "ask-which-timer-cancel"
                     )
                     self._cancel_matches = None
-                    self._state = "cancelling-timer"
+                    self._state = State.CANCELLING_TIMER
                     return self.continue_session(dialog=dialog, expect_response=True)
             else:
                 # Name or duration is present
@@ -285,7 +333,7 @@ class TimerSkill(MycroftSkill):
                     if len(matches) > 1:
                         # Multiple matches, need to ask user for clarification
                         self._cancel_matches = matches
-                        self._state = "cancelling-timer"
+                        self._state = State.CANCELLING_TIMER
                         dialog = self._ask_which_timer(
                             self.active_timers, "ask-which-timer-cancel"
                         )
@@ -302,7 +350,7 @@ class TimerSkill(MycroftSkill):
         else:
             dialog = "no-active-timer"
 
-        return self.end_session(dialog=dialog, gui_clear="at_start")
+        return self.end_session(dialog=dialog)
 
     def _cancel_all_duration(self, duration: timedelta):
         """Cancels all timers with an original duration matching the utterance.
@@ -718,40 +766,29 @@ class TimerSkill(MycroftSkill):
 
         Runs once every two seconds via a repeating event.
         """
-        if self.expired_timers:
+        if self.expired_timers and (self._expired_session_id is None):
             dialog = None
-            gui = None
             sound_uri = f"file://{self.sound_file_path}"
 
-            if not self.showing_expired_timers:
-                gui = ("timer_mark_ii.qml", self._get_gui_data())
-                self.showing_expired_timers = True
+            # for timer in self.expired_timers:
+            #     if not timer.expiration_announced:
+            #         timer.expiration_announced = True
+            #         timer_dialog = TimerDialog(timer, self.lang)
+            #         timer_dialog.build_expiration_announcement_dialog(
+            #             len(self.active_timers)
+            #         )
+            #         dialog = (timer_dialog.name, timer_dialog.data)
 
-            for timer in self.expired_timers:
-                if not timer.expiration_announced:
-                    timer.expiration_announced = True
-                    timer_dialog = TimerDialog(timer, self.lang)
-                    timer_dialog.build_expiration_announcement_dialog(
-                        len(self.active_timers)
-                    )
-                    dialog = (timer_dialog.name, timer_dialog.data)
-                    self.bus.emit(
-                        self.emit_start_session(
-                            audio_alert=sound_uri,
-                            dialog=dialog,
-                            gui=gui,
-                            gui_clear="never",
-                        )
-                    )
-                    return
+            #         # Only speak one timer at time
+            #         break
 
-            # self.play_sound_uri(sound_uri)
-            self.bus.emit(
-                self.emit_start_session(
-                    audio_alert=sound_uri,
-                    gui=gui,
-                    gui_clear="never",
-                )
+            gui = ("timer_mark_ii.qml", self._get_gui_data())
+            self._expired_session_id = self.emit_start_session(
+                audio_alert=sound_uri,
+                # dialog=dialog,
+                gui=gui,
+                gui_clear=GuiClear.NEVER,
+                continue_session=True,
             )
 
     # def _speak_expired_timer(self, expired_timers):

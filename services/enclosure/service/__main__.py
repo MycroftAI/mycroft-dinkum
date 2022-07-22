@@ -73,13 +73,6 @@ def main():
                     Message("mycroft.feedback.set-state", data={"state": "thinking"})
                 )
 
-        # def handle_session_ended(message):
-        #     nonlocal led_session_id
-        #     if led_session_id == message.data.get("mycroft_session_id"):
-        #         bus.emit(
-        #             Message("mycroft.feedback.set-state", data={"state": "asleep"})
-        #         )
-
         def handle_idle(message):
             nonlocal led_session_id
             led_session_id = None
@@ -95,6 +88,9 @@ def main():
                     bus.emit(Message("mycroft.mic.mute"))
                 else:
                     bus.emit(Message("mycroft.mic.unmute"))
+            elif (name == "action") and (state == "on"):
+                # Action button wakes up device
+                bus.emit(Message("mycroft.mic.listen"))
 
         bus.on("recognizer_loop:awoken", handle_wake)
         bus.on("mycroft.session.started", handle_session_started)

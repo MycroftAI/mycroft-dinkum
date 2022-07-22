@@ -44,10 +44,15 @@ def voice_loop(
     command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
     chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
     is_recording = False
+    muted = False
     mycroft_session_id: Optional[str] = None
 
     def do_listen(message: Optional[Message] = None):
         nonlocal is_recording, mycroft_session_id
+        if muted:
+            LOG.warning("Not waking up since we're muted")
+            return
+
         if message:
             mycroft_session_id = message.data.get("mycroft_session_id")
         else:
@@ -86,8 +91,6 @@ def voice_loop(
             chunk_array = np.frombuffer(chunk, dtype=np.int16)
             is_speech = vad(chunk_array) >= VAD_THRESHOLD
             command.process(is_speech, seconds)
-
-    muted = False
 
     def handle_mute(_message):
         nonlocal muted
