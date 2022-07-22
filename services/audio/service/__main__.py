@@ -24,7 +24,7 @@ from mycroft.messagebus.client import create_client
 from mycroft_bus_client import Message, MessageBusClient
 
 from .audio_ui import AudioUserInterface
-from .tts import load_tts_module, register_tts
+from .tts import load_tts_module, SpeakHandler
 
 SERVICE_ID = "audio"
 LOG = logging.getLogger(SERVICE_ID)
@@ -48,7 +48,8 @@ def main():
         audio_ui = AudioUserInterface(config)
         audio_ui.initialize(bus)
 
-        register_tts(config, bus, tts)
+        speak_handler = SpeakHandler(config, bus, tts)
+        speak_handler.start()
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -63,6 +64,7 @@ def main():
         except KeyboardInterrupt:
             pass
         finally:
+            speak_handler.stop()
             audio_ui.shutdown()
             bus.close()
 

@@ -40,8 +40,10 @@ def main():
     try:
         config = Configuration.get()
         bus = _connect_to_bus(config)
-        intent_service = IntentService(bus)
+        intent_service = IntentService(config, bus)
         event_scheduler = EventScheduler(bus)
+
+        intent_service.start()
 
         # Start watchdog thread
         Thread(target=_watchdog, daemon=True).start()
@@ -56,6 +58,7 @@ def main():
         except KeyboardInterrupt:
             LOG.info("Service is shutting down...")
         finally:
+            intent_service.stop()
             event_scheduler.shutdown()
             bus.close()
     except Exception:
