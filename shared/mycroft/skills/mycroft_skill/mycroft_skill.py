@@ -941,6 +941,13 @@ class MycroftSkill:
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
             self._mycroft_session_id = message.data.get("mycroft_session_id")
+            self.log.debug(
+                "Handling %s with skill %s (session=%s)",
+                name,
+                self.skill_id,
+                self._mycroft_session_id,
+            )
+
             result_message: Optional[Message] = None
             try:
                 self.acknowledge()

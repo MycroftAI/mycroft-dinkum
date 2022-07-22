@@ -53,6 +53,8 @@ class Session:
     actions: List[Dict[str, Any]] = field(default_factory=dict)
     tick: int = field(default_factory=time.monotonic_ns)
     aborted: bool = False
+    waiting_for_tts: bool = False
+    waiting_for_audio: bool = False
 
 
 class IntentService:
@@ -384,7 +386,7 @@ class IntentService:
 
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
-            if session is not None:
+            if (session is not None) and session.waiting_for_tts:
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
@@ -397,17 +399,13 @@ class IntentService:
                     self.end_session(session.id)
 
     def handle_media_finished(self, message: Message):
-        channel = message.data.get("channel")
-        if channel != 0:
-            # Only handle sound effects here (channel 0)
-            return
-
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Audio finished: %s", mycroft_session_id)
 
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
-            if session is not None:
+            if (session is not None) and session.waiting_for_audio:
+                session.waiting_for_audio = False
                 if not session.aborted:
                     waiting_for_action = self.next_session_action(session)
                     if not waiting_for_action:
@@ -462,6 +460,7 @@ class IntentService:
                                 break
 
                         # Will be called back when TTS is finished
+                        session.waiting_for_tts = True
                         return True
             elif action_type == "message":
                 msg_type = action["message_type"]
@@ -500,6 +499,7 @@ class IntentService:
                     )
                     if action.get("wait", True):
                         # Will be called back when audio is finished
+                        session.waiting_for_audio = True
                         return True
 
             elif action_type == "stream_music":

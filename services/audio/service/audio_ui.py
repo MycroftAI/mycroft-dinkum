@@ -213,7 +213,9 @@ class AudioUserInterface:
         self._stop_tts()
 
     def _stop_tts(self):
-        LOG.info("Stopping TTS session: %s", self._tts_session_id)
+        if self._tts_session_id:
+            LOG.info("Stopping TTS session: %s", self._tts_session_id)
+
         self._tts_session_id = None
         self._drain_speech_queue()
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
