@@ -949,7 +949,7 @@ class MycroftSkill:
                 LOG.exception("Error in intent handler: %s", name)
 
                 # Speak error
-                self.start_session(
+                self.emit_start_session(
                     dialog=("skill.error", {"skill": camel_case_split(self.name)})
                 )
 
@@ -1707,7 +1707,7 @@ class MycroftSkill:
                 else:
                     dialog_name, dialog_data = maybe_dialog
 
-                utterance = self.dialog_renderer.render(dialog_name, dialog_data)
+                utterance = mycroft.dialog.get(dialog_name, self.lang, dialog_data)
                 actions.append(
                     {
                         "type": "speak",
@@ -1719,7 +1719,6 @@ class MycroftSkill:
 
                 if gui_clear == GuiClear.AUTO:
                     gui_clear = GuiClear.AFTER_SPEAK
-
 
         if speak is not None:
             actions.append(
