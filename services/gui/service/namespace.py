@@ -123,13 +123,7 @@ class NamespaceManager:
                     "data": [{"skill_id": namespace.name}],
                 }
             )
-            send_message_to_gui(
-                {
-                    "type": "mycroft.session.set",
-                    "namespace": namespace.name,
-                    "data": namespace.data,
-                }
-            )
+            self._update_namespace_data(namespace)
             send_message_to_gui(
                 {
                     "type": "mycroft.gui.list.insert",
@@ -144,8 +138,12 @@ class NamespaceManager:
             namespace = self._ensure_namespace_exists(message.data["namespace"])
             namespace.pages = message.data["page"]
             namespace.data = message.data.get("data", {})
-            self._activate_namespace(namespace)
-            self.synchronize()
+            if namespace not in self.active_namespaces:
+                self._activate_namespace(namespace)
+                self.synchronize()
+            else:
+                # Only send session data
+                self._update_namespace_data(namespace)
 
             LOG.debug(
                 "Showing page %s on namespace %s with data %s",
@@ -200,6 +198,15 @@ class NamespaceManager:
             self.loaded_namespaces[namespace_name] = namespace
 
         return namespace
+
+    def _update_namespace_data(self, namespace: Namespace):
+        send_message_to_gui(
+            {
+                "type": "mycroft.session.set",
+                "namespace": namespace.name,
+                "data": namespace.data,
+            }
+        )
 
     def handle_status_request(self, message: Message):
         """Handles a GUI status request by replying with the connection status.
