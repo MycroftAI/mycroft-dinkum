@@ -76,6 +76,10 @@ class TimerSkill(MycroftSkill):
         self.sound_file_path = (
             Path(__file__).parent.joinpath("sounds", "two-beep.wav").absolute()
         )
+        self.sound_uri: Optional[str] = None
+        if self.sound_file_path:
+            self.sound_uri = f"file://{self.sound_file_path}"
+
         self.timer_index = 0
         self.display_group = 0
         self.save_path = Path(self.file_system.path).joinpath("save_timers")
@@ -95,17 +99,11 @@ class TimerSkill(MycroftSkill):
         """Initialization steps to execute after the skill is loaded."""
         self._load_timers()
         self._reset_timer_index()
-        # if self.active_timers:
-        #     if self.skill_service_initializing:
-        #         self.add_event("mycroft.ready", self.handle_mycroft_ready)
-        #     else:
-        #         self._initialize_active_timers()
         self._initialize_active_timers()
         self._load_resources()
 
         # To prevent beeping while listening
         self.add_event("recognizer_loop:wakeword", self.handle_wake_word_detected)
-        # self.add_event("skill.timer.stop", self.handle_timer_stop)
         self.add_event(
             "mycroft.session.actions-completed", self.handle_session_actions_completed
         )
@@ -160,7 +158,7 @@ class TimerSkill(MycroftSkill):
                 self.bus.emit(
                     self.continue_session(
                         mycroft_session_id=self._expired_session_id,
-                        audio_alert=sound_uri,
+                        audio_alert=self.sound_uri,
                         dialog=dialog,
                         gui_clear=GuiClear.NEVER,
                     )
@@ -241,7 +239,12 @@ class TimerSkill(MycroftSkill):
                 matches = matcher.matches
                 dialog = self._cancel_requested_timers(matches)
 
-            return self.end_session(dialog=dialog)
+            if self.active_timers:
+                gui_clear = GuiClear.NEVER
+            else:
+                gui_clear = GuiClear.AFTER_SPEAK
+
+            return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
     def _start_new_timer(self, duration, name):
         timer = self._build_timer(duration, name)
@@ -350,7 +353,12 @@ class TimerSkill(MycroftSkill):
         else:
             dialog = "no-active-timer"
 
-        return self.end_session(dialog=dialog)
+        if self.active_timers:
+            gui_clear = GuiClear.NEVER
+        else:
+            gui_clear = GuiClear.AFTER_SPEAK
+
+        return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
     def _cancel_all_duration(self, duration: timedelta):
         """Cancels all timers with an original duration matching the utterance.
@@ -377,22 +385,24 @@ class TimerSkill(MycroftSkill):
         self.active_timers = list()
         return dialog
 
-    # @intent_handler(AdaptIntent().require("show").require("timer"))
-    # def handle_show_timers(self, _message: Message):
-    #     """Handles showing the timers screen if it is hidden."""
-    #     self.log.info("Handling show timer intent")
-    #     if self.active_timers:
-    #         result = self._show_gui()
-    #     else:
-    #         result = self.end_session(dialog="no-active-timer")
+    @intent_handler(AdaptIntent().require("show").require("timer"))
+    def handle_show_timers(self, _message: Message):
+        """Handles showing the timers screen if it is hidden."""
+        self.log.info("Handling show timer intent")
+        dialog = None
+        gui = None
+        if self.active_timers:
+            gui = ("timer_mark_ii.qml", self._get_gui_data())
+        else:
+            dialog = "no-active-timer"
 
-    #     return result
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
-    # @intent_handler(AdaptIntent().require("showtimers"))
-    # def handle_showtimers(self, message):
-    #     """Hack for STT giving 'showtimers' for 'show timers'"""
-    #     self.log.info("Handling Adapt showtimers intent")
-    #     return self.handle_show_timers(message)
+    @intent_handler(AdaptIntent().require("showtimers"))
+    def handle_showtimers(self, message):
+        """Hack for STT giving 'showtimers' for 'show timers'"""
+        self.log.info("Handling Adapt showtimers intent")
+        return self.handle_show_timers(message)
 
     def _determine_timer_duration(self, utterance: str):
         """Interrogate the utterance to determine the duration of the timer.
@@ -584,26 +594,6 @@ class TimerSkill(MycroftSkill):
 
         return dialog
 
-    # def _get_timer_status_matches(self, utterance: str) -> List[CountdownTimer]:
-    #     """Determine which active timer(s) match the user's status request.
-
-    #     Args:
-    #         utterance: The user's request for status of timer(s)
-
-    #     Returns:
-    #         Active timer(s) matching the user's request
-    #     """
-    #     if len(self.active_timers) == 1:
-    #         matches = self.active_timers
-    #     else:
-    #         matcher = TimerMatcher(utterance, self.active_timers, self.static_resources)
-    #         matcher.match()
-    #         matches = matcher.matches or self.active_timers
-    #     while matches is not None and len(matches) > 2:
-    #         matches = self._ask_which_timer(matches, question="ask-which-timer")
-
-    #     return matches
-
     def _speak_timer_status_matches(self, matches: List[CountdownTimer]):
         """Constructs and speaks the dialog(s) communicating timer status to the user.
 
@@ -768,23 +758,9 @@ class TimerSkill(MycroftSkill):
         """
         if self.expired_timers and (self._expired_session_id is None):
             dialog = None
-            sound_uri = f"file://{self.sound_file_path}"
-
-            # for timer in self.expired_timers:
-            #     if not timer.expiration_announced:
-            #         timer.expiration_announced = True
-            #         timer_dialog = TimerDialog(timer, self.lang)
-            #         timer_dialog.build_expiration_announcement_dialog(
-            #             len(self.active_timers)
-            #         )
-            #         dialog = (timer_dialog.name, timer_dialog.data)
-
-            #         # Only speak one timer at time
-            #         break
-
             gui = ("timer_mark_ii.qml", self._get_gui_data())
             self._expired_session_id = self.emit_start_session(
-                audio_alert=sound_uri,
+                audio_alert=self.sound_uri,
                 # dialog=dialog,
                 gui=gui,
                 gui_clear=GuiClear.NEVER,
@@ -814,7 +790,7 @@ class TimerSkill(MycroftSkill):
 
     #     return dialog
 
-    def stop(self) -> bool:
+    def stop(self):
         """Handle a stop command issued by the user.
 
         When a user says "stop" while one or more expired timers are beeping, cancel
@@ -824,43 +800,32 @@ class TimerSkill(MycroftSkill):
         Returns:
             A boolean indicating if the stop message was consumed by this skill.
         """
-        stop_handled = False
+        dialog = None
         if self.expired_timers:
             self._clear_expired_timers()
             if not self.active_timers:
                 self._reset()
-            stop_handled = True
         elif self.active_timers:
-            # We shouldn't initiate dialog during Stop handling because there is
-            # a conflict between stopping speech and starting new conversations.
-            # Instead, we'll just consider this Stop consumed and emit an event.
-            # The event handler will ask the user if they want to cancel active timers.
-            self.bus.emit(Message("skill.timer.stop"))
-            stop_handled = True
+            if len(self.active_timers) == 1:
+                self.active_timers = list()
+                dialog = "cancelled-single-timer"
+                self._save_timers()
+            else:
+                # Need a timer name
+                dialog = self._ask_which_timer(
+                    self.active_timers, "ask-which-timer-cancel"
+                )
+                self._cancel_matches = None
+                self._state = State.CANCELLING_TIMER
+                return self.continue_session(dialog=dialog, expect_response=True)
 
-        return stop_handled
+        return self.end_session(dialog=dialog, gui_clear=GuiClear.AFTER_SPEAK)
 
     def _clear_expired_timers(self):
         """The user wants the beeping to stop so cancel all expired timers."""
         for timer in self.expired_timers:
             self.active_timers.remove(timer)
         self._save_timers()
-
-    # def handle_timer_stop(self, _):
-    #     """Event handler for the stop command when timers are active.
-
-    #     This is a little odd. This actually does the work for the Stop command/button,
-    #     which prevents blocking during the Stop handler when input from the
-    #     user is needed.
-    #     """
-    #     if len(self.active_timers) == 1:
-    #         question = "ask-cancel-running-single"
-    #     else:
-    #         question = "ask-cancel-running-multiple"
-    #     answer = self.ask_yesno(question)
-    #     if answer == "yes":
-    #         self._cancel_each_and_every_one()
-    #         self._reset()
 
     def _reset(self):
         """There are no active timers so reset all the stateful things."""

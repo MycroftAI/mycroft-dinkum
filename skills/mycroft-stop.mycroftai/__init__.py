@@ -21,14 +21,14 @@ class StopSkill(MycroftSkill):
     def __init__(self):
         super().__init__(name="StopSkill")
 
-    @intent_handler(IntentBuilder("").require("Stop"))
+    @intent_handler(IntentBuilder("").require("Stop").exactly())
     def handle_stop(self, event):
         self.bus.emit(Message("mycroft.stop"))
-        return self.end_session(gui_clear="never")
+        return self.end_session()
 
-    @intent_handler(IntentBuilder("").require("Nevermind"))
+    @intent_handler(IntentBuilder("").require("Nevermind").exactly())
     def handle_nevermind(self, event):
-        return self.end_session(gui_clear="never")
+        return self.end_session()
 
 
 def create_skill():

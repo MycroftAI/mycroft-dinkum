@@ -270,4 +270,4 @@ class GetResponseAction(BaseAction):
     TYPE: ClassVar[str] = "get_response"
 
     def do_action(self, session: Session, bus: MessageBusClient):
-        pass
+        session.expect_response = True

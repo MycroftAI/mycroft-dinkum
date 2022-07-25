@@ -42,6 +42,7 @@ from .session import (
     GetResponseAction,
     ClearDisplayAction,
     WaitForIdleAction,
+    MessageAction,
 )
 
 # Seconds before home screen is shown again (mycroft.gui.idle event)
@@ -231,39 +232,54 @@ class IntentService:
         mycroft_session_id = message.data.get("mycroft_session_id")
         with self._session_lock:
             for session in self._sessions.values():
-                if session.id != mycroft_session_id:
+                if (session.id != mycroft_session_id):
                     session.aborted = True
 
-    def handle_stop(self, _message: Message):
-        # Always stop TTS
-        self.bus.emit(Message("mycroft.tts.stop"))
+    def handle_stop(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if skill_id is None:
+            # Always stop TTS
+            self.bus.emit(Message("mycroft.tts.stop"))
 
-        # Determine target skill
-        skill_id: Optional[str] = None
-        with self._session_lock:
-            if self._last_gui_session is not None:
-                skill_id = self._last_gui_session.skill_id
+            # Determine target skill
+            skill_id: Optional[str] = None
+            with self._session_lock:
+                if self._last_gui_session is not None:
+                    skill_id = self._last_gui_session.skill_id
 
-        # Abort all other sessions
-        with self._session_lock:
-            for session in self._sessions.values():
-                if session.skill_id != skill_id:
-                    session.aborted = True
+                # Abort all other sessions
+                for session in self._sessions.values():
+                    if session.skill_id != skill_id:
+                        session.aborted = True
 
-        if skill_id:
-            # TODO: Call skill handler
-            LOG.debug("Stopping skill: %s", skill_id)
+            if skill_id:
+                # Target skill directly
+                LOG.debug("Stopping skill: %s", skill_id)
+                mycroft_session_id = str(uuid4())
+                self.start_session(
+                    mycroft_session_id,
+                    skill_id=skill_id,
+                )
+                self.bus.emit(
+                    Message(
+                        "mycroft.skill.stop",
+                        data={
+                            "mycroft_session_id": mycroft_session_id,
+                            "skill_id": skill_id,
+                        },
+                    )
+                )
+            else:
+                # Return GUI to idle
+                self._disable_idle_timeout()
+                self.bus.emit(Message("mycroft.gui.idle"))
 
-        # Return GUI to idle
-        self._disable_idle_timeout()
-        self.bus.emit(Message("mycroft.gui.idle"))
+    def start_session(self, mycroft_session_id: str, **session_kwargs):
+        if mycroft_session_id is None:
+            mycroft_session_id = str(uuid4())
 
-    def start_session(self, mycroft_session_id: str, skill_id: Optional[str] = None):
         LOG.debug("Starting session: %s", mycroft_session_id)
-        session = Session(
-            id=mycroft_session_id,
-            skill_id=skill_id,
-        )
+        session = Session(id=mycroft_session_id, **session_kwargs)
         self._sessions[session.id] = session
         session.started(self.bus)
 

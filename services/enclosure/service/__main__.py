@@ -73,6 +73,14 @@ def main():
                     Message("mycroft.feedback.set-state", data={"state": "thinking"})
                 )
 
+        def handle_session_ended(message):
+            nonlocal led_session_id
+            if message.data.get("mycroft_session_id") == led_session_id:
+                led_session_id = None
+                bus.emit(
+                    Message("mycroft.feedback.set-state", data={"state": "asleep"})
+                )
+
         def handle_idle(message):
             nonlocal led_session_id
             led_session_id = None
@@ -94,6 +102,7 @@ def main():
 
         bus.on("recognizer_loop:awoken", handle_wake)
         bus.on("mycroft.session.started", handle_session_started)
+        bus.on("mycroft.session.ended", handle_session_ended)
         bus.on("mycroft.session.no-active-sessions", handle_idle)
         bus.on("mycroft.gui.idle", handle_idle)
         bus.on("mycroft.switch.state", handle_switch_state)

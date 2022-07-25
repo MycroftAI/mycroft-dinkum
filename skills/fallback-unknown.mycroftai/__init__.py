@@ -15,7 +15,7 @@ import time
 import typing
 from collections import deque
 
-from mycroft.skills import AdaptIntent, intent_handler
+from mycroft.skills import AdaptIntent, intent_handler, GuiClear
 from mycroft.skills.fallback_skill import FallbackSkill
 from mycroft.util.log import LOG
 
@@ -61,7 +61,9 @@ class UnknownSkill(FallbackSkill):
     def handle_unknown_recognition(self, message):
         """Called when no transcription is returned from STT"""
         self.log.info("Unknown recognition")
-        return self.end_session(dialog="unknown", gui=self.gui_show())
+        return self.end_session(
+            dialog="unknown", gui=self.gui_show(), gui_clear=GuiClear.ON_IDLE
+        )
 
     def handle_utterance(self, message):
         utterances = message.data.get("utterances")

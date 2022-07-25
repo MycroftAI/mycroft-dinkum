@@ -433,13 +433,14 @@ class MycroftSkill:
         system.
         """
 
-        def stop_is_implemented():
-            return self.__class__.stop is not MycroftSkill.stop
+        # def stop_is_implemented():
+        #     return self.__class__.stop is not MycroftSkill.stop
 
-        # Only register stop if it's been implemented
-        if stop_is_implemented():
-            self.add_event("mycroft.stop", self.__handle_stop)
+        # # Only register stop if it's been implemented
+        # if stop_is_implemented():
+        #     self.add_event("mycroft.stop", self.__handle_stop)
 
+        self.add_event("mycroft.skill.stop", self.__handle_skill_stop)
         self.add_event("mycroft.skills.initialized", self.handle_skills_initialized)
         self.add_event("mycroft.skill.enable_intent", self.handle_enable_intent)
         self.add_event("mycroft.skill.disable_intent", self.handle_disable_intent)
@@ -1377,38 +1378,55 @@ class MycroftSkill:
             for regex in regexes:
                 self.intent_service.register_adapt_regex(regex)
 
-    def __handle_stop(self, _):
-        """Handler for the "mycroft.stop" signal. Runs the user defined
-        `stop()` method.
-        """
-        msg = _
-        if (
-            msg.data.get("skill", "") == self.skill_id
-            or msg.data.get("skill", "") == "*"
-        ):
-            LOG.debug("handle stop skill_id:%s" % (self.skill_id,))
-        else:
-            LOG.debug("stop ignored. %s, %s" % (self.skill_id, msg.data))
-            return
+    # def __handle_stop(self, _):
+    #     """Handler for the "mycroft.stop" signal. Runs the user defined
+    #     `stop()` method.
+    #     """
+    #     msg = _
+    #     if (
+    #         msg.data.get("skill", "") == self.skill_id
+    #         or msg.data.get("skill", "") == "*"
+    #     ):
+    #         LOG.debug("handle stop skill_id:%s" % (self.skill_id,))
+    #     else:
+    #         LOG.debug("stop ignored. %s, %s" % (self.skill_id, msg.data))
+    #         return
 
-        def __stop_timeout():
-            # The self.stop() call took more than 100ms, assume it handled Stop
-            self.bus.emit(
-                Message("mycroft.stop.handled", {"skill_id": str(self.skill_id) + ":"})
-            )
+    #     def __stop_timeout():
+    #         # The self.stop() call took more than 100ms, assume it handled Stop
+    #         self.bus.emit(
+    #             Message("mycroft.stop.handled", {"skill_id": str(self.skill_id) + ":"})
+    #         )
 
-        timer = Timer(0.1, __stop_timeout)  # set timer for 100ms
-        try:
-            if self.stop():
-                self.bus.emit(
-                    Message("mycroft.stop.handled", {"by": "skill:" + self.skill_id})
-                )
-            timer.cancel()
-        except Exception:
-            timer.cancel()
-            LOG.error("Failed to stop skill: {}".format(self.name), exc_info=True)
+    #     timer = Timer(0.1, __stop_timeout)  # set timer for 100ms
+    #     try:
+    #         if self.stop():
+    #             self.bus.emit(
+    #                 Message("mycroft.stop.handled", {"by": "skill:" + self.skill_id})
+    #             )
+    #         timer.cancel()
+    #     except Exception:
+    #         timer.cancel()
+    #         LOG.error("Failed to stop skill: {}".format(self.name), exc_info=True)
 
-    def stop(self):
+    def __handle_skill_stop(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if skill_id == self.skill_id:
+            self.log.debug("Handling stop in skill: %s", self.skill_id)
+            self._mycroft_session_id = message.data.get("mycroft_session_id")
+
+            result_message: Optional[Message] = None
+            try:
+                result_message = self.stop()
+            except Exception:
+                self.log.exception("Error handling stop")
+
+            if result_message is None:
+                result_message = self.end_session()
+
+            self.bus.emit(result_message)
+
+    def stop(self) -> Optional[Message]:
         """Optional method implemented by subclass."""
         pass
 
@@ -1653,9 +1671,6 @@ class MycroftSkill:
                     }
                 )
 
-                if gui_clear == GuiClear.AUTO:
-                    gui_clear = GuiClear.AFTER_SPEAK
-
         if speak is not None:
             actions.append(
                 {
@@ -1664,9 +1679,6 @@ class MycroftSkill:
                     "wait": speak_wait,
                 }
             )
-
-            if gui_clear == GuiClear.AUTO:
-                gui_clear = GuiClear.AFTER_SPEAK
 
         if (message is not None) and (message_send == MessageSend.AT_END):
             actions.append(
@@ -1684,9 +1696,17 @@ class MycroftSkill:
         if expect_response:
             actions.append({"type": "get_response"})
 
-        # No TTS, so time out on idle
         if gui_clear == GuiClear.AUTO:
-            gui_clear = GuiClear.ON_IDLE
+            if guis:
+                if dialogs or (speak is not None):
+                    # TTS, wait for speak
+                    gui_clear = GuiClear.AFTER_SPEAK
+                else:
+                    # No TTS, so time out on idle
+                    gui_clear = GuiClear.ON_IDLE
+            else:
+                # No GUI, don't clear
+                gui_clear = GuiClear.NEVER
 
         if gui_clear == GuiClear.AFTER_SPEAK:
             actions.append({"type": "clear_display"})
@@ -1818,7 +1838,7 @@ class MycroftSkill:
         ):
             utterances = message.data.get("utterances", [])
             utterance = utterances[0] if utterances else None
-            result_message = None
+            result_message: Optional[Message] = None
             try:
                 self.acknowledge()
                 result_message = self.raw_utterance(utterance)
