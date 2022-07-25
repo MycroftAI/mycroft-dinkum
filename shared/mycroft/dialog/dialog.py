@@ -90,7 +90,7 @@ class MustacheDialogRenderer:
         context = context or {}
         if template_name not in self.templates:
             LOG.warning("Missing template file: %s", template_name)
-            return dialog.get(template_name, context=context)
+            return get(template_name, context=context)
 
             # When not found, return the name itself as the dialog
             # This allows things like render("record.not.found") to either

@@ -216,10 +216,6 @@ class WolframAlphaSkill(CommonQuerySkill):
     def __translate(self, template, data=None):
         return self.dialog_renderer.render(template, data)
 
-    def stop(self):
-        self.log.debug("Wolfy stop() hit")
-        self.CQS_release_output_focus()
-
 
 def create_skill():
     return WolframAlphaSkill()

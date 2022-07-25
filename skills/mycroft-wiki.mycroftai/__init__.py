@@ -297,10 +297,6 @@ class WikipediaSkill(CommonQuerySkill):
             "imgLink": article.image or "",
         }
 
-    def stop(self):
-        self.log.debug("wiki stop() hit")
-        self.CQS_release_output_focus()
-
 
 def create_skill():
     return WikipediaSkill()

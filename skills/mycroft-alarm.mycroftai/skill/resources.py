@@ -1,4 +1,4 @@
-# Copyright 2021 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,16 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import namedtuple
 
-from .alarm import Alarm
-from .alarms import Alarms
-from .format import nice_relative_time
-from .match import AlarmMatcher
-from .repeat import (
-    build_day_of_week_repeat_rule,
-    build_repeat_rule_description,
-    convert_day_of_week,
-    determine_next_occurrence,
+StaticResources = namedtuple(
+    "StaticResources",
+    [
+        "all_words",
+        "and_word",
+        "dismiss_words",
+        "midnight_words",
+        "months",
+        "name_regex",
+        "next_words",
+        "repeat_phrases",
+        "repeat_rules",
+        "today",
+        "tonight",
+        "weekdays",
+    ],
 )
-from .resources import StaticResources
-from .parse import extract_repeat_rule

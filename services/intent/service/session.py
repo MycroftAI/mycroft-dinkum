@@ -37,17 +37,22 @@ class Session:
     aborted: bool = False
     waiting_for_tts: bool = False
     waiting_for_audio: bool = False
+    state: Optional[Dict[str, Any]] = None
 
     @property
     def is_waiting_for_action(self):
         """Session is currently waiting for an external action to complete"""
-        return self.waiting_for_tts or self.waiting_for_audio
+        return self.waiting_for_tts or self.waiting_for_audio or self.expect_response
 
     def started(self, bus: MessageBusClient):
         bus.emit(
             Message(
                 "mycroft.session.started",
-                data={"mycroft_session_id": self.id, "skill_id": self.skill_id},
+                data={
+                    "mycroft_session_id": self.id,
+                    "skill_id": self.skill_id,
+                    "state": self.state,
+                },
             )
         )
 
@@ -63,7 +68,11 @@ class Session:
         bus.emit(
             Message(
                 "mycroft.session.continued",
-                data={"mycroft_session_id": self.id},
+                data={
+                    "mycroft_session_id": self.id,
+                    "skill_id": self.skill_id,
+                    "state": self.state,
+                },
             )
         )
 
@@ -71,7 +80,11 @@ class Session:
         bus.emit(
             Message(
                 "mycroft.session.ended",
-                data={"mycroft_session_id": self.id, "aborted": self.aborted},
+                data={
+                    "mycroft_session_id": self.id,
+                    "aborted": self.aborted,
+                    "state": self.state,
+                },
             )
         )
 
@@ -87,8 +100,12 @@ class Session:
 
             if not self.actions:
                 self.actions_completed(bus)
-                if (not self.is_waiting_for_action) and (not self.will_continue):
-                    self.ended(bus)
+                if not self.is_waiting_for_action:
+                    if self.will_continue:
+                        self.will_continue = False
+                        self.continued(bus)
+                    else:
+                        self.ended(bus)
 
     @staticmethod
     def parse_actions(action_dicts: List[Dict[str, Any]]) -> List[BaseAction]:

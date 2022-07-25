@@ -72,8 +72,8 @@ class GuiClear(str, Enum):
     AUTO = "auto"
     ON_IDLE = "on_idle"
     NEVER = "never"
-    AFTER_SPEAK = "after_speak"
     AT_START = "at_start"
+    AT_END = "at_end"
 
 
 class MessageSend(str, Enum):
@@ -367,17 +367,7 @@ class MycroftSkill:
 
             self._register_public_api()
 
-            # Unblock wait_while_speaking
-            # self._bus.on(
-            #     "mycroft.tts.speaking-finished", self._handle_speaking_finished
-            # )
-
-            # # For get_response
-            # self._bus.on("mycroft.skill-response", self._handle_skill_response)
-
-            # self._bus.on("mycroft.session.started", self._handle_session_started)
-            # self._bus.on("mycroft.session.ended", self._handle_session_ended)
-            self._bus.on("mycroft.skill-response", self._handle_skill_response)
+            self._bus.on("mycroft.skill-response", self.__handle_skill_response)
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -1428,7 +1418,7 @@ class MycroftSkill:
 
     def stop(self) -> Optional[Message]:
         """Optional method implemented by subclass."""
-        pass
+        return self.end_session(gui_clear=GuiClear.AT_END)
 
     def shutdown(self):
         """Optional shutdown proceedure implemented by subclass.
@@ -1700,7 +1690,7 @@ class MycroftSkill:
             if guis:
                 if dialogs or (speak is not None):
                     # TTS, wait for speak
-                    gui_clear = GuiClear.AFTER_SPEAK
+                    gui_clear = GuiClear.AT_END
                 else:
                     # No TTS, so time out on idle
                     gui_clear = GuiClear.ON_IDLE
@@ -1708,7 +1698,7 @@ class MycroftSkill:
                 # No GUI, don't clear
                 gui_clear = GuiClear.NEVER
 
-        if gui_clear == GuiClear.AFTER_SPEAK:
+        if gui_clear == GuiClear.AT_END:
             actions.append({"type": "clear_display"})
         elif gui_clear == GuiClear.ON_IDLE:
             actions.append({"type": "wait_for_idle"})
@@ -1764,6 +1754,7 @@ class MycroftSkill:
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
         mycroft_session_id: Optional[str] = None,
+        state: Optional[Dict[str, Any]] = None,
     ) -> Message:
         if mycroft_session_id is None:
             # Use session from latest intent handler
@@ -1785,6 +1776,7 @@ class MycroftSkill:
                     message_send=message_send,
                     expect_response=expect_response,
                 ),
+                "state": state,
             },
         )
 
@@ -1827,21 +1819,24 @@ class MycroftSkill:
         message.data["aborted"] = True
         return message
 
-    def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
+    def raw_utterance(
+        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+    ) -> Optional[Message]:
         """Callback when expect_response=True in continue_session"""
         return None
 
-    def _handle_skill_response(self, message: Message):
+    def __handle_skill_response(self, message: Message):
         """Verifies that raw utterance is for this skill"""
         if (message.data.get("skill_id") == self.skill_id) and (
             message.data.get("mycroft_session_id") == self._mycroft_session_id
         ):
             utterances = message.data.get("utterances", [])
             utterance = utterances[0] if utterances else None
+            state = message.data.get("state")
             result_message: Optional[Message] = None
             try:
                 self.acknowledge()
-                result_message = self.raw_utterance(utterance)
+                result_message = self.raw_utterance(utterance, state)
             except Exception:
                 LOG.exception("Unexpected error in raw_utterance")
 

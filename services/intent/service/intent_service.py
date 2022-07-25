@@ -228,11 +228,12 @@ class IntentService:
         return [parser.__dict__ for parser in self.adapt_service.engine.intent_parsers]
 
     def handle_wake(self, message: Message):
+        self.bus.emit(Message("mycroft.tts.stop"))
         self._disable_idle_timeout()
         mycroft_session_id = message.data.get("mycroft_session_id")
         with self._session_lock:
             for session in self._sessions.values():
-                if (session.id != mycroft_session_id):
+                if session.id != mycroft_session_id:
                     session.aborted = True
 
     def handle_stop(self, message: Message):
@@ -314,10 +315,15 @@ class IntentService:
                 self._trigger_listen(session.id)
             elif isinstance(action, ShowPageAction):
                 self._last_gui_session = session
-            elif isinstance(action, ClearDisplayAction):
-                self._set_idle_timeout(IDLE_QUICK_TIMEOUT)
-            elif isinstance(action, WaitForIdleAction):
-                self._set_idle_timeout(IDLE_QUICK_TIMEOUT)
+            elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
+                if (self._last_gui_session is None) or (
+                    self._last_gui_session.id == session.id
+                ):
+                    if isinstance(action, WaitForIdleAction):
+                        timeout = IDLE_TIMEOUT
+                    else:
+                        timeout = IDLE_QUICK_TIMEOUT
+                    self._set_idle_timeout(timeout)
 
     def handle_session_start(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -342,6 +348,7 @@ class IntentService:
             session = self._sessions.get(mycroft_session_id)
             if session is not None:
                 session.skill_id = message.data.get("skill_id", session.skill_id)
+                session.state = message.data.get("state", session.state)
                 if session.aborted:
                     session.ended(self.bus)
                 else:
@@ -351,7 +358,6 @@ class IntentService:
                     actions = Session.parse_actions(message.data.get("actions", []))
                     session.actions.extend(actions)
 
-                    session.continued(self.bus)
                     self._run_session(session)
 
     def handle_session_end(self, message: Message):
@@ -431,6 +437,7 @@ class IntentService:
                                     "mycroft_session_id": mycroft_session_id,
                                     "skill_id": session.skill_id,
                                     "utterances": message.data.get("utterances"),
+                                    "state": session.state,
                                 },
                             )
                         )

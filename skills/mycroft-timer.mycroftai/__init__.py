@@ -207,7 +207,7 @@ class TimerSkill(MycroftSkill):
 
     def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
         if self.voc_match(utterance, "cancel"):
-            self.log.debug("Cancelled duration request")
+            self.log.debug("Cancelled user response")
             return
 
         if self._state == State.STARTING_TIMER:
@@ -242,7 +242,7 @@ class TimerSkill(MycroftSkill):
             if self.active_timers:
                 gui_clear = GuiClear.NEVER
             else:
-                gui_clear = GuiClear.AFTER_SPEAK
+                gui_clear = GuiClear.AT_END
 
             return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
@@ -356,7 +356,7 @@ class TimerSkill(MycroftSkill):
         if self.active_timers:
             gui_clear = GuiClear.NEVER
         else:
-            gui_clear = GuiClear.AFTER_SPEAK
+            gui_clear = GuiClear.AT_END
 
         return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
@@ -767,29 +767,6 @@ class TimerSkill(MycroftSkill):
                 continue_session=True,
             )
 
-    # def _speak_expired_timer(self, expired_timers):
-    #     """Announce the expiration of any timers not already announced.
-
-    #     This occurs every two seconds, so only announce one expired timer per pass.
-    #     Pause the expiration check so the expired timer is not beeping while the
-    #     expiration announcement is being spoken.
-
-    #     On the Mark I, pause the display of any active timers so that the mouth can
-    #     do the "talking".
-    #     """
-    #     dialog = None
-    #     for timer in expired_timers:
-    #         if not timer.expiration_announced:
-    #             dialog = TimerDialog(timer, self.lang)
-    #             dialog.build_expiration_announcement_dialog(len(self.active_timers))
-    #             # self._stop_expiration_check()
-
-    #             dialog = (dialog.name, dialog.data)
-    #             timer.expiration_announced = True
-    #             break
-
-    #     return dialog
-
     def stop(self):
         """Handle a stop command issued by the user.
 
@@ -819,7 +796,7 @@ class TimerSkill(MycroftSkill):
                 self._state = State.CANCELLING_TIMER
                 return self.continue_session(dialog=dialog, expect_response=True)
 
-        return self.end_session(dialog=dialog, gui_clear=GuiClear.AFTER_SPEAK)
+        return self.end_session(dialog=dialog, gui_clear=GuiClear.AT_END)
 
     def _clear_expired_timers(self):
         """The user wants the beeping to stop so cancel all expired timers."""

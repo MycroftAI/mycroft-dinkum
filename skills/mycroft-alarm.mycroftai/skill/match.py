@@ -75,20 +75,26 @@ class AlarmMatcher:
         Returns:
             a matched alarm name or None if no match found
         """
+        alarm_name = None
+        possible_names = {alarm.name for alarm in self.alarms}
+
         name_extractor = RegexExtractor("name", static_resources.name_regex)
-        alarm_name = name_extractor.extract(self.utterance)
-        if alarm_name is None:
+        maybe_alarm_name = name_extractor.extract(self.utterance)
+        if maybe_alarm_name in possible_names:
+            alarm_name = maybe_alarm_name
+        else:
             # Attempt to extract a name from a "cancel alarm" utterance
             words = self.utterance.split()
             possible_name = " ".join(words[1:])
-            if possible_name in [alarm.name for alarm in self.alarms]:
+            if possible_name in possible_names:
                 alarm_name = possible_name
             else:
                 possible_name = " ".join(words[2:])
-                if possible_name in [alarm.name for alarm in self.alarms]:
+                if possible_name in possible_names:
                     alarm_name = possible_name
-            if alarm_name is not None:
-                LOG.info(f'Extracted alarm name "{alarm_name}" from utterance')
+
+        if alarm_name is not None:
+            LOG.info(f'Extracted alarm name "{alarm_name}" from utterance')
 
         return alarm_name
 
@@ -111,6 +117,7 @@ class AlarmMatcher:
             self.matches = copy(self.alarms)
         elif self.requested_next:
             self.matches = [self.alarms[0]]
+
         if self.requested_name is not None:
             self._match_alarm_to_name()
         elif self.requested_repeat_rule is not None:

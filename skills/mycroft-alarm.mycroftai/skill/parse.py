@@ -18,6 +18,9 @@ from typing import Optional, Tuple
 from mycroft.util.log import LOG
 from mycroft.util.parse import extract_datetime
 
+from .repeat import build_day_of_week_repeat_rule
+from .resources import StaticResources
+
 
 def extract_alarm_datetime(utterance: str) -> Tuple[Optional[datetime], str]:
     """Extract datetime of Alarm expiry.
@@ -41,3 +44,16 @@ def extract_alarm_datetime(utterance: str) -> Tuple[Optional[datetime], str]:
         LOG.info(f"Alarm date and time of {alarm_datetime} found in request")
 
     return alarm_datetime, remaining_utterance
+
+
+def extract_repeat_rule(
+    utterance: str, resources: StaticResources
+) -> Tuple[bool, Optional[str]]:
+    repeat_rule: Optional[str] = None
+    repeat_in_utterance = any(
+        [repeat[0] in utterance for repeat in resources.repeat_phrases]
+    )
+    if repeat_in_utterance:
+        repeat_rule = build_day_of_week_repeat_rule(utterance, resources.repeat_rules)
+
+    return repeat_in_utterance, repeat_rule

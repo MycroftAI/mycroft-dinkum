@@ -65,6 +65,13 @@ def main():
             bus.emit(Message("mycroft.tts.stop"))
             bus.emit(Message("mycroft.feedback.set-state", data={"state": "awake"}))
 
+        def handle_skill_response(message):
+            nonlocal led_session_id
+            led_session_id = message.data.get("mycroft_session_id")
+            bus.emit(
+                Message("mycroft.feedback.set-state", data={"state": "thinking"})
+            )
+
         def handle_session_started(message):
             nonlocal led_session_id
             if message.data.get("skill_id") != IDLE_SKILL_ID:
@@ -101,6 +108,7 @@ def main():
                 bus.emit(Message("mycroft.mic.listen"))
 
         bus.on("recognizer_loop:awoken", handle_wake)
+        bus.on("mycroft.skill-response", handle_skill_response)
         bus.on("mycroft.session.started", handle_session_started)
         bus.on("mycroft.session.ended", handle_session_ended)
         bus.on("mycroft.session.no-active-sessions", handle_idle)

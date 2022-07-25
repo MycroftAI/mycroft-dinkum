@@ -1,4 +1,4 @@
-# Copyright 2021 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Definition of an alarm."""
+from datetime import datetime, time
+from dataclasses import dataclass
+from typing import ClassVar, Optional, Tuple
+
 from mycroft.util.format import nice_date_time, nice_time
 from mycroft.util.time import now_local
+from mycroft.util.parse import extract_datetime
+from mycroft.skills.skill_data import RegexExtractor
 
-from .repeat import build_repeat_rule_description, determine_next_occurrence
+from .repeat import (
+    build_repeat_rule_description,
+    determine_next_occurrence,
+    build_day_of_week_repeat_rule,
+)
+from .resources import StaticResources
 
 BACKGROUND_COLORS = ("#22A7F0", "#40DBB0", "#BDC3C7", "#4DE0FF")
 
 
+@dataclass
 class Alarm:
     """Defines the attributes of an alarm.
 
@@ -33,22 +45,101 @@ class Alarm:
         snooze: the date and time the alarm should sound after the snooze expires
     """
 
-    def __init__(self, name, date_time, repeat_rule):
-        self.name = name
-        self.repeat_rule = repeat_rule
-        if self.repeat_rule is None:
-            self.date_time = date_time
-        else:
-            self.date_time = determine_next_occurrence(self.repeat_rule, date_time)
-        self.snooze = None
-        self.description = None
+    MISSING_REPEAT_RULE: ClassVar[str] = "<MISSING>"
+
+    name: Optional[str] = None
+    date_time: Optional[datetime] = None
+    repeat_rule: Optional[str] = None
+    snooze: Optional[datetime] = None
+    description: Optional[str] = None
+
+    def __post_init__(self):
+        if self.has_repeat_rule:
+            self.date_time = determine_next_occurrence(self.repeat_rule, self.date_time)
 
     @property
     def expired(self) -> bool:
         """Indicates whether or not the alarm has expired."""
+        if self.date_time is None:
+            return False
+
         return self.date_time < now_local()
 
-    def format_for_display(self, index, translations, use_24_hour) -> dict:
+    @property
+    def has_name(self) -> bool:
+        return bool(self.name)
+
+    @property
+    def has_datetime(self) -> bool:
+        return self.date_time is not None
+
+    @property
+    def has_repeat_rule(self) -> bool:
+        return (not self.is_missing_repeat_rule) and bool(self.repeat_rule)
+
+    @property
+    def is_missing_repeat_rule(self) -> bool:
+        return self.repeat_rule == Alarm.MISSING_REPEAT_RULE
+
+    @staticmethod
+    def datetime_from_utterance(
+        utterance: str, resources: StaticResources
+    ) -> Tuple[Optional[datetime], str]:
+        # Extract date/time
+        alarm_datetime: Optional[datetime] = None
+        datetime_result = extract_datetime(utterance)
+        remaining_utterance = utterance
+        if datetime_result is not None:
+            alarm_datetime, remaining_utterance = datetime_result
+            if alarm_datetime.time() == time(0):
+                # Check for midnight
+                midnight_requested = any(
+                    [word in utterance for word in resources.midnight_words]
+                )
+                if not midnight_requested:
+                    alarm_datetime = None
+                    remaining_utterance = utterance
+
+        return alarm_datetime, remaining_utterance
+
+    @staticmethod
+    def repeat_rule_from_utterance(
+        utterance: str, resources: StaticResources
+    ) -> Tuple[bool, Optional[str]]:
+        repeat_rule: Optional[str] = None
+        repeat_in_utterance = any(
+            [repeat[0] in utterance for repeat in resources.repeat_phrases]
+        )
+        if repeat_in_utterance:
+            repeat_rule = build_day_of_week_repeat_rule(
+                utterance, resources.repeat_rules
+            )
+
+        return repeat_in_utterance, repeat_rule
+
+    @staticmethod
+    def from_utterance(utterance: str, resources: StaticResources) -> "Alarm":
+        # Extract date/time
+        alarm_datetime, remaining_utterance = Alarm.datetime_from_utterance(
+            utterance, resources
+        )
+
+        # Extract name
+        name_extractor = RegexExtractor("name", resources.name_regex)
+        alarm_name = name_extractor.extract(remaining_utterance)
+
+        # Extract repeat rule
+        repeat_in_utterance, repeat_rule = Alarm.repeat_rule_from_utterance(
+            utterance, resources
+        )
+        if repeat_in_utterance and (repeat_rule is None):
+            repeat_rule = Alarm.MISSING_REPEAT_RULE
+
+        return Alarm(name=alarm_name, date_time=alarm_datetime, repeat_rule=repeat_rule)
+
+    def format_for_display(
+        self, index, translations: StaticResources, use_24_hour: bool
+    ) -> dict:
         """Build the name/value pairs to be passed to the GUI.
 
         Args:
@@ -79,7 +170,7 @@ class Alarm:
             alarmDays=display_days.title(),
         )
 
-    def build_description_dialog(self, resources, use_24_hour):
+    def build_description_dialog(self, resources: StaticResources, use_24_hour: bool):
         """Builds a speakable description of the alarm using its attributes.
 
         Args:
@@ -113,6 +204,7 @@ class Alarm:
         Returns:
             speakable text representing the alarm's time of day.
         """
+        assert self.date_time is not None
         if use_24_hour:
             speakable_time = nice_time(self.date_time, use_24hour=True)
         else:
@@ -129,6 +221,7 @@ class Alarm:
         Returns:
             speakable text representing the alarm's date and time.
         """
+        assert self.date_time is not None
         if use_24_hour:
             speakable_datetime = nice_date_time(
                 self.date_time, now=now_local(), use_24hour=True
