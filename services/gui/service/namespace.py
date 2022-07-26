@@ -157,12 +157,17 @@ class NamespaceManager:
     def handle_set_value(self, message: Message):
         """Sets session data values"""
         try:
-            namespace = message.data["namespace"]
+            namespace = self._ensure_namespace_exists(message.data["namespace"])
             data = message.data.get("data", {})
+            if message.data.get("overwrite", True):
+                namespace.data = data
+            else:
+                namespace.data.update(data)
+
             send_message_to_gui(
                 {
                     "type": "mycroft.session.set",
-                    "namespace": namespace,
+                    "namespace": namespace.name,
                     "data": message.data.get("data", {}),
                 }
             )

@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 import logging
+import signal
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -86,7 +87,21 @@ class DinkumService(ABC):
         Defaults to blocking until the service is terminated externally.
         """
         # Wait for exit signal
-        Event().wait()
+        run_event = Event()
+
+        def signal_handler(_sig, _frame):
+            """Registers signal handlers to catch CTRL+C and TERM."""
+            run_event.set()
+
+        original_int_handler = signal.signal(signal.SIGINT, signal_handler)
+        original_term_handler = signal.signal(signal.SIGTERM, signal_handler)
+
+        try:
+            run_event.wait()
+        finally:
+            # Restore original signal handlers
+            signal.signal(signal.SIGINT, original_int_handler)
+            signal.signal(signal.SIGTERM, original_term_handler)
 
     @abstractmethod
     def stop(self):

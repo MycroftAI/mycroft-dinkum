@@ -1555,11 +1555,17 @@ class MycroftSkill:
 
     # -------------------------------------------------------------------------
 
-    def update_gui_values(self, page: str, data: Dict[str, Any]):
+    def update_gui_values(
+        self, page: str, data: Dict[str, Any], overwrite: bool = True
+    ):
         self.bus.emit(
             Message(
                 "gui.value.set",
-                data={"namespace": f"{self.skill_id}.{page}", "data": data},
+                data={
+                    "namespace": f"{self.skill_id}.{page}",
+                    "data": data,
+                    "overwrite": overwrite,
+                },
             )
         )
 
@@ -1571,6 +1577,7 @@ class MycroftSkill:
         gui: Optional[SessionGuisType] = None,
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
         expect_response: bool = False,
@@ -1683,6 +1690,9 @@ class MycroftSkill:
                 }
             )
 
+        if music_uri:
+            actions.append({"type": "stream_music", "uri": music_uri})
+
         if expect_response:
             actions.append({"type": "get_response"})
 
@@ -1713,6 +1723,7 @@ class MycroftSkill:
         gui: Optional[SessionGuisType] = None,
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
         continue_session: bool = False,
@@ -1731,6 +1742,7 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
                     message_send=message_send,
                     expect_response=expect_response,
@@ -1750,6 +1762,7 @@ class MycroftSkill:
         gui: Optional[SessionGuisType] = None,
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
@@ -1772,6 +1785,7 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
                     message_send=message_send,
                     expect_response=expect_response,
@@ -1788,6 +1802,7 @@ class MycroftSkill:
         gui: Optional[SessionGuisType] = None,
         gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
         mycroft_session_id: Optional[str] = None,
@@ -1808,6 +1823,7 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
                     message_send=message_send,
                 ),

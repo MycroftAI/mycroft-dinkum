@@ -14,11 +14,12 @@
 import random
 import re
 from os.path import exists, join
-from threading import Lock
+from typing import Optional
 
 from adapt.intent import IntentBuilder
-from mycroft.skills import MycroftSkill, intent_handler
+from mycroft.skills import MycroftSkill, intent_handler, GuiClear
 from mycroft.skills.audioservice import AudioService
+from mycroft.messagebus.message import Message
 
 STATUS_KEYS = ["track", "artist", "album", "image"]
 
@@ -26,65 +27,16 @@ STATUS_KEYS = ["track", "artist", "album", "image"]
 class PlaybackControlSkill(MycroftSkill):
     def __init__(self):
         super(PlaybackControlSkill, self).__init__("Playback Control Skill")
-        self.query_replies = {}  # cache of received replies
-        self.query_extensions = {}  # maintains query timeout extensions
-        self.has_played = False
-        self.lock = Lock()
-
-    # TODO: Make this an option for voc_match()?  Only difference is the
-    #       comparison using "==" instead of "in"
-    def voc_match_exact(self, utt, voc_filename, lang=None):
-        """Determine if the given utterance contains the vocabulary provided
-
-        Checks for vocabulary match in the utterance instead of the other
-        way around to allow the user to say things like "yes, please" and
-        still match against "Yes.voc" containing only "yes". The method first
-        checks in the current skill's .voc files and secondly the "res/text"
-        folder of mycroft-core. The result is cached to avoid hitting the
-        disk each time the method is called.
-
-        Args:
-            utt (str): Utterance to be tested
-            voc_filename (str): Name of vocabulary file (e.g. 'yes' for
-                                'res/text/en-us/yes.voc')
-            lang (str): Language code, defaults to self.long
-
-        Returns:
-            bool: True if the utterance has the given vocabulary it
-        """
-        lang = lang or self.lang
-        cache_key = lang + voc_filename
-
-        if cache_key not in self.voc_match_cache:
-            # Check for both skill resources and mycroft-core resources
-            voc = self.find_resource(voc_filename + ".voc", "vocab")
-            if not voc:
-                voc = self.resolve_resource_file(
-                    join("text", lang, voc_filename + ".voc")
-                )
-
-            if not voc or not exists(voc):
-                raise FileNotFoundError(
-                    "Could not find {}.voc file".format(voc_filename)
-                )
-
-            with open(voc) as f:
-                self.voc_match_cache[cache_key] = f.read().splitlines()
-
-        # Check for exact match
-        if utt and any(i.strip() == utt for i in self.voc_match_cache[cache_key]):
-            return True
-        return False
+        self.phrase: Optional[str] = None
+        self.reply_message: Optional[Message] = None
+        self._stream_session_id: Optional[str] = None
 
     def initialize(self):
-        self.audio_service = AudioService(self.bus)
         self.add_event("play:query.response", self.handle_play_query_response)
+        self.add_event("mycroft.audio.service.playing", self.handle_stream_playing)
 
-        self.add_event("playback.display.video.type", self.handle_display_video)
-        self.add_event("playback.display.audio.type", self.handle_display_audio)
-        self.add_event("playback.display.remove", self.handle_remove_player)
-
-        self.clear_gui_info()
+    def handle_stream_playing(self, message: Message):
+        self._stream_session_id = message.data.get("mycroft_session_id")
 
     # Handle common audio intents.  'Audio' skills should listen for the
     # common messages:
@@ -93,11 +45,11 @@ class PlaybackControlSkill(MycroftSkill):
     #   self.add_event('mycroft.audio.service.pause', SKILL_HANDLER)
     #   self.add_event('mycroft.audio.service.resume', SKILL_HANDLER)
 
-    def clear_gui_info(self):
-        """Clear the gui variable list."""
-        # Initialize track info variables
-        for k in STATUS_KEYS:
-            self.gui[k] = ""
+    # def clear_gui_info(self):
+    #     """Clear the gui variable list."""
+    #     # Initialize track info variables
+    #     for k in STATUS_KEYS:
+    #         self.gui[k] = ""
 
     # @intent_handler(IntentBuilder('').require('Next').require("Track"))
     # def handle_next(self, message):
@@ -111,167 +63,126 @@ class PlaybackControlSkill(MycroftSkill):
 
     @intent_handler(IntentBuilder("").require("Pause").exactly())
     def handle_pause(self, message):
-        with self.activity():
-            self.audio_service.pause()
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.pause",
+                data={"mycroft_session_id": self._stream_session_id},
+            )
+        )
 
     @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
     def handle_play(self, message):
         """Resume playback if paused"""
-        with self.activity():
-            self.audio_service.resume()
-
-    def stop(self, message=None):
-        self.clear_gui_info()
-
-        self.log.info(
-            "Audio service status: " "{}".format(self.audio_service.track_info())
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.resume",
+                data={"mycroft_session_id": self._stream_session_id},
+            )
         )
-        if self.audio_service.is_playing:
-            self.audio_service.stop()
-            self.has_played = False
-            return True
-        else:
-            return False
+
+    # def stop(self, message=None):
+    #     self.clear_gui_info()
+
+    #     self.log.info(
+    #         "Audio service status: " "{}".format(self.audio_service.track_info())
+    #     )
+    #     if self.audio_service.is_playing:
+    #         self.audio_service.stop()
+    #         self.has_played = False
+    #         return True
+    #     else:
+    #         return False
 
     @intent_handler("play.rx")
     def play(self, message):
-        with self.activity():
-            self.gui.show_page("SearchingForMusic.qml")
-            self.speak_dialog("just.one.moment")
+        # Playback flow
+        # 1. We continue the current session, sending the 'play:query' message to Common Play skills
+        # 2. Until the timeout is reached, we track the replies in handle_play_query_response
+        # 3. When the timeout occurs, the skill with the highest confidence is sent a 'play:start' message
+        self.reply_message = None
+        self.phrase = message.data["Phrase"]
+        self.schedule_event(
+            self._play_query_timeout,
+            5,
+            data={
+                "phrase": self.phrase,
+                "mycroft_session_id": self._mycroft_session_id,
+            },
+            name="PlayQueryTimeout",
+        )
 
-            phrase = message.data["Phrase"]
-            self.log.info("Resolving Player for: " + phrase)
-            self.enclosure.mouth_think()
-
-            # Now we place a query on the messsagebus for anyone who wants to
-            # attempt to service a 'play.request' message.  E.g.:
-            #   {
-            #      "type": "play.query",
-            #      "phrase": "the news" / "tom waits" / "madonna on Pandora"
-            #   }
-            #
-            # One or more skills can reply with a 'play.request.reply', e.g.:
-            #   {
-            #      "type": "play.request.response",
-            #      "target": "the news",
-            #      "skill_id": "<self.skill_id>",
-            #      "conf": "0.7",
-            #      "callback_data": "<optional data>"
-            #   }
-            # This means the skill has a 70% confidence they can handle that
-            # request.  The "callback_data" is optional, but can provide data
-            # that eliminates the need to re-parse if this reply is chosen.
-            #
-            self.query_replies[phrase] = []
-            self.query_extensions[phrase] = []
-            self.bus.emit(message.forward("play:query", data={"phrase": phrase}))
-
-            self.schedule_event(
-                self._play_query_timeout,
-                1,
-                data={"phrase": phrase},
-                name="PlayQueryTimeout",
-            )
+        # Now we place a query on the messsagebus for anyone who wants to
+        # attempt to service a 'play.request' message.  E.g.:
+        #   {
+        #      "type": "play.query",
+        #      "phrase": "the news" / "tom waits" / "madonna on Pandora"
+        #   }
+        #
+        # One or more skills can reply with a 'play.request.reply', e.g.:
+        #   {
+        #      "type": "play.request.response",
+        #      "target": "the news",
+        #      "skill_id": "<self.skill_id>",
+        #      "conf": "0.7",
+        #      "callback_data": "<optional data>"
+        #   }
+        # This means the skill has a 70% confidence they can handle that
+        # request.  The "callback_data" is optional, but can provide data
+        # that eliminates the need to re-parse if this reply is chosen.
+        return self.continue_session(
+            dialog="just.one.moment",
+            speak_wait=False,
+            message=Message("play:query", data={"phrase": self.phrase}),
+            gui="SearchingForMusic.qml",
+            gui_clear=GuiClear.NEVER,
+        )
 
     def handle_play_query_response(self, message):
-        with self.lock:
-            search_phrase = message.data["phrase"]
+        if message.data.get("mycroft_session_id") != self._mycroft_session_id:
+            # Different session now
+            return
 
-            if "searching" in message.data and search_phrase in self.query_extensions:
-                # Manage requests for time to complete searches
-                skill_id = message.data["skill_id"]
-                if message.data["searching"]:
-                    # extend the timeout by 5 seconds
-                    self.cancel_scheduled_event("PlayQueryTimeout")
-                    self.schedule_event(
-                        self._play_query_timeout,
-                        5,
-                        data={"phrase": search_phrase},
-                        name="PlayQueryTimeout",
-                    )
+        searching = message.data.get("searching")
+        if searching:
+            # No answer yet
+            return
 
-                    # TODO: Perhaps block multiple extensions?
-                    if skill_id not in self.query_extensions[search_phrase]:
-                        self.query_extensions[search_phrase].append(skill_id)
-                else:
-                    # Search complete, don't wait on this skill any longer
-                    if skill_id in self.query_extensions[search_phrase]:
-                        self.query_extensions[search_phrase].remove(skill_id)
-                        if not self.query_extensions[search_phrase]:
-                            self.cancel_scheduled_event("PlayQueryTimeout")
-                            self.schedule_event(
-                                self._play_query_timeout,
-                                0,
-                                data={"phrase": search_phrase},
-                                name="PlayQueryTimeout",
-                            )
+        try:
+            skill_id = message.data["skill_id"]
+            conf = message.data["conf"]
+            phrase = message.data["phrase"]
 
-            elif search_phrase in self.query_replies:
-                # Collect all replies until the timeout
-                self.query_replies[message.data["phrase"]].append(message.data)
+            if (not self.reply_message) or (conf > self.reply_message.data["conf"]):
+                self.log.info(
+                    "Reply from %s: %s (confidence=%s)", skill_id, phrase, conf
+                )
+                self.reply_message = message
+        except Exception:
+            self.log.exception("Error handling playback reply")
 
     def _play_query_timeout(self, message):
-        with self.lock:
-            # Prevent any late-comers from retriggering this query handler
-            search_phrase = message.data["phrase"]
-            self.query_extensions[search_phrase] = []
-            self.enclosure.mouth_reset()
+        if message.data.get("mycroft_session_id") != self._mycroft_session_id:
+            # Different session now
+            return
 
-            # Look at any replies that arrived before the timeout
-            # Find response(s) with the highest confidence
-            best = None
-            ties = []
-            self.log.debug("CommonPlay Resolution: {}".format(search_phrase))
-            for handler in self.query_replies[search_phrase]:
-                self.log.debug(
-                    "    {} using {}".format(handler["conf"], handler["skill_id"])
-                )
-                if not best or handler["conf"] > best["conf"]:
-                    best = handler
-                    ties = []
-                elif handler["conf"] == best["conf"]:
-                    ties.append(handler)
+        try:
+            if self.reply_message is not None:
+                skill_id = self.reply_message.data["skill_id"]
+                self.log.info("Playing with: %s", skill_id)
 
-            if best:
-                if ties:
-                    # select randomly
-                    self.log.info("Skills tied, choosing randomly")
-                    skills = ties + [best]
-                    self.log.debug("Skills: " + str([s["skill_id"] for s in skills]))
-                    selected = random.choice(skills)
-                    # TODO: Ask user to pick between ties or do it
-                    # automagically
-                else:
-                    selected = best
-
-                # invoke best match
-                self.log.info("Playing with: {}".format(selected["skill_id"]))
                 start_data = {
-                    "skill_id": selected["skill_id"],
-                    "phrase": search_phrase,
-                    "callback_data": selected.get("callback_data"),
+                    "skill_id": skill_id,
+                    "phrase": self.phrase,
+                    "callback_data": self.reply_message.data.get("callback_data"),
                 }
-                self.bus.emit(message.forward("play:start", start_data))
-                self.has_played = True
-            elif self.voc_match(search_phrase, "Music"):
-                self.speak_dialog("setup.hints")
+                self.bus.emit(self.reply_message.forward("play:start", start_data))
             else:
-                self.log.info("   No matches")
-                self.speak_dialog("cant.play", data={"phrase": search_phrase})
-
-            if search_phrase in self.query_replies:
-                del self.query_replies[search_phrase]
-            if search_phrase in self.query_extensions:
-                del self.query_extensions[search_phrase]
-
-    def handle_display_video(self, message):
-        self.gui.show_page("VideoPlayer.qml", override_idle=True)
-
-    def handle_display_audio(self, message):
-        self.gui.show_page("AudioPlayer.qml", override_idle=True)
-
-    def handle_remove_player(self, message):
-        self.gui.release()
+                self.log.info("No matches for %s", self.phrase)
+                dialog = ("cant.play", {"phrase": self.phrase})
+                result = self.end_session(dialog=dialog, gui_clear=GuiClear.AT_END)
+                self.bus.emit(result)
+        except Exception:
+            self.log.exception("Error processing playback results")
 
 
 def create_skill():

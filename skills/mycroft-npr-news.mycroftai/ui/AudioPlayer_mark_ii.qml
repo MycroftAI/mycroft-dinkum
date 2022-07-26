@@ -56,7 +56,10 @@ Mycroft.CardDelegate {
         if (!isStreaming) {
             root.playerPosition = media.position
         }
-        if(playerState === "Playing"){
+
+        if(playerState === "Starting"){
+            root.playerPosition = 0
+        } else if(playerState === "Playing"){
             streamTimer.running = true
         } else if(playerState === "Paused") {
             streamTimer.running = false

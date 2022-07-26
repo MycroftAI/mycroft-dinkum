@@ -98,7 +98,12 @@ class CommonPlaySkill(MycroftSkill, ABC):
         # (this extends a timeout while this skill looks for a match)
         self.bus.emit(
             message.response(
-                {"phrase": search_phrase, "skill_id": self.skill_id, "searching": True}
+                {
+                    "mycroft_session_id": message.data.get("mycroft_session_id"),
+                    "phrase": search_phrase,
+                    "skill_id": self.skill_id,
+                    "searching": True,
+                }
             )
         )
 

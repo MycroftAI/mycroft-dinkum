@@ -460,6 +460,12 @@ class AudioUserInterface:
             self._stream_session_id,
         )
         self._ahal.start_background(uri_playlist)
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.playing",
+                data={"mycroft_session_id": self._stream_session_id},
+            )
+        )
 
     def handle_stream_pause(self, message: Message):
         """Handler for mycroft.audio.service.pause"""
@@ -467,6 +473,12 @@ class AudioUserInterface:
         if mycroft_session_id == self._stream_session_id:
             LOG.debug("Pausing background stream (session=%s)", mycroft_session_id)
             self._ahal.pause_background()
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.paused",
+                    data={"mycroft_session_id": mycroft_session_id},
+                )
+            )
 
     def handle_stream_resume(self, message: Message):
         """Handler for mycroft.audio.service.resume"""
@@ -474,6 +486,12 @@ class AudioUserInterface:
         if mycroft_session_id == self._stream_session_id:
             LOG.debug("Resuming background stream (session=%s)", mycroft_session_id)
             self._ahal.resume_background()
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.resumed",
+                    data={"mycroft_session_id": mycroft_session_id},
+                )
+            )
 
     def handle_stream_stop(self, message):
         """Handler for mycroft.audio.service.stop"""
@@ -484,6 +502,12 @@ class AudioUserInterface:
             # Don't ever actually stop the background stream.
             # This lets us resume it later at any point.
             self._ahal.pause_background()
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.stopped",
+                    data={"mycroft_session_id": mycroft_session_id},
+                )
+            )
 
     def send_stream_position(self):
         """Sends out background stream position to skills"""

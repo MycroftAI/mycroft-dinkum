@@ -317,7 +317,7 @@ class IntentService:
                 self._last_gui_session = session
             elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
                 if (self._last_gui_session is None) or (
-                    self._last_gui_session.id == session.id
+                    self._last_gui_session.skill_id == session.skill_id
                 ):
                     if isinstance(action, WaitForIdleAction):
                         timeout = IDLE_TIMEOUT

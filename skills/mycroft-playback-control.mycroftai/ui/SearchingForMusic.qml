@@ -42,7 +42,7 @@ Mycroft.Delegate {
             anchors.top: parent.top
             anchors.topMargin: gridUnit * 8
             anchors.left: parent.left
-            anchors.leftMargin: gridUnit * 11
+            anchors.leftMargin: gridUnit * 8
             width: gridUnit * 24
             height: gridUnit * 4
             font.pixelSize: 47
@@ -58,12 +58,6 @@ Mycroft.Delegate {
             height: gridUnit
             indeterminate: true
             width: gridUnit * 24
-
-            background: Rectangle {
-                anchors.fill: searchProgress
-                radius: 8
-            }
-
         }
     }
 }

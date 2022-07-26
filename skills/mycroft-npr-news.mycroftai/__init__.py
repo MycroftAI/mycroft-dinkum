@@ -15,11 +15,11 @@
 import os
 import subprocess
 import time
-from typing import Tuple
+from typing import Tuple, Optional
 from urllib.parse import quote
 
 from mycroft.messagebus import Message
-from mycroft.skills import AdaptIntent, intent_handler
+from mycroft.skills import AdaptIntent, intent_handler, GuiClear
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft.util import get_cache_directory
 
@@ -41,20 +41,30 @@ CONF_GENERIC_MATCH = 0.6
 class NewsSkill(CommonPlaySkill):
     def __init__(self):
         super().__init__(name="NewsSkill")
-        self.now_playing = None
-        self.last_station_played = None
-        self.curl = None
+        self.now_playing: Optional[Station] = None
+        self._stream_session_id: Optional[str] = None
 
     def initialize(self):
-        time.sleep(1)
+        # time.sleep(1)
         self.log.debug("Disabling restart intent")
-        self.disable_intent("restart_playback")
         # Longer titles or alternative common names of feeds for searching
         self.alternate_station_names = self.load_alternate_station_names()
-        self.register_gui_handlers()
-        self.platform = self.config_core["enclosure"].get("platform", "unknown")
+        # self.register_gui_handlers()
         self.settings_change_callback = self.on_websettings_changed
         self.on_websettings_changed()
+
+        self.add_event(
+            "mycroft.audio.service.playing", self.handle_audioservice_status_change
+        )
+        self.add_event(
+            "mycroft.audio.service.paused", self.handle_audioservice_status_change
+        )
+        self.add_event(
+            "mycroft.audio.service.resumed", self.handle_audioservice_status_change
+        )
+        self.add_event(
+            "mycroft.audio.service.stopped", self.handle_audioservice_status_change
+        )
 
     def load_alternate_station_names(self) -> dict:
         """Load the list of alternate station names from alt.feed.name.value
@@ -76,19 +86,6 @@ class NewsSkill(CommonPlaySkill):
             alternate_station_names[acronym].append(name)
         return alternate_station_names
 
-    def register_gui_handlers(self):
-        """Register handlers for events to or from the GUI."""
-        self.bus.on(
-            "mycroft.audio.service.pause", self.handle_audioservice_status_change
-        )
-        self.bus.on(
-            "mycroft.audio.service.resume", self.handle_audioservice_status_change
-        )
-        self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
-        self.gui.register_handler("cps.gui.pause", self.handle_gui_status_change)
-        self.gui.register_handler("cps.gui.play", self.handle_gui_status_change)
-        self.gui.register_handler("cps.gui.restart", self.handle_gui_restart)
-
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
 
@@ -96,38 +93,20 @@ class NewsSkill(CommonPlaySkill):
         """
         if not self.now_playing:
             return
-        command = message.msg_type.split(".")[-1]
-        if command == "resume":
-            new_status = "Playing"
-        elif command == "pause":
-            new_status = "Paused"
-        self.gui["status"] = new_status
 
-    def handle_gui_status_change(self, message):
-        """Handle play and pause status changes from the GUI.
-
-        This notifies the audioservice. The GUI state only changes once the
-        audioservice emits the relevant messages to say the state has changed.
-        """
-        if not self.now_playing:
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
             return
+
         command = message.msg_type.split(".")[-1]
-        if command == "play":
-            self.log.info("Audio resumed by GUI.")
-            self.bus.emit(Message("mycroft.audio.service.resume"))
-        elif command == "pause":
-            self.log.info("Audio paused by GUI.")
-            self.bus.emit(Message("mycroft.audio.service.pause"))
+        if command in {"playing", "resumed"}:
+            new_status = "Playing"
+        elif command in {"paused", "stopped"}:
+            new_status = "Paused"
 
-    def handle_media_finished(self, _):
-        """Handle media playback finishing."""
-        if self.now_playing:
-            self.gui.release()
-            self.now_playing = False
-
-    def handle_gui_restart(self, _):
-        """Handle restart button press."""
-        self.restart_playback(None)
+        self.update_gui_values(
+            page="AudioPlayer_mark_ii.qml", data={"status": new_status}, overwrite=False
+        )
 
     def on_websettings_changed(self):
         """Callback triggered anytime Skill settings are modified on backend."""
@@ -140,45 +119,80 @@ class NewsSkill(CommonPlaySkill):
     @intent_handler(AdaptIntent("").one_of("Give", "Latest").require("News"))
     def handle_latest_news(self, message):
         """Adapt intent handler to capture general queries for the latest news."""
-        with self.activity():
-            match = match_station_from_utterance(self, message.data["utterance"])
-            if match and match.station:
-                station = match.station
-            else:
-                station = self.get_default_station()
-            self.handle_play_request(station)
+        match = match_station_from_utterance(self, message.data["utterance"])
+        if match and match.station:
+            station = match.station
+        else:
+            station = self.get_default_station()
+
+        dialog = ("news", {"from": station.full_name})
+        media_uri = station.media_uri
+        gui_page = "AudioPlayer_mark_ii.qml"
+        gui_data = {
+            "media": {
+                "image": str(station.image_path),
+                "artist": station.acronym,
+                "track": station.full_name,
+                "album": "",
+                "skill": self.skill_id,
+                "streaming": True,
+            },
+            "status": "Starting",
+            "theme": dict(fgColor="white", bgColor=station.color),
+            "playerPosition": 0.0,
+        }
+
+        # The session id of our stream in the audio UI will be this sesson's id
+        self._stream_session_id = self._mycroft_session_id
+        self.now_playing = station
+
+        return self.end_session(
+            dialog=dialog,
+            gui=(gui_page, gui_data),
+            music_uri=media_uri,
+            gui_clear=GuiClear.NEVER,
+        )
 
     @intent_handler("PlayTheNews.intent")
     def handle_latest_news_alt(self, message):
         """Padatious intent handler to capture short distinct utterances."""
-        with self.activity():
-            match = match_station_from_utterance(self, message.data["utterance"])
-            if match and match.station:
-                station = match.station
-            else:
-                station = self.get_default_station()
-            self.handle_play_request(station)
+        return self.handle_latest_news(message)
 
     @intent_handler(AdaptIntent("").require("Play").require("News"))
     def handle_play_news(self, message):
-        self.handle_latest_news(message)
+        return self.handle_latest_news(message)
 
-    @intent_handler(AdaptIntent("").require("Restart"))
-    def restart_playback(self, _):
-        with self.activity():
-            self.log.info(
-                f"Restarting last station to be played: {self.last_station_played.acronym}"
+    @intent_handler(AdaptIntent("").require("Stop").require("News"))
+    def handle_stop_news(self, message):
+        dialog = None
+
+        if self.now_playing is not None:
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.stop",
+                    data={"mycroft_session_id": self._stream_session_id},
+                )
             )
-            if self.last_station_played:
-                self.handle_play_request(self.last_station_played)
+            self._stream_session_id = None
+            self.now_playing = None
+            gui_clear = GuiClear.AT_END
+        else:
+            dialog = "no.news.playing"
+            gui_clear = GuiClear.NEVER
+
+        return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
     @intent_handler(AdaptIntent("").require("Show").require("News"))
     def handle_show_news(self, _):
-        with self.activity():
-            if self.now_playing is not None:
-                self._show_gui_page("AudioPlayer")
-            else:
-                self.speak_dialog("no.news.playing")
+        gui = None
+        dialog = None
+
+        if self.now_playing is not None:
+            gui = "AudioPlayer_mark_ii.qml"
+        else:
+            dialog = "no.news.playing"
+
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
@@ -220,31 +234,6 @@ class NewsSkill(CommonPlaySkill):
 
         return match.station.full_name, match_level, match.station.as_dict()
 
-    def download_media_file(self, url: str) -> str:
-        """Download a media file and return path to the stream.
-
-        Args:
-            url (str): media file to download
-
-        Returns:
-            stream (str): file path of the audio stream
-
-        Raises:
-            ValueError if url does not provide a valid audio file
-        """
-        stream = "{}/stream".format(get_cache_directory("NewsSkill"))
-        # (Re)create Fifo
-        if os.path.exists(stream):
-            os.remove(stream)
-        os.mkfifo(stream)
-        self.log.debug("Running curl {}".format(url))
-        args = ["curl", "-L", quote(url, safe=":/"), "-o", stream]
-        self.curl = subprocess.Popen(args)
-        # Check if downloaded file is actually an error page
-        if contains_html(stream):
-            raise ValueError("Could not fetch valid audio file.")
-        return stream
-
     def get_default_station(self) -> BaseStation:
         """Get default station for user.
 
@@ -272,18 +261,6 @@ class NewsSkill(CommonPlaySkill):
         station_code = country_defaults.get(country_code)
         return stations.get(station_code)
 
-    def handle_play_request(self, station: BaseStation = None):
-        """Handle request to play a station.
-
-        Args:
-            station: Instance of a Station to be played
-        """
-        # Speak intro while downloading in background
-        self.speak_dialog("news", data={"from": station.full_name})
-        self._play_station(station)
-        self.last_station_played = station
-        self.enable_intent("restart_playback")
-
     @property
     def is_https_supported(self) -> bool:
         """Check if any available audioservice backend supports https."""
@@ -292,94 +269,18 @@ class NewsSkill(CommonPlaySkill):
                 return True
         return False
 
-    def _play_station(self, station: BaseStation):
-        """Play the given station using the most appropriate service.
-
-        Args:
-            station (Station): Instance of a Station to be played
-        """
-        try:
-            self.log.info(f"Playing News feed: {station.full_name}")
-            media_url = station.media_uri
-            self.log.info(f"News media url: {media_url}")
-            mime = find_mime_type(media_url)
-            # Ensure announcement of station has finished before playing
-            self.wait_while_speaking()
-
-            # We support streaming
-            self.CPS_play((media_url, mime))
-
-            # If backend cannot handle https, download the file and provide a local stream.
-            # if media_url[:8] == 'https://' and not self.is_https_supported:
-            #     stream = self.download_media_file(media_url)
-            #     self.CPS_play((f"file://{stream}", mime))
-            # else:
-            #     self.CPS_play((media_url, mime))
-
-            self.gui["media"] = {
-                "image": str(station.image_path),
-                "artist": station.acronym,
-                "track": station.full_name,
-                "album": "",
-                "skill": self.skill_id,
-                "streaming": True,
-            }
-            self.gui["status"] = "Playing"
-            self.gui["theme"] = dict(fgColor="white", bgColor=station.color)
-            self._show_gui_page("AudioPlayer")
-            self.CPS_send_status(
-                # cast to str for json serialization
-                image=str(station.image_path),
-                artist=station.full_name,
+    def stop(self) -> Optional[Message]:
+        if self.now_playing is not None:
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.stop",
+                    data={"mycroft_session_id": self._stream_session_id},
+                )
             )
-            self.now_playing = station.full_name
-        except ValueError as e:
-            self.speak_dialog("could.not.start.the.news.feed")
-            self.log.exception(e)
+            self._stream_session_id = None
+            self.now_playing = None
 
-    def _show_gui_page(self, page):
-        """Show a page variation depending on platform."""
-        if self.gui.connected:
-            if self.platform == "mycroft_mark_2":
-                qml_page = f"{page}_mark_ii.qml"
-            else:
-                qml_page = f"{page}_scalable.qml"
-            self.gui.show_page(qml_page, override_idle=True)
-
-    def stop_curl_process(self):
-        """Stop any running curl download process."""
-        if self.curl:
-            try:
-                self.curl.terminate()
-                self.curl.communicate()
-                # Check if process has completed
-                return_code = self.curl.poll()
-                if return_code is None:
-                    # Process must still be running...
-                    self.curl.kill()
-                else:
-                    self.log.debug(f"Curl return code: {return_code}")
-            except subprocess.SubprocessError as e:
-                self.log.exception(f"Could not stop curl: {repr(e)}")
-            finally:
-                self.curl = None
-
-    def stop(self) -> bool:
-        """Respond to system stop commands."""
-        if self.now_playing is None:
-            return False
-        self.now_playing = None
-        # Disable restarting when stopped
-        if self.last_station_played:
-            self.disable_intent("restart_playback")
-            self.last_station_played = None
-
-        # Stop download process if it's running.
-        self.stop_curl_process()
-        self.CPS_send_status()
-        self.gui.release()
-        self.CPS_release_output_focus()
-        return True
+            return self.end_session(gui_clear=GuiClear.AT_END)
 
 
 def create_skill():

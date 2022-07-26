@@ -98,42 +98,52 @@ class QuestionsAnswersSkill(FallbackSkill):
             # No answer yet
             return
 
-        answer = message.data.get("answer")
+        try:
+            answer = message.data.get("answer")
 
-        if answer:
-            skill_id = message.data["skill_id"]
-            conf = message.data["conf"]
+            if answer:
+                skill_id = message.data["skill_id"]
+                conf = message.data["conf"]
 
-            if (not self.answer_message) or (conf > self.answer_message.data["conf"]):
-                self.log.info(
-                    "Answer from %s: %s (confidence=%s)", skill_id, answer, conf
-                )
-                self.answer_message = message
+                if (not self.answer_message) or (
+                    conf > self.answer_message.data["conf"]
+                ):
+                    self.log.info(
+                        "Answer from %s: %s (confidence=%s)", skill_id, answer, conf
+                    )
+                    self.answer_message = message
+        except Exception:
+            self.log.exception("Error handling query response")
 
     def _query_timeout(self, message):
         if message.data.get("mycroft_session_id") != self._mycroft_session_id:
             # Different session now
             return
 
-        if self.answer_message:
-            # Engage action
-            self.log.info("CQS action start (data=%s)", self.answer_message.data)
-            self.bus.emit(
-                message.forward(
-                    "question:action",
-                    data={
-                        "mycroft_session_id": self._mycroft_session_id,
-                        "skill_id": self.answer_message.data.get("skill_id"),
-                        "phrase": message.data.get("phrase"),
-                        "callback_data": self.answer_message.data.get("callback_data"),
-                    },
+        try:
+            if self.answer_message is not None:
+                # Engage action
+                self.log.info("CQS action start (data=%s)", self.answer_message.data)
+                self.bus.emit(
+                    message.forward(
+                        "question:action",
+                        data={
+                            "mycroft_session_id": self._mycroft_session_id,
+                            "skill_id": self.answer_message.data.get("skill_id"),
+                            "phrase": message.data.get("phrase"),
+                            "callback_data": self.answer_message.data.get(
+                                "callback_data"
+                            ),
+                        },
+                    )
                 )
-            )
-        else:
-            # No answers
-            self.log.info("Search timeout")
-            result = self.end_session(dialog="noAnswer")
-            self.bus.emit(result)
+            else:
+                # No answers
+                self.log.info("Search timeout")
+                result = self.end_session(dialog="noAnswer", gui_clear=GuiClear.AT_END)
+                self.bus.emit(result)
+        except Exception:
+            self.log.exception("Error processing query results")
 
 
 def create_skill():

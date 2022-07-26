@@ -172,7 +172,6 @@ class HomescreenSkill(MycroftSkill):
         Each time this intent is executed the next item in the list of collected
         wallpapers will be displayed and the skill setting will be updated.
         """
-        gui_data = {}
         utterance = message.data.get("utterance", "")
         wallpaper_name = self.wallpaper.extract_wallpaper_name(
             self.name_regex, utterance
@@ -185,6 +184,8 @@ class HomescreenSkill(MycroftSkill):
             self.wallpaper.next()
 
         self.settings["wallpaper_file"] = self.wallpaper.file_name_setting
+
+        gui_page, gui_data = self._show_idle_screen()
         gui_data["wallpaperPath"] = str(self.wallpaper.selected)
         self.bus.emit(
             Message(
@@ -196,9 +197,7 @@ class HomescreenSkill(MycroftSkill):
             "Home screen wallpaper changed to %s", self.wallpaper.selected.name
         )
 
-        return self.end_session(
-            gui=("mark_ii_idle.qml", gui_data), gui_clear=GuiClear.NEVER
-        )
+        return self.end_session(gui=(gui_page, gui_data), gui_clear=GuiClear.NEVER)
 
     def update_date(self):
         """Formats the datetime object returned from the parser for display purposes."""
