@@ -126,6 +126,7 @@ class Session:
                     MessageAction(
                         message_type=action_dict.get("message_type", ""),
                         data=action_dict.get("data"),
+                        delay=action_dict.get("delay", 0.0),
                     )
                 )
             elif action_type == ShowPageAction.TYPE:
@@ -205,9 +206,11 @@ class MessageAction(BaseAction):
     TYPE: ClassVar[str] = "message"
     message_type: str
     data: Optional[Dict[str, Any]] = None
+    delay: float = 0.0
 
     def do_action(self, session: Session, bus: MessageBusClient):
-        bus.emit(Message(self.message_type, data=self.data))
+        if self.delay <= 0:
+            bus.emit(Message(self.message_type, data=self.data))
 
 
 @dataclass

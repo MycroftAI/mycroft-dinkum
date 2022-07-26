@@ -45,6 +45,7 @@ from .session import (
     MessageAction,
 )
 
+
 # Seconds before home screen is shown again (mycroft.gui.idle event)
 IDLE_TIMEOUT = 15
 
@@ -73,6 +74,9 @@ class IntentService:
         self._last_gui_session: Optional[Session] = None
 
         self._idle_seconds_left: Optional[int] = None
+        self._delayed_messages_lock = RLock()
+        self._delayed_messages: List[MessageAction] = []
+
         self.registered_vocab = []
 
         # Register services
@@ -323,6 +327,11 @@ class IntentService:
                     else:
                         timeout = IDLE_QUICK_TIMEOUT
                     self._set_idle_timeout(timeout)
+            elif isinstance(action, MessageAction):
+                if action.delay > 0:
+                    # Send message later
+                    with self._delayed_messages_lock:
+                        self._delayed_messages.append(action)
 
     def handle_session_start(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -455,16 +464,30 @@ class IntentService:
 
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""
+        interval = 0.1
         try:
             while True:
                 if self._idle_seconds_left is not None:
-                    self._idle_seconds_left -= 1
+                    self._idle_seconds_left -= interval
                     if self._idle_seconds_left <= 0:
                         self._idle_seconds_left = None
                         self._last_gui_session = None
                         self.bus.emit(Message("mycroft.gui.idle"))
 
-                time.sleep(1)
+                with self._delayed_messages_lock:
+                    remove_actions = []
+                    for action in self._delayed_messages:
+                        action.delay -= interval
+                        if action.delay <= 0:
+                            remove_actions.append(action)
+                            self.bus.emit(
+                                Message(action.message_type, data=action.data)
+                            )
+
+                    for action in remove_actions:
+                        self._delayed_messages.remove(action)
+
+                time.sleep(interval)
         except Exception:
             LOG.exception("Error while checking idle timeout")
 

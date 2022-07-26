@@ -69,12 +69,6 @@ Mycroft.Delegate {
             height: gridUnit
             indeterminate: true
             width: gridUnit * 24
-
-            background: Rectangle {
-                anchors.fill: connectionProgress
-                radius: 8
-            }
-
         }
     }
 }

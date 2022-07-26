@@ -1580,10 +1580,11 @@ class MycroftSkill:
         music_uri: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
         expect_response: bool = False,
     ):
         # Action ordering is fixed:
-        # 1. Send message
+        # 1. Send message (if "at_start")
         # 2. Clear gui (if "at_start")
         # 3. Play audio alert
         # 4. Show gui page(s)
@@ -1682,6 +1683,7 @@ class MycroftSkill:
                 {
                     "type": "message",
                     "message_type": message.msg_type,
+                    "delay": message_delay,
                     "data": {
                         # Automatically add session id
                         "mycroft_session_id": self._mycroft_session_id,
@@ -1728,6 +1730,7 @@ class MycroftSkill:
         message: Optional[Message] = None,
         continue_session: bool = False,
         message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
     ) -> str:
         mycroft_session_id = str(uuid4())
         message = Message(
@@ -1745,6 +1748,7 @@ class MycroftSkill:
                     music_uri=music_uri,
                     message=message,
                     message_send=message_send,
+                    message_delay=message_delay,
                     expect_response=expect_response,
                 ),
                 "continue_session": continue_session,
@@ -1766,6 +1770,7 @@ class MycroftSkill:
         expect_response: bool = False,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
         mycroft_session_id: Optional[str] = None,
         state: Optional[Dict[str, Any]] = None,
     ) -> Message:
@@ -1788,6 +1793,7 @@ class MycroftSkill:
                     music_uri=music_uri,
                     message=message,
                     message_send=message_send,
+                    message_delay=message_delay,
                     expect_response=expect_response,
                 ),
                 "state": state,
@@ -1805,6 +1811,7 @@ class MycroftSkill:
         music_uri: Optional[str] = None,
         message: Optional[Message] = None,
         message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
         mycroft_session_id: Optional[str] = None,
     ) -> Message:
         if mycroft_session_id is None:
@@ -1826,6 +1833,7 @@ class MycroftSkill:
                     music_uri=music_uri,
                     message=message,
                     message_send=message_send,
+                    message_delay=message_delay,
                 ),
             },
         )

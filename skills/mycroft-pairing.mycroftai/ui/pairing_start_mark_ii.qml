@@ -16,8 +16,8 @@
  */
 
 import QtQuick 2.4
-import QtQuick.Controls 2.0
 import QtQuick.Layouts 1.4
+import QtQuick.Controls 2.0
 
 import Mycroft 1.0 as Mycroft
 
@@ -49,6 +49,7 @@ Mycroft.Delegate {
         }
 
         Item {
+            id: instructions
             anchors.left: pairingPhone.right
             anchors.leftMargin: gridUnit * 2
             anchors.top: parent.top
@@ -77,6 +78,15 @@ Mycroft.Delegate {
                 anchors.top: thirdLine.bottom
                 text: "mycroft.ai/pair"
                 textColor: "#22a7f0"
+            }
+
+            ProgressBar {
+                id: connectionProgress
+                anchors.top: fourthLine.bottom
+                anchors.topMargin: gridUnit * 4
+                height: gridUnit
+                indeterminate: true
+                width: gridUnit * 24
             }
         }
     }

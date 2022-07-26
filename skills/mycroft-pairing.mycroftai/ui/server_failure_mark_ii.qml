@@ -20,7 +20,7 @@ import QtQuick.Controls 2.0
 
 import Mycroft 1.0 as Mycroft
 
-/* Define a screen indicating that pairing was successful. */
+/* Define a screen indicating that pairing was unsuccessful. */
 Mycroft.Delegate {
     id: root
     leftPadding: 0
@@ -51,7 +51,7 @@ Mycroft.Delegate {
             id: textFirstLine
             anchors.top: pairingFailureImage.bottom
             centerText: true
-            fontSize: 47
+            fontSize: 37
             fontStyle: "Bold"
             height: gridUnit * 3
             text: "Attempt to connect with Mycroft"
@@ -62,7 +62,7 @@ Mycroft.Delegate {
             id: textSecondLine
             anchors.top: textFirstLine.bottom
             centerText: true
-            fontSize: 47
+            fontSize: 37
             fontStyle: "Bold"
             height: gridUnit * 3
             text: "servers failed: retrying..."

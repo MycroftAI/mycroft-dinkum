@@ -144,12 +144,16 @@ class NamespaceManager:
                 data = namespace.data
 
             namespace.data = data
-            if namespace not in self.active_namespaces:
-                self._activate_namespace(namespace)
-                self.synchronize()
-            else:
-                # Only send session data
-                self._update_namespace_data(namespace)
+
+            # DEBUG
+            self._activate_namespace(namespace)
+            self.synchronize()
+            # if namespace not in self.active_namespaces:
+            #     self._activate_namespace(namespace)
+            #     self.synchronize()
+            # else:
+            #     # Only send session data
+            #     self._update_namespace_data(namespace)
 
             LOG.debug(
                 "Showing page %s on namespace %s with data %s",
