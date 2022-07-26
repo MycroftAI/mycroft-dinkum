@@ -228,7 +228,6 @@ class IntentService:
         return [parser.__dict__ for parser in self.adapt_service.engine.intent_parsers]
 
     def handle_wake(self, message: Message):
-        self.bus.emit(Message("mycroft.tts.stop"))
         self._disable_idle_timeout()
         mycroft_session_id = message.data.get("mycroft_session_id")
         with self._session_lock:

@@ -37,7 +37,7 @@ Mycroft.CardDelegate {
 
     property var media: sessionData.media
     property var playerDuration: media.length
-    property real playerPosition: 0
+    property real playerPosition: sessionData.playerPosition
     property var playerState: sessionData.status
     property bool isStreaming: media.streaming
     property bool streamTimerPaused: false
@@ -49,33 +49,6 @@ Mycroft.CardDelegate {
         var minutes = Math.floor(ms / 60000);
         var seconds = ((ms % 60000) / 1000).toFixed(0);
         return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
-    }
-
-    onPlayerStateChanged: {
-        console.log(playerState)
-        if (!isStreaming) {
-            root.playerPosition = media.position
-        }
-
-        if(playerState === "Starting"){
-            root.playerPosition = 0
-        } else if(playerState === "Playing"){
-            streamTimer.running = true
-        } else if(playerState === "Paused") {
-            streamTimer.running = false
-        }
-    }
-
-    Timer {
-        id: streamTimer
-        interval: 1000
-        running: false
-        repeat: true
-        onTriggered: {
-            if(!streamTimerPaused){
-                playerPosition = playerPosition + 1000
-            }
-        }
     }
 
     Rectangle {

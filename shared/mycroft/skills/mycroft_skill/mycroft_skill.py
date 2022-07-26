@@ -1639,7 +1639,7 @@ class MycroftSkill:
         for maybe_dialog, maybe_gui in itertools.zip_longest(dialogs, guis):
             if maybe_gui is not None:
                 if isinstance(maybe_gui, str):
-                    gui_page, gui_data = maybe_gui, {}
+                    gui_page, gui_data = maybe_gui, None
                 else:
                     gui_page, gui_data = maybe_gui
 
@@ -1647,7 +1647,7 @@ class MycroftSkill:
                     {
                         "type": "show_page",
                         "page": "file://" + self.find_resource(gui_page, "ui"),
-                        "data": gui_data or {},
+                        "data": gui_data,
                         "namespace": f"{self.skill_id}.{gui_page}",
                     }
                 )

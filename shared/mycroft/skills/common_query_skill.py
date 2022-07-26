@@ -213,6 +213,8 @@ class CommonQuerySkill(MycroftSkill, ABC):
         result: Optional[Message] = None
         try:
             result = self.CQS_action(phrase, data)
+        except Exception:
+            LOG.exception("Error running common query action")
         finally:
             self.bus.emit(Message("query:action-complete", data=message.data))
 

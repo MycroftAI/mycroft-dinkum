@@ -39,6 +39,7 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
+from dataclasses import dataclass, field
 from threading import Lock, Timer
 from typing import Any, Dict, List, Union
 
@@ -58,6 +59,7 @@ from .bus import (
 # RESERVED_KEYS = ["__from", "__idle"]
 
 
+@dataclass
 class Namespace:
     """A grouping mechanism for related GUI pages and data.
 
@@ -73,10 +75,9 @@ class Namespace:
         data: a key/value pair representing the data used to populate the GUI
     """
 
-    def __init__(self, name: str):
-        self.name = name
-        self.pages: List[str] = list()
-        self.data: Dict[str, Any] = dict()
+    name: str
+    pages: List[str] = field(default_factory=list)
+    data: Dict[str, Any] = field(default_factory=dict)
 
 
 class NamespaceManager:
@@ -137,7 +138,12 @@ class NamespaceManager:
         try:
             namespace = self._ensure_namespace_exists(message.data["namespace"])
             namespace.pages = message.data["page"]
-            namespace.data = message.data.get("data", {})
+
+            data = message.data.get("data")
+            if data is None:
+                data = namespace.data
+
+            namespace.data = data
             if namespace not in self.active_namespaces:
                 self._activate_namespace(namespace)
                 self.synchronize()
@@ -205,6 +211,7 @@ class NamespaceManager:
         return namespace
 
     def _update_namespace_data(self, namespace: Namespace):
+        LOG.info(namespace)
         send_message_to_gui(
             {
                 "type": "mycroft.session.set",

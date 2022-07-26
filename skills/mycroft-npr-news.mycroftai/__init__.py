@@ -41,29 +41,16 @@ CONF_GENERIC_MATCH = 0.6
 class NewsSkill(CommonPlaySkill):
     def __init__(self):
         super().__init__(name="NewsSkill")
-        self.now_playing: Optional[Station] = None
+        self.now_playing: Optional[BaseStation] = None
         self._stream_session_id: Optional[str] = None
 
     def initialize(self):
-        # time.sleep(1)
-        self.log.debug("Disabling restart intent")
         # Longer titles or alternative common names of feeds for searching
         self.alternate_station_names = self.load_alternate_station_names()
-        # self.register_gui_handlers()
         self.settings_change_callback = self.on_websettings_changed
         self.on_websettings_changed()
-
         self.add_event(
-            "mycroft.audio.service.playing", self.handle_audioservice_status_change
-        )
-        self.add_event(
-            "mycroft.audio.service.paused", self.handle_audioservice_status_change
-        )
-        self.add_event(
-            "mycroft.audio.service.resumed", self.handle_audioservice_status_change
-        )
-        self.add_event(
-            "mycroft.audio.service.stopped", self.handle_audioservice_status_change
+            "mycroft.audio.service.position", self.handle_audioservice_position
         )
 
     def load_alternate_station_names(self) -> dict:
@@ -85,6 +72,21 @@ class NewsSkill(CommonPlaySkill):
                 alternate_station_names[acronym] = []
             alternate_station_names[acronym].append(name)
         return alternate_station_names
+
+    def handle_audioservice_position(self, message):
+        if not self.now_playing:
+            return
+
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
+
+        position_ms = message.data["position_ms"]
+        self.update_gui_values(
+            page="AudioPlayer_mark_ii.qml",
+            data={"playerPosition": position_ms},
+            overwrite=False,
+        )
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
@@ -125,33 +127,7 @@ class NewsSkill(CommonPlaySkill):
         else:
             station = self.get_default_station()
 
-        dialog = ("news", {"from": station.full_name})
-        media_uri = station.media_uri
-        gui_page = "AudioPlayer_mark_ii.qml"
-        gui_data = {
-            "media": {
-                "image": str(station.image_path),
-                "artist": station.acronym,
-                "track": station.full_name,
-                "album": "",
-                "skill": self.skill_id,
-                "streaming": True,
-            },
-            "status": "Starting",
-            "theme": dict(fgColor="white", bgColor=station.color),
-            "playerPosition": 0.0,
-        }
-
-        # The session id of our stream in the audio UI will be this sesson's id
-        self._stream_session_id = self._mycroft_session_id
-        self.now_playing = station
-
-        return self.end_session(
-            dialog=dialog,
-            gui=(gui_page, gui_data),
-            music_uri=media_uri,
-            gui_clear=GuiClear.NEVER,
-        )
+        return self.handle_play_request(station)
 
     @intent_handler("PlayTheNews.intent")
     def handle_latest_news_alt(self, message):
@@ -194,6 +170,35 @@ class NewsSkill(CommonPlaySkill):
 
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
+    def handle_play_request(self, station: BaseStation):
+        dialog = ("news", {"from": station.full_name})
+        media_uri = station.media_uri
+        gui_page = "AudioPlayer_mark_ii.qml"
+        gui_data = {
+            "media": {
+                "image": str(station.image_path),
+                "artist": station.acronym,
+                "track": station.full_name,
+                "album": "",
+                "skill": self.skill_id,
+                "streaming": True,
+            },
+            "status": "Starting",
+            "theme": dict(fgColor="white", bgColor=station.color),
+            "playerPosition": 0.0,
+        }
+
+        # The session id of our stream in the audio UI will be this sesson's id
+        self._stream_session_id = self._mycroft_session_id
+        self.now_playing = station
+
+        return self.end_session(
+            dialog=dialog,
+            gui=(gui_page, gui_data),
+            music_uri=media_uri,
+            gui_clear=GuiClear.NEVER,
+        )
+
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
         if data and data.get("acronym"):
@@ -202,7 +207,8 @@ class NewsSkill(CommonPlaySkill):
         else:
             # Just use the default news feed
             selected_station = self.get_default_station()
-        self.handle_play_request(selected_station)
+
+        return self.handle_play_request(selected_station)
 
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
         """Respond to Common Play Service query requests.
@@ -216,6 +222,7 @@ class NewsSkill(CommonPlaySkill):
         if not self.voc_match(phrase.lower(), "News"):
             # The utterance does not contain news vocab. Do not match.
             return None
+
         match = match_station_from_utterance(self, phrase)
 
         # If no match but utterance contains news, return low confidence level

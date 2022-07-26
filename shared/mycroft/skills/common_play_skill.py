@@ -194,8 +194,18 @@ class CommonPlaySkill(MycroftSkill, ABC):
             )
         )
 
-        # Invoke derived class to provide playback data
-        self.CPS_start(phrase, data)
+        result: Optional[Message] = None
+        try:
+            # Invoke derived class to provide playback data
+            result = self.CQS_start(phrase, data)
+        except Exception:
+            LOG.exception("Error starting common play service")
+
+        if result is None:
+            # Automatically close session
+            result = self.end_session()
+
+        self.bus.emit(result)
 
     def CPS_play(self, tracks=None, utterance=None, repeat=None):
         """Begin playback of a media file or stream

@@ -298,12 +298,10 @@ class AudioUserInterface:
         LOG.info("Queued TTS chunk %s/%s: %s", chunk_index + 1, num_chunks, uri)
 
     def handle_tts_started(self, _message: Message):
-        # Duck music
-        self._ahal.set_background_volume(0.3)
+        self._duck_volume()
 
     def handle_tts_finished(self, _message: Message):
-        # Unduck music
-        self._ahal.set_background_volume(1.0)
+        self._unduck_volume()
 
     def handle_media_finished(self, message):
         """Callback when VLC media item has finished playing"""
