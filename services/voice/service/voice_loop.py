@@ -6,7 +6,7 @@ from collections import deque
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import numpy as np
@@ -27,139 +27,162 @@ VAD_THRESHOLD = 0.2
 CHUNKS_TO_BUFFER = 2
 
 
-def voice_loop(
-    config: dict[str, Any],
-    bus: MessageBusClient,
-    hotword: HotWordEngine,
-    vad: SileroVoiceActivityDetector,
-    stt: StreamingSTT,
-):
-    # Name reported in recognizer_loop:wakeword
-    wake_word_name = config.get("listener", {}).get("wake_word", "hey mycroft")
+class VoiceLoop:
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        bus: MessageBusClient,
+        hotword: HotWordEngine,
+        vad: SileroVoiceActivityDetector,
+        stt: StreamingSTT,
+    ):
+        self.config = config
+        self.bus = bus
+        self.hotword = hotword
+        self.vad = vad
+        self.stt = stt
 
-    queue: "Queue[bytes]" = Queue()
-    Thread(target=_audio_input, args=(queue,), daemon=True).start()
+        # TODO: Use config
+        self.command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
 
-    # TODO: Use config
-    command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
-    chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
-    is_recording = False
-    muted = False
-    mycroft_session_id: Optional[str] = None
+        self.log = logging.getLogger("voice.loop")
 
-    def do_listen(message: Optional[Message] = None):
-        nonlocal is_recording, mycroft_session_id
-        if muted:
-            LOG.warning("Not waking up since we're muted")
+        self.is_recording = False
+        self.muted = False
+        self.mycroft_session_id: Optional[str] = None
+
+        # Name reported in recognizer_loop:wakeword
+        self.wake_word_name = config.get("listener", {}).get("wake_word", "hey mycroft")
+
+        # Audio chunks from arecord
+        self.queue: "Queue[bytes]" = Queue()
+
+        # Buffered audio that's sent to STT after wake
+        self.chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
+
+    def start(self):
+        # Start arecord in separate thread
+        # TODO: Use configurable command
+        Thread(target=_audio_input, args=(self.queue,), daemon=True).start()
+
+        self.bus.on("mycroft.mic.mute", self.handle_mute)
+        self.bus.on("mycroft.mic.unmute", self.handle_unmute)
+        self.bus.on("mycroft.mic.listen", self.handle_listen)
+
+    def run(self):
+        while True:
+            chunk = self.queue.get(timeout=AUDIO_TIMEOUT)
+            assert chunk, "Empty audio chunk"
+
+            if self.muted:
+                self.chunk_buffer.clear()
+                chunk = bytes(len(chunk))
+
+            self.chunk_buffer.append(chunk)
+            if not self.is_recording:
+                self.hotword.update(chunk)
+                if self.hotword.found_wake_word(None) and (not self.muted):
+                    self.log.info("Hotword detected!")
+                    self.do_listen()
+            else:
+                # In voice command
+                self.stt.update(chunk)
+                seconds = _chunk_seconds(
+                    len(chunk), sample_rate=16000, sample_width=2, channels=1
+                )
+
+                # Check for end of voice command
+                chunk_array = np.frombuffer(chunk, dtype=np.int16)
+                is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
+                if self.command.process(is_speech, seconds):
+                    self.is_recording = False
+                    text = self.stt.stop() or ""
+                    self.log.info("STT: %s", text)
+
+                    self.bus.emit(
+                        Message(
+                            "recognizer_loop:record_end",
+                            {
+                                "mycroft_session_id": self.mycroft_session_id,
+                            },
+                        )
+                    )
+                    self.bus.emit(
+                        Message(
+                            "recognizer_loop:utterance",
+                            {
+                                "utterances": [text],
+                                "mycroft_session_id": self.mycroft_session_id,
+                            },
+                        )
+                    )
+
+                    if not text:
+                        self.bus.emit(
+                            Message("recognizer_loop:speech.recognition.unknown")
+                        )
+
+    def do_listen(self, message: Optional[Message] = None):
+        if self.muted:
+            self.log.warning("Not waking up since we're muted")
             return
 
         if message:
-            mycroft_session_id = message.data.get("mycroft_session_id")
+            self.mycroft_session_id = message.data.get("mycroft_session_id")
         else:
-            mycroft_session_id = str(uuid4())
+            self.mycroft_session_id = str(uuid4())
 
-        bus.emit(
+        self.bus.emit(
             Message(
                 "recognizer_loop:awoken",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": self.mycroft_session_id},
             )
         )
-        bus.emit(
+        self.bus.emit(
             Message(
                 "recognizer_loop:wakeword",
-                data={"utterance": wake_word_name, "session": mycroft_session_id},
+                data={
+                    "utterance": self.wake_word_name,
+                    "session": self.mycroft_session_id,
+                },
             )
         )
-        bus.emit(
+        self.bus.emit(
             Message(
                 "recognizer_loop:record_begin",
                 {
-                    "mycroft_session_id": mycroft_session_id,
+                    "mycroft_session_id": self.mycroft_session_id,
                 },
             )
         )
 
         # Begin voice command
-        command.reset()
-        stt.start()
-        is_recording = True
+        self.command.reset()
+        self.stt.start()
+        self.is_recording = True
 
         # Push audio buffer into STT
-        command.reset()
-        for buffered_chunk in chunk_buffer:
-            stt.update(buffered_chunk)
-            chunk_array = np.frombuffer(chunk, dtype=np.int16)
-            is_speech = vad(chunk_array) >= VAD_THRESHOLD
-            command.process(is_speech, seconds)
+        self.command.reset()
+        for buffered_chunk in self.chunk_buffer:
+            seconds = _chunk_seconds(
+                len(buffered_chunk), sample_rate=16000, sample_width=2, channels=1
+            )
 
-    def handle_mute(_message):
-        nonlocal muted
-        muted = True
-        LOG.info("Muted microphone")
+            self.stt.update(buffered_chunk)
+            chunk_array = np.frombuffer(buffered_chunk, dtype=np.int16)
+            is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
+            self.command.process(is_speech, seconds)
 
-    def handle_unmute(_message):
-        nonlocal muted
-        muted = False
-        LOG.info("Unmuted microphone")
+    def handle_mute(self, _message):
+        self.muted = True
+        self.log.info("Muted microphone")
 
-    def handle_listen(message):
-        do_listen(message)
+    def handle_unmute(self, _message):
+        self.muted = False
+        self.log.info("Unmuted microphone")
 
-    bus.on("mycroft.mic.mute", handle_mute)
-    bus.on("mycroft.mic.unmute", handle_unmute)
-    bus.on("mycroft.mic.listen", handle_listen)
-
-    while True:
-        chunk = queue.get(timeout=AUDIO_TIMEOUT)
-        assert chunk, "Empty audio chunk"
-
-        if muted:
-            chunk_buffer.clear()
-            chunk = bytes(len(chunk))
-
-        # TODO: Use config
-        seconds = _chunk_seconds(
-            len(chunk), sample_rate=16000, sample_width=2, channels=1
-        )
-
-        chunk_buffer.append(chunk)
-        if not is_recording:
-            hotword.update(chunk)
-            if hotword.found_wake_word(None) and (not muted):
-                LOG.info("Hotword detected!")
-                do_listen()
-        else:
-            # In voice command
-            stt.update(chunk)
-
-            # Check for end of voice command
-            chunk_array = np.frombuffer(chunk, dtype=np.int16)
-            is_speech = vad(chunk_array) >= VAD_THRESHOLD
-            if command.process(is_speech, seconds):
-                is_recording = False
-                text = stt.stop() or ""
-                LOG.info("STT: %s", text)
-
-                bus.emit(
-                    Message(
-                        "recognizer_loop:record_end",
-                        {
-                            "mycroft_session_id": mycroft_session_id,
-                        },
-                    )
-                )
-                bus.emit(
-                    Message(
-                        "recognizer_loop:utterance",
-                        {
-                            "utterances": [text],
-                            "mycroft_session_id": mycroft_session_id,
-                        },
-                    )
-                )
-
-                if not text:
-                    bus.emit(Message("recognizer_loop:speech.recognition.unknown"))
+    def handle_listen(self, message):
+        self.do_listen(message)
 
 
 def _audio_input(queue: "Queue[bytes]"):

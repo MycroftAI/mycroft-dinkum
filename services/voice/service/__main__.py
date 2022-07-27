@@ -18,7 +18,7 @@ from .voice_loop import (
     load_hotword_module,
     load_stt_module,
     load_vad_detector,
-    voice_loop,
+    VoiceLoop,
 )
 
 
@@ -70,15 +70,14 @@ class VoiceService(DinkumService):
         self.vad = load_vad_detector()
         self.stt = load_stt_module(self.config, self.bus)
 
+        self.voice_loop = VoiceLoop(
+            self.config, self.bus, self.hotword, self.vad, self.stt
+        )
+        self.voice_loop.start()
+
     def run(self):
         self._wait_for_ready()
-        voice_loop(
-            config=self.config,
-            bus=self.bus,
-            hotword=self.hotword,
-            vad=self.vad,
-            stt=self.stt,
-        )
+        self.voice_loop.run()
 
     def stop(self):
         pass
