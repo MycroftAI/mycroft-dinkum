@@ -153,4 +153,16 @@ class DinkumService(ABC):
 
             time.sleep(wait_sec)
 
-        LOG.debug("%s service connected", service_id)
+        self.log.debug("%s service connected", service_id)
+
+    def _wait_for_gui(self, wait_sec: float = 0.5):
+        # Wait for GUI connected
+        self.log.debug("Waiting for GUI...")
+        while True:
+            response = self.bus.wait_for_response(Message("gui.status.request"))
+            if response and response.data.get("connected", False):
+                break
+
+            time.sleep(wait_sec)
+
+        self.log.debug("GUI connected")

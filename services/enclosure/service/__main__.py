@@ -12,160 +12,93 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
-import sys
-import time
-from threading import Event, Thread
-from typing import Any, Dict, Optional
-
-import sdnotify
-from mycroft.configuration import Configuration
-from mycroft.messagebus.client import create_client
-from mycroft_bus_client import Message, MessageBusClient
-
-# from .enclosure.mark2 import EnclosureMark2
-
-SERVICE_ID = "enclosure"
-LOG = logging.getLogger(SERVICE_ID)
-NOTIFIER = sdnotify.SystemdNotifier()
-WATCHDOG_DELAY = 0.5
+from mycroft.service import DinkumService
+from mycroft_bus_client import Message
 
 IDLE_SKILL_ID = "homescreen.mycroftai"
 
 
-def main():
-    """Service entry point"""
-    logging.basicConfig(level=logging.DEBUG)
-    LOG.info("Starting service...")
+class EnclosureService(DinkumService):
+    def __init__(self):
+        super().__init__(service_id="enclosure")
 
-    try:
-        config = Configuration.get()
-        bus = _connect_to_bus(config)
+        self.led_session_id: Optional[str] = None
 
-        # Wait for GUI connected
-        LOG.debug("Waiting for GUI...")
-        while True:
-            response = bus.wait_for_response(Message("gui.status.request"))
-            if response.data.get("connected", False):
-                break
+    def start(self):
+        self._wait_for_gui()
 
-            time.sleep(0.5)
+        self.bus.on("recognizer_loop:awoken", self.handle_wake)
+        self.bus.on("mycroft.skill-response", self.handle_skill_response)
+        self.bus.on("mycroft.session.started", self.handle_session_started)
+        self.bus.on("mycroft.session.ended", self.handle_session_ended)
+        self.bus.on("mycroft.session.no-active-sessions", self.handle_idle)
+        self.bus.on("mycroft.gui.idle", self.handle_idle)
+        self.bus.on("mycroft.switch.state", self.handle_switch_state)
 
-        LOG.debug("GUI connected")
+        # Return to idle screen if GUI reconnects
+        self.bus.on(
+            "gui.initialize.ended", lambda m: self.bus.emit(Message("mycroft.gui.idle"))
+        )
 
-        # enclosure = EnclosureMark2(bus, config)
-        # enclosure.run()
-        led_session_id: Optional[str] = None
+        # HACK: Show home screen
+        self.bus.emit(Message("mycroft.gui.idle"))
 
-        def handle_wake(message):
-            nonlocal led_session_id
-            led_session_id = message.data.get("mycroft_session_id")
+        # Request switch states so mute is correctly shown
+        self.bus.emit(Message("mycroft.switch.report-states"))
 
-            # Stop speaking
-            bus.emit(Message("mycroft.tts.stop"))
-            bus.emit(Message("mycroft.feedback.set-state", data={"state": "awake"}))
+        # TODO: Make this request/response
+        self.bus.emit(Message("mycroft.ready"))
 
-        def handle_skill_response(message):
-            nonlocal led_session_id
-            led_session_id = message.data.get("mycroft_session_id")
-            bus.emit(
+    def stop(self):
+        pass
+
+    def handle_wake(self, message):
+        self.led_session_id = message.data.get("mycroft_session_id")
+
+        # Stop speaking
+        self.bus.emit(Message("mycroft.tts.stop"))
+        self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "awake"}))
+
+    def handle_skill_response(self, message):
+        self.led_session_id = message.data.get("mycroft_session_id")
+        self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "thinking"}))
+
+    def handle_session_started(self, message):
+        if message.data.get("skill_id") != IDLE_SKILL_ID:
+            self.led_session_id = message.data.get("mycroft_session_id")
+            self.bus.emit(
                 Message("mycroft.feedback.set-state", data={"state": "thinking"})
             )
 
-        def handle_session_started(message):
-            nonlocal led_session_id
-            if message.data.get("skill_id") != IDLE_SKILL_ID:
-                led_session_id = message.data.get("mycroft_session_id")
-                bus.emit(
-                    Message("mycroft.feedback.set-state", data={"state": "thinking"})
-                )
+    def handle_session_ended(self, message):
+        if message.data.get("mycroft_session_id") == self.led_session_id:
+            self.led_session_id = None
+            self.bus.emit(
+                Message("mycroft.feedback.set-state", data={"state": "asleep"})
+            )
 
-        def handle_session_ended(message):
-            nonlocal led_session_id
-            if message.data.get("mycroft_session_id") == led_session_id:
-                led_session_id = None
-                bus.emit(
-                    Message("mycroft.feedback.set-state", data={"state": "asleep"})
-                )
+    def handle_idle(self, message):
+        self.led_session_id = None
+        self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
 
-        def handle_idle(message):
-            nonlocal led_session_id
-            led_session_id = None
-            bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
-
-        def handle_switch_state(message):
-            name = message.data.get("name")
-            state = message.data.get("state")
-            if name == "mute":
-                # This looks wrong, but the off/inactive state of the switch
-                # means muted.
-                if state == "off":
-                    bus.emit(Message("mycroft.mic.mute"))
-                else:
-                    bus.emit(Message("mycroft.mic.unmute"))
-            elif (name == "action") and (state == "on"):
-                # Action button wakes up device
-                bus.emit(Message("mycroft.mic.listen"))
-
-        bus.on("recognizer_loop:awoken", handle_wake)
-        bus.on("mycroft.skill-response", handle_skill_response)
-        bus.on("mycroft.session.started", handle_session_started)
-        bus.on("mycroft.session.ended", handle_session_ended)
-        bus.on("mycroft.session.no-active-sessions", handle_idle)
-        bus.on("mycroft.gui.idle", handle_idle)
-        bus.on("mycroft.switch.state", handle_switch_state)
-
-        # Return to idle screen if GUI reconnects
-        bus.on("gui.initialize.ended", lambda m: bus.emit(Message("mycroft.gui.idle")))
-
-        # Start watchdog thread
-        Thread(target=_watchdog, daemon=True).start()
-
-        # Inform systemd that we successfully started
-        NOTIFIER.notify("READY=1")
-        bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
-
-        # HACK: Show home screen
-        bus.emit(Message("mycroft.gui.idle"))
-
-        # Request switch states so mute is correctly shown
-        bus.emit(Message("mycroft.switch.report-states"))
-
-        bus.emit(Message("mycroft.ready"))
-
-        try:
-            # Wait for exit signal
-            Event().wait()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            enclosure.stop()
-            bus.close()
-
-        LOG.info("Service is shutting down...")
-    except Exception:
-        LOG.exception("Service failed to start")
+    def handle_switch_state(self, message):
+        name = message.data.get("name")
+        state = message.data.get("state")
+        if name == "mute":
+            # This looks wrong, but the off/inactive state of the switch
+            # means muted.
+            if state == "off":
+                self.bus.emit(Message("mycroft.mic.mute"))
+            else:
+                self.bus.emit(Message("mycroft.mic.unmute"))
+        elif (name == "action") and (state == "on"):
+            # Action button wakes up device
+            self.bus.emit(Message("mycroft.mic.listen"))
 
 
-def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
-    bus = create_client(config)
-    bus.run_in_thread()
-    bus.connected_event.wait()
-    bus.on(f"{SERVICE_ID}.service.connected", lambda m: bus.emit(m.response()))
-    bus.emit(Message(f"{SERVICE_ID}.initialize.started"))
-    LOG.info("Connected to Mycroft Core message bus")
-
-    return bus
-
-
-def _watchdog():
-    try:
-        while True:
-            # Prevent systemd from restarting service
-            NOTIFIER.notify("WATCHDOG=1")
-            time.sleep(WATCHDOG_DELAY)
-    except Exception:
-        LOG.exception("Unexpected error in watchdog thread")
+def main():
+    """Service entry point"""
+    EnclosureService().main()
 
 
 if __name__ == "__main__":

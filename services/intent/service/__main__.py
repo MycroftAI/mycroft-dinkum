@@ -30,6 +30,8 @@ class IntentService(DinkumService):
         self._intent_service = InternalIntentService(self.config, self.bus)
         self._event_scheduler = EventScheduler(self.bus)
 
+        self._intent_service.start()
+
     def stop(self):
         self._intent_service.stop()
         self._event_scheduler.shutdown()
