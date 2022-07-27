@@ -213,6 +213,8 @@ class CommonQuerySkill(MycroftSkill, ABC):
         result: Optional[Message] = None
         try:
             result = self.CQS_action(phrase, data)
+        except Exception:
+            LOG.exception("Error running common query action")
         finally:
             self.bus.emit(Message("query:action-complete", data=message.data))
 
@@ -222,14 +224,8 @@ class CommonQuerySkill(MycroftSkill, ABC):
 
         self.bus.emit(result)
 
-    def stop(self):
-        # TODO check if active
-        self.log.error("Creepy Internal Error 101 - skill missing stop method")
-
     def CQS_release_output_focus(self):
-        """Stop any active tts."""
-        self.log.debug("Release tts %s" % (self.skill_id,))
-        self.bus.emit(Message("mycroft.tts.stop"))
+        pass
 
     @abstractmethod
     def CQS_match_query_phrase(self, phrase):

@@ -1,9 +1,0 @@
-{
-  "utterance": "register my device",
-  "intent_type": "PairingIntent",
-  "intent": {
-    "PairingKeyword": "register",
-    "DeviceKeyword": "device"
-  },
-  "expected_dialog": "already.paired"
-}

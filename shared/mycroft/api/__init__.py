@@ -32,12 +32,16 @@ class BackendDown(RequestException):
     pass
 
 
-def get_pantacor_device_id():
+def get_pantacor_device_id() -> str:
     """Quick hack to read a file owned by root on a pantacor device."""
-    # TODO: replace this with reading a file accessible by the mycroft user
-    cmd = ["sudo", "cat", "/pantavisor/device-id"]
-    result = subprocess.check_output(cmd)
-    pantacor_device_id = result.decode().strip()
+    try:
+        # TODO: replace this with reading a file accessible by the mycroft user
+        cmd = ["sudo", "cat", "/pantavisor/device-id"]
+        result = subprocess.check_output(cmd)
+        pantacor_device_id = result.decode().strip()
+    except Exception:
+        LOG.exception("Error reading pantacor id")
+        pantacor_device_id = "unknown"
 
     return pantacor_device_id
 

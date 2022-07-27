@@ -31,6 +31,7 @@ from threading import Event, Lock, Timer
 from typing import Any, Dict, List, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
+from enum import Enum
 
 import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder
@@ -65,6 +66,19 @@ SessionDialogsType = Union[SessionDialogType, List[SessionDialogType]]
 SessionGuiDataType = Optional[Dict[str, Any]]
 SessionGuiType = Union[str, Tuple[str, SessionGuiDataType]]
 SessionGuisType = Union[SessionGuiType, List[SessionGuiType]]
+
+
+class GuiClear(str, Enum):
+    AUTO = "auto"
+    ON_IDLE = "on_idle"
+    NEVER = "never"
+    AT_START = "at_start"
+    AT_END = "at_end"
+
+
+class MessageSend(str, Enum):
+    AT_START = "at_start"
+    AT_END = "at_end"
 
 
 def simple_trace(stack_trace):
@@ -353,17 +367,7 @@ class MycroftSkill:
 
             self._register_public_api()
 
-            # Unblock wait_while_speaking
-            # self._bus.on(
-            #     "mycroft.tts.speaking-finished", self._handle_speaking_finished
-            # )
-
-            # # For get_response
-            # self._bus.on("mycroft.skill-response", self._handle_skill_response)
-
-            # self._bus.on("mycroft.session.started", self._handle_session_started)
-            # self._bus.on("mycroft.session.ended", self._handle_session_ended)
-            self._bus.on("mycroft.skill-response", self._handle_skill_response)
+            self._bus.on("mycroft.skill-response", self.__handle_skill_response)
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -419,13 +423,14 @@ class MycroftSkill:
         system.
         """
 
-        def stop_is_implemented():
-            return self.__class__.stop is not MycroftSkill.stop
+        # def stop_is_implemented():
+        #     return self.__class__.stop is not MycroftSkill.stop
 
-        # Only register stop if it's been implemented
-        if stop_is_implemented():
-            self.add_event("mycroft.stop", self.__handle_stop)
+        # # Only register stop if it's been implemented
+        # if stop_is_implemented():
+        #     self.add_event("mycroft.stop", self.__handle_stop)
 
+        self.add_event("mycroft.skill.stop", self.__handle_skill_stop)
         self.add_event("mycroft.skills.initialized", self.handle_skills_initialized)
         self.add_event("mycroft.skill.enable_intent", self.handle_enable_intent)
         self.add_event("mycroft.skill.disable_intent", self.handle_disable_intent)
@@ -932,15 +937,23 @@ class MycroftSkill:
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
             self._mycroft_session_id = message.data.get("mycroft_session_id")
+            self.log.debug(
+                "Handling %s with skill %s (session=%s)",
+                name,
+                self.skill_id,
+                self._mycroft_session_id,
+            )
+
             result_message: Optional[Message] = None
             try:
+                self.acknowledge()
                 message = unmunge_message(message, self.skill_id)
                 result_message = handler(message)
             except Exception:
                 LOG.exception("Error in intent handler: %s", name)
 
                 # Speak error
-                self.start_session(
+                self.emit_start_session(
                     dialog=("skill.error", {"skill": camel_case_split(self.name)})
                 )
 
@@ -1305,7 +1318,7 @@ class MycroftSkill:
         if acknowledge:
             audio_file = resolve_resource_file(acknowledge)
 
-            if audio_file:
+            if not audio_file:
                 LOG.warning("Could not find 'acknowledge' audio file!")
                 return
 
@@ -1355,40 +1368,57 @@ class MycroftSkill:
             for regex in regexes:
                 self.intent_service.register_adapt_regex(regex)
 
-    def __handle_stop(self, _):
-        """Handler for the "mycroft.stop" signal. Runs the user defined
-        `stop()` method.
-        """
-        msg = _
-        if (
-            msg.data.get("skill", "") == self.skill_id
-            or msg.data.get("skill", "") == "*"
-        ):
-            LOG.debug("handle stop skill_id:%s" % (self.skill_id,))
-        else:
-            LOG.debug("stop ignored. %s, %s" % (self.skill_id, msg.data))
-            return
+    # def __handle_stop(self, _):
+    #     """Handler for the "mycroft.stop" signal. Runs the user defined
+    #     `stop()` method.
+    #     """
+    #     msg = _
+    #     if (
+    #         msg.data.get("skill", "") == self.skill_id
+    #         or msg.data.get("skill", "") == "*"
+    #     ):
+    #         LOG.debug("handle stop skill_id:%s" % (self.skill_id,))
+    #     else:
+    #         LOG.debug("stop ignored. %s, %s" % (self.skill_id, msg.data))
+    #         return
 
-        def __stop_timeout():
-            # The self.stop() call took more than 100ms, assume it handled Stop
-            self.bus.emit(
-                Message("mycroft.stop.handled", {"skill_id": str(self.skill_id) + ":"})
-            )
+    #     def __stop_timeout():
+    #         # The self.stop() call took more than 100ms, assume it handled Stop
+    #         self.bus.emit(
+    #             Message("mycroft.stop.handled", {"skill_id": str(self.skill_id) + ":"})
+    #         )
 
-        timer = Timer(0.1, __stop_timeout)  # set timer for 100ms
-        try:
-            if self.stop():
-                self.bus.emit(
-                    Message("mycroft.stop.handled", {"by": "skill:" + self.skill_id})
-                )
-            timer.cancel()
-        except Exception:
-            timer.cancel()
-            LOG.error("Failed to stop skill: {}".format(self.name), exc_info=True)
+    #     timer = Timer(0.1, __stop_timeout)  # set timer for 100ms
+    #     try:
+    #         if self.stop():
+    #             self.bus.emit(
+    #                 Message("mycroft.stop.handled", {"by": "skill:" + self.skill_id})
+    #             )
+    #         timer.cancel()
+    #     except Exception:
+    #         timer.cancel()
+    #         LOG.error("Failed to stop skill: {}".format(self.name), exc_info=True)
 
-    def stop(self):
+    def __handle_skill_stop(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if skill_id == self.skill_id:
+            self.log.debug("Handling stop in skill: %s", self.skill_id)
+            self._mycroft_session_id = message.data.get("mycroft_session_id")
+
+            result_message: Optional[Message] = None
+            try:
+                result_message = self.stop()
+            except Exception:
+                self.log.exception("Error handling stop")
+
+            if result_message is None:
+                result_message = self.end_session()
+
+            self.bus.emit(result_message)
+
+    def stop(self) -> Optional[Message]:
         """Optional method implemented by subclass."""
-        pass
+        return self.end_session(gui_clear=GuiClear.AT_END)
 
     def shutdown(self):
         """Optional shutdown proceedure implemented by subclass.
@@ -1515,65 +1545,6 @@ class MycroftSkill:
         """Cancel any repeating events started by the skill."""
         return self.event_scheduler.cancel_all_repeating_events()
 
-    # def activity_started(self):
-    #     """Indicate that a skill activity has started.
-
-    #     This will flush the TTS cache and keep LED animations going.
-    #     """
-    #     self._activity_id = str(uuid4())
-    #     self.bus.emit(
-    #         Message(
-    #             "skill.started",
-    #             data={
-    #                 "skill_id": self.skill_id,
-    #                 "activity_id": self._activity_id,
-    #                 "mycroft_session_id": self._mycroft_session_id,
-    #             },
-    #         )
-    #     )
-    #     LOG.info(
-    #         "%s started (skill=%s, activity=%s)",
-    #         self.name,
-    #         self.skill_id,
-    #         self._activity_id,
-    #     )
-
-    #     self.acknowledge()
-
-    # def activity_ended(self):
-    #     """Indicate that a skill activity has ended.
-
-    #     This will stop LED animations.
-    #     """
-    #     self.bus.emit(
-    #         Message(
-    #             "skill.ended",
-    #             data={
-    #                 "skill_id": self.skill_id,
-    #                 "activity_id": self._activity_id,
-    #                 "mycroft_session_id": self._mycroft_session_id,
-    #             },
-    #         )
-    #     )
-    #     LOG.info(
-    #         "%s ended (skill=%s, activity=%s)",
-    #         self.name,
-    #         self.skill_id,
-    #         self._activity_id,
-    #     )
-
-    # @contextmanager
-    # def activity(self):
-    #     """Return a context manager that calls activity started/ended.
-
-    #     Yields the activity id.
-    #     """
-    #     self.activity_started()
-    #     try:
-    #         yield self._activity_id
-    #     finally:
-    #         self.activity_ended()
-
     def play_sound_uri(self, uri: str):
         self.bus.emit(
             Message(
@@ -1582,37 +1553,19 @@ class MycroftSkill:
             )
         )
 
-    # def wait_while_speaking(self, timeout=60):
-    #     if self._tts_session_id:
-    #         self._tts_speak_finished.wait(timeout=timeout)
-
-    # def _handle_speaking_finished(self, message: Message):
-    #     session_id = message.data.get("session_id")
-    #     if session_id == self._tts_session_id:
-    #         self._tts_session_id = None
-    #         self._tts_speak_finished.set()
-
-    # def stop_speaking(self):
-    #     self.bus.emit(Message("mycroft.tts.stop"))
-
-    # def _handle_skill_response(self, message: Message):
-    #     """Catch responses intended for a specific skill"""
-    #     skill_id = message.data.get("skill_id")
-    #     if skill_id == self.skill_id:
-    #         # Intended for this skill
-    #         utterances = message.data.get("utterances")
-    #         utterance = utterances[0] if utterances else None
-    #         LOG.debug("Handling response in skill: %s", utterance)
-    #         self._response_queue.put_nowait(utterance)
-    #         self._bus.emit(message.response())
-
     # -------------------------------------------------------------------------
 
-    def update_gui_values(self, page: str, data: Dict[str, Any]):
+    def update_gui_values(
+        self, page: str, data: Dict[str, Any], overwrite: bool = True
+    ):
         self.bus.emit(
             Message(
                 "gui.value.set",
-                data={"namespace": f"{self.skill_id}.{page}", "data": data},
+                data={
+                    "namespace": f"{self.skill_id}.{page}",
+                    "data": data,
+                    "overwrite": overwrite,
+                },
             )
         )
 
@@ -1622,13 +1575,29 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
+        expect_response: bool = False,
     ):
+        # Action ordering is fixed:
+        # 1. Send message (if "at_start")
+        # 2. Clear gui (if "at_start")
+        # 3. Play audio alert
+        # 4. Show gui page(s)
+        # 5. Speak dialog(s) or text
+        # 6. Clear gui or set idle timeout
         actions = []
 
-        if message is not None:
+        if expect_response and (gui_clear == GuiClear.AUTO):
+            # Don't clear GUI if a response is needed from the user
+            gui_clear = GuiClear.NEVER
+
+        # 1. Send message
+        if (message is not None) and (message_send == MessageSend.AT_START):
             actions.append(
                 {
                     "type": "message",
@@ -1641,12 +1610,15 @@ class MycroftSkill:
                 }
             )
 
-        if gui_clear == "at_start":
+        # 2. Clear gui (if "at_start")
+        if gui_clear == GuiClear.AT_START:
             actions.append({"type": "clear_display"})
 
+        # 3. Play audio alert
         if audio_alert:
             actions.append({"type": "audio_alert", "uri": audio_alert, "wait": True})
 
+        # 4. Show gui page(s)
         guis = []
         if gui is not None:
             if isinstance(gui, (str, tuple)):
@@ -1655,6 +1627,7 @@ class MycroftSkill:
             else:
                 guis = list(gui)
 
+        # 5. Speak dialog(s) or text
         dialogs = []
         if dialog is not None:
             if isinstance(dialog, (str, tuple)):
@@ -1663,10 +1636,11 @@ class MycroftSkill:
             else:
                 dialogs = list(dialog)
 
+        # Interleave dialog/gui pages
         for maybe_dialog, maybe_gui in itertools.zip_longest(dialogs, guis):
             if maybe_gui is not None:
                 if isinstance(maybe_gui, str):
-                    gui_page, gui_data = maybe_gui, {}
+                    gui_page, gui_data = maybe_gui, None
                 else:
                     gui_page, gui_data = maybe_gui
 
@@ -1674,13 +1648,10 @@ class MycroftSkill:
                     {
                         "type": "show_page",
                         "page": "file://" + self.find_resource(gui_page, "ui"),
-                        "data": gui_data or {},
+                        "data": gui_data,
                         "namespace": f"{self.skill_id}.{gui_page}",
                     }
                 )
-
-                if gui_clear == "auto":
-                    gui_clear = "on_idle"
 
             if maybe_dialog is not None:
                 if isinstance(maybe_dialog, str):
@@ -1707,9 +1678,41 @@ class MycroftSkill:
                 }
             )
 
-        if gui_clear == "after_speak":
+        if (message is not None) and (message_send == MessageSend.AT_END):
+            actions.append(
+                {
+                    "type": "message",
+                    "message_type": message.msg_type,
+                    "delay": message_delay,
+                    "data": {
+                        # Automatically add session id
+                        "mycroft_session_id": self._mycroft_session_id,
+                        **message.data,
+                    },
+                }
+            )
+
+        if music_uri:
+            actions.append({"type": "stream_music", "uri": music_uri})
+
+        if expect_response:
+            actions.append({"type": "get_response"})
+
+        if gui_clear == GuiClear.AUTO:
+            if guis:
+                if dialogs or (speak is not None):
+                    # TTS, wait for speak
+                    gui_clear = GuiClear.AT_END
+                else:
+                    # No TTS, so time out on idle
+                    gui_clear = GuiClear.ON_IDLE
+            else:
+                # No GUI, don't clear
+                gui_clear = GuiClear.NEVER
+
+        if gui_clear == GuiClear.AT_END:
             actions.append({"type": "clear_display"})
-        elif gui_clear == "on_idle":
+        elif gui_clear == GuiClear.ON_IDLE:
             actions.append({"type": "wait_for_idle"})
 
         return actions
@@ -1720,13 +1723,19 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
         continue_session: bool = False,
+        message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
+        mycroft_session_id: Optional[str] = None,
     ) -> str:
-        mycroft_session_id = str(uuid4())
+        if mycroft_session_id is None:
+            mycroft_session_id = str(uuid4())
+
         message = Message(
             "mycroft.session.start",
             data={
@@ -1739,9 +1748,12 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
+                    message_send=message_send,
+                    message_delay=message_delay,
+                    expect_response=expect_response,
                 ),
-                "expect_response": expect_response,
                 "continue_session": continue_session,
             },
         )
@@ -1755,15 +1767,24 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         expect_response: bool = False,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
+        mycroft_session_id: Optional[str] = None,
+        state: Optional[Dict[str, Any]] = None,
     ) -> Message:
+        if mycroft_session_id is None:
+            # Use session from latest intent handler
+            mycroft_session_id = self._mycroft_session_id
+
         return Message(
             "mycroft.session.continue",
             data={
-                "mycroft_session_id": self._mycroft_session_id,
+                "mycroft_session_id": mycroft_session_id,
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,
@@ -1772,9 +1793,13 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
+                    message_send=message_send,
+                    message_delay=message_delay,
+                    expect_response=expect_response,
                 ),
-                "expect_response": expect_response,
+                "state": state,
             },
         )
 
@@ -1784,14 +1809,22 @@ class MycroftSkill:
         speak: Optional[str] = None,
         speak_wait: bool = True,
         gui: Optional[SessionGuisType] = None,
-        gui_clear: str = "auto",
+        gui_clear: GuiClear = GuiClear.AUTO,
         audio_alert: Optional[str] = None,
+        music_uri: Optional[str] = None,
         message: Optional[Message] = None,
+        message_send: MessageSend = MessageSend.AT_START,
+        message_delay: float = 0.0,
+        mycroft_session_id: Optional[str] = None,
     ) -> Message:
+        if mycroft_session_id is None:
+            # Use session from latest intent handler
+            mycroft_session_id = self._mycroft_session_id
+
         return Message(
             "mycroft.session.end",
             data={
-                "mycroft_session_id": self._mycroft_session_id,
+                "mycroft_session_id": mycroft_session_id,
                 "skill_id": self.skill_id,
                 "actions": self._build_actions(
                     dialog=dialog,
@@ -1800,7 +1833,10 @@ class MycroftSkill:
                     gui=gui,
                     gui_clear=gui_clear,
                     audio_alert=audio_alert,
+                    music_uri=music_uri,
                     message=message,
+                    message_send=message_send,
+                    message_delay=message_delay,
                 ),
             },
         )
@@ -1810,27 +1846,28 @@ class MycroftSkill:
         message.data["aborted"] = True
         return message
 
-    # def _handle_session_started(self, message: Message):
-    #     self._mycroft_session_id = message.data.get("mycroft_session_id")
-
-    # def _handle_session_ended(self, _message: Message):
-    #     self._mycroft_session_id = None
-
-    def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
+    def raw_utterance(
+        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+    ) -> Optional[Message]:
+        """Callback when expect_response=True in continue_session"""
         return None
 
-    def _handle_skill_response(self, message: Message):
+    def __handle_skill_response(self, message: Message):
+        """Verifies that raw utterance is for this skill"""
         if (message.data.get("skill_id") == self.skill_id) and (
             message.data.get("mycroft_session_id") == self._mycroft_session_id
         ):
             utterances = message.data.get("utterances", [])
             utterance = utterances[0] if utterances else None
-            result_message = None
+            state = message.data.get("state")
+            result_message: Optional[Message] = None
             try:
-                result_message = self.raw_utterance(utterance)
+                self.acknowledge()
+                result_message = self.raw_utterance(utterance, state)
             except Exception:
                 LOG.exception("Unexpected error in raw_utterance")
 
             if result_message is None:
                 result_message = self.end_session()
+
             self.bus.emit(result_message)

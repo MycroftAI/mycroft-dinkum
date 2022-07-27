@@ -23,4 +23,6 @@ from .mycroft_skill import (
     intent_handler,
     resting_screen_handler,
     skill_api_method,
+    GuiClear,
+    MessageSend,
 )

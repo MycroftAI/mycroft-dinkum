@@ -39,6 +39,7 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
+from dataclasses import dataclass, field
 from threading import Lock, Timer
 from typing import Any, Dict, List, Union
 
@@ -58,6 +59,7 @@ from .bus import (
 # RESERVED_KEYS = ["__from", "__idle"]
 
 
+@dataclass
 class Namespace:
     """A grouping mechanism for related GUI pages and data.
 
@@ -73,10 +75,9 @@ class Namespace:
         data: a key/value pair representing the data used to populate the GUI
     """
 
-    def __init__(self, name: str):
-        self.name = name
-        self.pages: List[str] = list()
-        self.data: Dict[str, Any] = dict()
+    name: str
+    pages: List[str] = field(default_factory=list)
+    data: Dict[str, Any] = field(default_factory=dict)
 
 
 class NamespaceManager:
@@ -123,13 +124,7 @@ class NamespaceManager:
                     "data": [{"skill_id": namespace.name}],
                 }
             )
-            send_message_to_gui(
-                {
-                    "type": "mycroft.session.set",
-                    "namespace": namespace.name,
-                    "data": namespace.data,
-                }
-            )
+            self._update_namespace_data(namespace)
             send_message_to_gui(
                 {
                     "type": "mycroft.gui.list.insert",
@@ -143,9 +138,19 @@ class NamespaceManager:
         try:
             namespace = self._ensure_namespace_exists(message.data["namespace"])
             namespace.pages = message.data["page"]
-            namespace.data = message.data.get("data", {})
-            self._activate_namespace(namespace)
-            self.synchronize()
+
+            data = message.data.get("data")
+            if data is None:
+                data = namespace.data
+
+            namespace.data = data
+
+            if namespace not in self.active_namespaces:
+                self._activate_namespace(namespace)
+                self.synchronize()
+            else:
+                # Only send session data
+                self._update_namespace_data(namespace)
 
             LOG.debug(
                 "Showing page %s on namespace %s with data %s",
@@ -159,12 +164,17 @@ class NamespaceManager:
     def handle_set_value(self, message: Message):
         """Sets session data values"""
         try:
-            namespace = message.data["namespace"]
+            namespace = self._ensure_namespace_exists(message.data["namespace"])
             data = message.data.get("data", {})
+            if message.data.get("overwrite", True):
+                namespace.data = data
+            else:
+                namespace.data.update(data)
+
             send_message_to_gui(
                 {
                     "type": "mycroft.session.set",
-                    "namespace": namespace,
+                    "namespace": namespace.name,
                     "data": message.data.get("data", {}),
                 }
             )
@@ -200,6 +210,15 @@ class NamespaceManager:
             self.loaded_namespaces[namespace_name] = namespace
 
         return namespace
+
+    def _update_namespace_data(self, namespace: Namespace):
+        send_message_to_gui(
+            {
+                "type": "mycroft.session.set",
+                "namespace": namespace.name,
+                "data": namespace.data,
+            }
+        )
 
     def handle_status_request(self, message: Message):
         """Handles a GUI status request by replying with the connection status.

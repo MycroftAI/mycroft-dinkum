@@ -1,4 +1,4 @@
-# Copyright 2017 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,14 +15,13 @@
 """Mycroft's intent service, providing intent parsing since forever!"""
 import time
 from copy import copy
-from dataclasses import dataclass, field
 from threading import RLock, Thread
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 from uuid import uuid4
 
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
-from mycroft.messagebus.message import Message
+from mycroft_bus_client import Message, MessageBusClient
 from mycroft.skills.intent_service_interface import open_intent_envelope
 from mycroft.util.log import LOG
 from mycroft.util.parse import normalize
@@ -36,20 +35,22 @@ from .intent_services import (
     PadatiousService,
     RegexService,
 )
+from .session import (
+    Session,
+    SpeakAction,
+    ShowPageAction,
+    GetResponseAction,
+    ClearDisplayAction,
+    WaitForIdleAction,
+    MessageAction,
+)
+
 
 # Seconds before home screen is shown again (mycroft.gui.idle event)
 IDLE_TIMEOUT = 15
 
-
-@dataclass
-class Session:
-    id: str
-    skill_id: Optional[str] = None
-    will_continue: bool = False
-    expect_response: bool = False
-    actions: List[Dict[str, Any]] = field(default_factory=dict)
-    tick: int = field(default_factory=time.monotonic_ns)
-    aborted: bool = False
+# Seconds after speaking before going idle
+IDLE_QUICK_TIMEOUT = 2
 
 
 class IntentService:
@@ -59,13 +60,26 @@ class IntentService:
     querying the intent service.
     """
 
-    def __init__(self, bus):
-        # Dictionary for translating a skill id to a name
+    def __init__(self, config: Dict[str, Any], bus: MessageBusClient):
+        self.config = config
         self.bus = bus
 
         self.skill_names = {}
         self.skill_categories = {}
-        config = Configuration.get()
+
+        self._response_skill_id: Optional[str] = None
+        self._sessions: Dict[str, Session] = {}
+        self._session_lock = RLock()
+
+        self._last_gui_session: Optional[Session] = None
+
+        self._idle_seconds_left: Optional[int] = None
+        self._delayed_messages_lock = RLock()
+        self._delayed_messages: List[MessageAction] = []
+
+        self.registered_vocab = []
+
+        # Register services
         self.regex_service = RegexService(bus, config)
         self.adapt_service = AdaptService(config.get("context", {}))
         try:
@@ -76,353 +90,14 @@ class IntentService:
             )
         self.fallback = FallbackService(bus)
 
-        self._response_skill_id: Optional[str] = None
-        self._sessions: Dict[str, Session] = {}
-        self._session_lock = RLock()
+    def start(self):
+        self._register_event_handlers()
 
-        self._last_gui_session: Optional[Session] = None
-        self._last_tts_session: Optional[Session] = None
-        self._last_music_session: Optional[Session] = None
-        self._last_alert_session: Optional[Session] = None
-
-        self._idle_seconds_left: Optional[int] = None
+        # Show idle GUI screen on timeout
         Thread(target=self._check_idle_timeout, daemon=True).start()
 
-        self.bus.on("register_vocab", self.handle_register_vocab)
-        self.bus.on("register_intent", self.handle_register_intent)
-
-        self.bus.on("recognizer_loop:utterance", self.handle_utterance)
-        self.bus.on("mycroft.session.start", self.handle_session_start)
-        self.bus.on("mycroft.session.continue", self.handle_session_continue)
-        self.bus.on("mycroft.session.end", self.handle_session_end)
-        self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
-        self.bus.on("mycroft.audio.hal.media.ended", self.handle_media_finished)
-        self.bus.on("mycroft.stop", self.handle_stop)
-
-        self.bus.on("detach_intent", self.handle_detach_intent)
-        self.bus.on("detach_skill", self.handle_detach_skill)
-
-        # Intents API
-        self.registered_vocab = []
-        self.bus.on("intent.service.intent.get", self.handle_get_intent)
-        self.bus.on("intent.service.adapt.get", self.handle_get_adapt)
-        self.bus.on("intent.service.adapt.manifest.get", self.handle_adapt_manifest)
-        self.bus.on(
-            "intent.service.adapt.vocab.manifest.get", self.handle_vocab_manifest
-        )
-        self.bus.on("intent.service.padatious.get", self.handle_get_padatious)
-        self.bus.on(
-            "intent.service.padatious.manifest.get", self.handle_padatious_manifest
-        )
-        self.bus.on(
-            "intent.service.padatious.entities.manifest.get",
-            self.handle_entity_manifest,
-        )
-
-    @property
-    def registered_intents(self):
-        return [parser.__dict__ for parser in self.adapt_service.engine.intent_parsers]
-
-    def update_skill_name_dict(self, message):
-        """Messagebus handler, updates dict of id to skill name conversions."""
-        self.skill_names[message.data["id"]] = message.data["name"]
-        self.bus.emit(Message("skillmanager.list"))
-
-    def update_skill_list(self, message):
-        for skill in message.data:
-            self.skill_categories[message.data[skill]["id"]] = message.data[skill][
-                "cat"
-            ]
-
-    def get_skill_name(self, skill_id):
-        """Get skill name from skill ID.
-
-        Args:
-            skill_id: a skill id as encoded in Intent handlers.
-
-        Returns:
-            (str) Skill name or the skill id if the skill wasn't found
-        """
-        return self.skill_names.get(skill_id, skill_id)
-
-    def handle_stop(self, _message: Message):
-        # Always stop TTS
-        self.bus.emit(Message("mycroft.tts.stop"))
-
-        # Determine target skill
-        skill_id: Optional[str] = None
-        with self._session_lock:
-            if self._last_gui_session is not None:
-                skill_id = self._last_gui_session.skill_id
-
-        if skill_id:
-            # TODO: Call skill handler
-            LOG.debug("Stopping skill: %s", skill_id)
-
-        # Return GUI to idle
-        self._idle_seconds_left = None
-        self.bus.emit(Message("mycroft.gui.idle"))
-
-    def start_session(self, mycroft_session_id: str, skill_id: Optional[str] = None):
-        LOG.debug("Starting session: %s", mycroft_session_id)
-        self._sessions[mycroft_session_id] = Session(
-            id=mycroft_session_id,
-            skill_id=skill_id,
-            will_continue=False,
-            expect_response=False,
-        )
-
-        self.bus.emit(
-            Message(
-                "mycroft.session.started",
-                data={"mycroft_session_id": mycroft_session_id, "skill_id": skill_id},
-            )
-        )
-
-    def abort_session(self, mycroft_session_id: str):
-        LOG.warning("Aborted session: %s", mycroft_session_id)
-        self.end_session(mycroft_session_id, aborted=True)
-
-    def end_session(self, mycroft_session_id: str, aborted: bool = False):
-        LOG.debug("Ending session: %s", mycroft_session_id)
-        session = self._sessions.pop(mycroft_session_id, None)
-        if session is not None:
-            self.bus.emit(
-                Message(
-                    "mycroft.session.ended",
-                    data={"mycroft_session_id": session.id, "aborted": aborted},
-                )
-            )
-
-    def _trigger_listen(self, mycroft_session_id: str):
-        LOG.debug("Triggering listen for session %s", mycroft_session_id)
-        self.bus.emit(
-            Message(
-                "mycroft.mic.listen",
-                {
-                    "mycroft_session_id": mycroft_session_id,
-                },
-            )
-        )
-
-    def handle_session_start(self, message: Message):
-        mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Starting session: %s", mycroft_session_id)
-        session = Session(
-            id=mycroft_session_id,
-            skill_id=message.data.get("skill_id"),
-            will_continue=message.data.get("continue_session", False),
-            expect_response=message.data.get("expect_response", False),
-        )
-
-        session.actions = message.data.get("actions", [])
-
-        with self._session_lock:
-            self._sessions[mycroft_session_id] = session
-            self.bus.emit(
-                Message(
-                    "mycroft.session.started",
-                    data={
-                        "mycroft_session_id": mycroft_session_id,
-                        "skill_id": session.skill_id,
-                    },
-                )
-            )
-
-            if not session.aborted:
-                waiting_for_action = self.next_session_action(session)
-
-                if not waiting_for_action:
-                    if session.expect_response:
-                        self._trigger_listen(session.id)
-                    elif not session.will_continue:
-                        # Session is over
-                        self.end_session(session.id)
-            else:
-                self.abort_session(session.id)
-
-    def handle_session_continue(self, message: Message):
-        mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Continuing session: %s", mycroft_session_id)
-
-        with self._session_lock:
-            session = self._sessions.get(mycroft_session_id)
-            if session is not None:
-                session.skill_id = message.data.get("skill_id", session.skill_id)
-                session.will_continue = True
-                session.expect_response = message.data.get("expect_response", False)
-                session.actions = message.data.get("actions", [])
-
-                if not session.aborted:
-                    waiting_for_action = self.next_session_action(session)
-                    self.bus.emit(
-                        Message(
-                            "mycroft.session.continued",
-                            data={"mycroft_session_id": session.id},
-                        )
-                    )
-
-                    if (not waiting_for_action) and session.expect_response:
-                        self._trigger_listen(session.id)
-                else:
-                    self.abort_session(session.id)
-
-    def handle_session_end(self, message: Message):
-        mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Requested session end: %s", mycroft_session_id)
-
-        with self._session_lock:
-            session = self._sessions.get(mycroft_session_id)
-            if session is not None:
-                session.will_continue = False
-                session.expect_response = False
-                session.skill_id = message.data.get("skill_id", session.skill_id)
-                session.actions = message.data.get("actions", [])
-
-                if not session.aborted:
-                    waiting_for_action = self.next_session_action(session)
-                    if not waiting_for_action:
-                        self.end_session(session.id)
-                else:
-                    self.abort_session(session.id)
-
-    def handle_tts_finished(self, message: Message):
-        mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("TTS finished: %s", mycroft_session_id)
-
-        with self._session_lock:
-            session = self._sessions.get(mycroft_session_id)
-            if session is not None:
-                if (self._last_tts_session is not None) and (
-                    self._last_tts_session.id == session.id
-                ):
-                    self._last_tts_session = None
-
-                if not session.aborted:
-                    waiting_for_action = self.next_session_action(session)
-                    if not waiting_for_action:
-                        if session.expect_response:
-                            self._trigger_listen(session.id)
-                        elif not session.will_continue:
-                            # Session will not continue
-                            self.end_session(session.id)
-                else:
-                    self.end_session(session.id)
-
-    def handle_media_finished(self, message: Message):
-        mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Audio finished: %s", mycroft_session_id)
-
-        with self._session_lock:
-            session = self._sessions.get(mycroft_session_id)
-            if session is not None:
-                if not session.aborted:
-                    waiting_for_action = self.next_session_action(session)
-                    if not waiting_for_action:
-                        if session.expect_response:
-                            self._trigger_listen(session.id)
-                        elif not session.will_continue:
-                            # Session will not continue
-                            self.end_session(session.id)
-                else:
-                    self.end_session(session.id)
-
-    def next_session_action(self, session: Session) -> bool:
-        # Clear idle timeout
-        self._idle_seconds_left = None
-
-        while session.actions:
-            action = session.actions[0] or {}
-            session.actions = session.actions[1:]
-
-            action_type = action.get("type")
-            if action_type == "speak":
-                utterance = action.get("utterance", "")
-                if utterance:
-                    self._last_tts_session = session
-                    self.bus.emit(
-                        Message(
-                            "speak",
-                            data={
-                                "mycroft_session_id": session.id,
-                                "utterance": utterance,
-                                "meta": {
-                                    "dialog": action.get("dialog"),
-                                    "skill_id": session.skill_id,
-                                },
-                            },
-                        )
-                    )
-
-                    if action.get("wait", True):
-                        # Will be called back when TTS is finished
-                        return True
-            elif action_type == "message":
-                msg_type = action["message_type"]
-                msg_data = action.get("data", {})
-                self.bus.emit(Message(msg_type, data=msg_data))
-            elif action_type == "show_page":
-                gui_page = action.get("page")
-                gui_data = action.get("data", {})
-                if gui_page:
-                    self._last_gui_session = session
-                    self.bus.emit(
-                        Message(
-                            "gui.page.show",
-                            {
-                                "namespace": action["namespace"],
-                                "page": gui_page,
-                                "data": gui_data,
-                                "skill_id": session.skill_id,
-                            },
-                        )
-                    )
-            elif action_type == "clear_display":
-                # Go idle immediately
-                self._last_gui_session = None
-                self.bus.emit(Message("mycroft.gui.idle"))
-            elif action_type == "wait_for_idle":
-                self._set_idle_timeout()
-            elif action_type == "audio_alert":
-                alert_uri = action.get("uri")
-                if alert_uri:
-                    self._last_alert_session = session
-                    self.bus.emit(
-                        Message(
-                            "mycroft.audio.play-sound",
-                            data={"uri": alert_uri, "mycroft_session_id": session.id},
-                        )
-                    )
-                    if action.get("wait", True):
-                        # Will be called back when audio is finished
-                        return True
-
-            elif action_type == "stream_music":
-                alert_uri = action.get("uri")
-                if alert_uri:
-                    self._last_music_session = session
-                    self.bus.emit(
-                        Message(
-                            "mycroft.audio.service.play",
-                            data={
-                                "tracks": [alert_uri],
-                                "mycroft_session_id": session.id,
-                            },
-                        )
-                    )
-
-            self.bus.emit(
-                Message(
-                    "mycroft.session.action",
-                    data={"mycroft_session_id": session.id, "action": action},
-                )
-            )
-
-        return False
-
-    def _set_idle_timeout(self):
-        self._idle_seconds_left = IDLE_TIMEOUT
-        LOG.debug("Idle timeout set for %s second(s)", self._idle_seconds_left)
+    def stop(self):
+        pass
 
     def handle_utterance(self, message: Message):
         """Main entrypoint for handling user utterances with Mycroft skills
@@ -519,6 +194,236 @@ class IntentService:
 
         LOG.debug("Exit handle utterance")
 
+    def _register_event_handlers(self):
+        self.bus.on("register_vocab", self.handle_register_vocab)
+        self.bus.on("register_intent", self.handle_register_intent)
+
+        self.bus.on("recognizer_loop:awoken", self.handle_wake)
+        self.bus.on("recognizer_loop:utterance", self.handle_utterance)
+        self.bus.on("mycroft.session.start", self.handle_session_start)
+        self.bus.on("mycroft.session.continue", self.handle_session_continue)
+        self.bus.on("mycroft.session.end", self.handle_session_end)
+        self.bus.on("mycroft.session.ended", self.handle_session_ended)
+        self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
+        self.bus.on("mycroft.audio.hal.media.ended", self.handle_media_finished)
+        self.bus.on("mycroft.stop", self.handle_stop)
+
+        self.bus.on("detach_intent", self.handle_detach_intent)
+        self.bus.on("detach_skill", self.handle_detach_skill)
+
+        # Intents API
+        self.bus.on("intent.service.intent.get", self.handle_get_intent)
+        self.bus.on("intent.service.adapt.get", self.handle_get_adapt)
+        self.bus.on("intent.service.adapt.manifest.get", self.handle_adapt_manifest)
+        self.bus.on(
+            "intent.service.adapt.vocab.manifest.get", self.handle_vocab_manifest
+        )
+        self.bus.on("intent.service.padatious.get", self.handle_get_padatious)
+        self.bus.on(
+            "intent.service.padatious.manifest.get", self.handle_padatious_manifest
+        )
+        self.bus.on(
+            "intent.service.padatious.entities.manifest.get",
+            self.handle_entity_manifest,
+        )
+
+    @property
+    def registered_intents(self):
+        return [parser.__dict__ for parser in self.adapt_service.engine.intent_parsers]
+
+    def handle_wake(self, message: Message):
+        self._disable_idle_timeout()
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        with self._session_lock:
+            for session in self._sessions.values():
+                if session.id != mycroft_session_id:
+                    session.aborted = True
+
+    def handle_stop(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if skill_id is None:
+            # Always stop TTS
+            self.bus.emit(Message("mycroft.tts.stop"))
+
+            # Determine target skill
+            skill_id: Optional[str] = None
+            with self._session_lock:
+                if self._last_gui_session is not None:
+                    skill_id = self._last_gui_session.skill_id
+
+                # Abort all other sessions
+                for session in self._sessions.values():
+                    if session.skill_id != skill_id:
+                        session.aborted = True
+
+            if skill_id:
+                # Target skill directly
+                LOG.debug("Stopping skill: %s", skill_id)
+                mycroft_session_id = str(uuid4())
+                self.start_session(
+                    mycroft_session_id,
+                    skill_id=skill_id,
+                )
+                self.bus.emit(
+                    Message(
+                        "mycroft.skill.stop",
+                        data={
+                            "mycroft_session_id": mycroft_session_id,
+                            "skill_id": skill_id,
+                        },
+                    )
+                )
+            else:
+                # Return GUI to idle
+                self._disable_idle_timeout()
+                self.bus.emit(Message("mycroft.gui.idle"))
+
+    def start_session(self, mycroft_session_id: str, **session_kwargs):
+        if mycroft_session_id is None:
+            mycroft_session_id = str(uuid4())
+
+        LOG.debug("Starting session: %s", mycroft_session_id)
+        session = Session(id=mycroft_session_id, **session_kwargs)
+        self._sessions[session.id] = session
+        session.started(self.bus)
+
+    def abort_session(self, mycroft_session_id: str):
+        LOG.warning("Aborted session: %s", mycroft_session_id)
+        self.end_session(mycroft_session_id, aborted=True)
+
+    def end_session(self, mycroft_session_id: str, aborted: bool = False):
+        LOG.debug("Ending session: %s", mycroft_session_id)
+        session = self._sessions.pop(mycroft_session_id, None)
+        if session is not None:
+            if aborted:
+                session.aborted = True
+            session.ended(self.bus)
+
+    def _trigger_listen(self, mycroft_session_id: str):
+        LOG.debug("Triggering listen for session %s", mycroft_session_id)
+        self.bus.emit(
+            Message(
+                "mycroft.mic.listen",
+                {
+                    "mycroft_session_id": mycroft_session_id,
+                },
+            )
+        )
+
+    def _run_session(self, session: Session):
+        self._disable_idle_timeout()
+        for action in session.run(self.bus):
+            LOG.debug("Completed action for session %s: %s", session.id, action)
+            if isinstance(action, GetResponseAction):
+                self._trigger_listen(session.id)
+            elif isinstance(action, ShowPageAction):
+                self._last_gui_session = session
+            elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
+                if (self._last_gui_session is None) or (
+                    self._last_gui_session.skill_id == session.skill_id
+                ):
+                    if isinstance(action, WaitForIdleAction):
+                        timeout = IDLE_TIMEOUT
+                    else:
+                        timeout = IDLE_QUICK_TIMEOUT
+                    self._set_idle_timeout(timeout)
+            elif isinstance(action, MessageAction):
+                if action.delay > 0:
+                    # Send message later
+                    with self._delayed_messages_lock:
+                        self._delayed_messages.append(action)
+
+    def handle_session_start(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("Starting session: %s", mycroft_session_id)
+        session = Session(
+            id=mycroft_session_id,
+            skill_id=message.data.get("skill_id"),
+            will_continue=message.data.get("continue_session", False),
+        )
+        session.actions = Session.parse_actions(message.data.get("actions", []))
+
+        with self._session_lock:
+            self._sessions[mycroft_session_id] = session
+            session.started(self.bus)
+            self._run_session(session)
+
+    def handle_session_continue(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("Continuing session: %s", mycroft_session_id)
+
+        with self._session_lock:
+            session = self._sessions.get(mycroft_session_id)
+            if session is not None:
+                session.skill_id = message.data.get("skill_id", session.skill_id)
+                session.state = message.data.get("state", session.state)
+                if session.aborted:
+                    session.ended(self.bus)
+                else:
+                    session.will_continue = True
+
+                    # Session may already have pending actions
+                    actions = Session.parse_actions(message.data.get("actions", []))
+                    session.actions.extend(actions)
+
+                    self._run_session(session)
+
+    def handle_session_end(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("Requested session end: %s", mycroft_session_id)
+
+        with self._session_lock:
+            session = self._sessions.get(mycroft_session_id)
+            if session is not None:
+                session.will_continue = False
+                session.skill_id = message.data.get("skill_id", session.skill_id)
+
+                if session.aborted:
+                    session.ended(self.bus)
+                else:
+                    session.actions = Session.parse_actions(
+                        message.data.get("actions", [])
+                    )
+                    self._run_session(session)
+
+    def handle_session_ended(self, message: Message):
+        with self._session_lock:
+            if not self._sessions:
+                self.bus.emit(Message("mycroft.session.no-active-sessions"))
+
+    def handle_tts_finished(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("TTS finished: %s", mycroft_session_id)
+
+        with self._session_lock:
+            session = self._sessions.get(mycroft_session_id)
+            if (session is not None) and session.waiting_for_tts:
+                session.waiting_for_tts = False
+                if session.aborted:
+                    session.ended(self.bus)
+                else:
+                    self._run_session(session)
+
+    def handle_media_finished(self, message: Message):
+        mycroft_session_id = message.data["mycroft_session_id"]
+        LOG.debug("Audio finished: %s", mycroft_session_id)
+
+        with self._session_lock:
+            session = self._sessions.get(mycroft_session_id)
+            if (session is not None) and session.waiting_for_audio:
+                session.waiting_for_audio = False
+                if session.aborted:
+                    session.ended(self.bus)
+                else:
+                    self._run_session(session)
+
+    def _set_idle_timeout(self, idle_seconds: Optional[int] = None):
+        if idle_seconds is None:
+            idle_seconds = IDLE_TIMEOUT
+
+        self._idle_seconds_left = idle_seconds
+        LOG.debug("Idle timeout set for %s second(s)", self._idle_seconds_left)
+
     def _handle_get_response(self, message: Message) -> bool:
         """
         Check if this utterance was intended for a specific skill.
@@ -529,7 +434,6 @@ class IntentService:
 
         if mycroft_session_id is not None:
             with self._session_lock:
-                LOG.debug(self._sessions)
                 for session in self._sessions.values():
                     if session.expect_response and session.id == mycroft_session_id:
                         session.expect_response = False
@@ -541,6 +445,7 @@ class IntentService:
                                     "mycroft_session_id": mycroft_session_id,
                                     "skill_id": session.skill_id,
                                     "utterances": message.data.get("utterances"),
+                                    "state": session.state,
                                 },
                             )
                         )
@@ -554,18 +459,35 @@ class IntentService:
 
         return handled
 
+    def _disable_idle_timeout(self):
+        self._idle_seconds_left = None
+
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""
+        interval = 0.1
         try:
             while True:
                 if self._idle_seconds_left is not None:
-                    self._idle_seconds_left -= 1
+                    self._idle_seconds_left -= interval
                     if self._idle_seconds_left <= 0:
                         self._idle_seconds_left = None
                         self._last_gui_session = None
                         self.bus.emit(Message("mycroft.gui.idle"))
 
-                time.sleep(1)
+                with self._delayed_messages_lock:
+                    remove_actions = []
+                    for action in self._delayed_messages:
+                        action.delay -= interval
+                        if action.delay <= 0:
+                            remove_actions.append(action)
+                            self.bus.emit(
+                                Message(action.message_type, data=action.data)
+                            )
+
+                    for action in remove_actions:
+                        self._delayed_messages.remove(action)
+
+                time.sleep(interval)
         except Exception:
             LOG.exception("Error while checking idle timeout")
 

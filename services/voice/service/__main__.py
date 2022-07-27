@@ -34,13 +34,25 @@ class VoiceService(DinkumService):
 
     Input messages:
     * mycroft.mic.mute
+      * Produces empty audio stream
     * mycroft.mic.unmute
+      * Uses real audio stream
     * mycroft.mic.listen
+      * Wakes up mycroft and starts recording voice command
 
     Output messages:
     * recognizer_loop:awoken
+      * Reports that mycroft is now awake
+    * recognizer_loop:wake
+      * Reports wake word used to wake up mycroft
+    * recognizer_loop:record_begin
+      * Reports that voice command recording has begun
+    * recognizer_loop:record_end
+      * Reports that voice command recording has ended
     * recognizer_loop:utterance
+      * Result from speech to text of voice command
     * recognizer_loop:speech.recognition.unknown
+      * Sent when empty result from speech to text is returned
 
     Service messages:
     * voice.service.connected
@@ -59,6 +71,7 @@ class VoiceService(DinkumService):
         self.stt = load_stt_module(self.config, self.bus)
 
     def run(self):
+        self._wait_for_ready()
         voice_loop(
             config=self.config,
             bus=self.bus,

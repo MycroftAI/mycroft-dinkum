@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 import logging
+import signal
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -86,7 +87,21 @@ class DinkumService(ABC):
         Defaults to blocking until the service is terminated externally.
         """
         # Wait for exit signal
-        Event().wait()
+        run_event = Event()
+
+        def signal_handler(_sig, _frame):
+            """Registers signal handlers to catch CTRL+C and TERM."""
+            run_event.set()
+
+        original_int_handler = signal.signal(signal.SIGINT, signal_handler)
+        original_term_handler = signal.signal(signal.SIGTERM, signal_handler)
+
+        try:
+            run_event.wait()
+        finally:
+            # Restore original signal handlers
+            signal.signal(signal.SIGINT, original_int_handler)
+            signal.signal(signal.SIGTERM, original_term_handler)
 
     @abstractmethod
     def stop(self):
@@ -125,3 +140,41 @@ class DinkumService(ABC):
                 time.sleep(WATCHDOG_DELAY)
         except Exception:
             self.log.exception("Unexpected error in watchdog thread")
+
+    def _wait_for_service(self, service_id: str, wait_sec: float = 0.5):
+        # Wait for intent service
+        self.log.debug("Waiting for %s service...", service_id)
+        while True:
+            response = self.bus.wait_for_response(
+                Message(f"{service_id}.service.connected")
+            )
+            if response:
+                break
+
+            time.sleep(wait_sec)
+
+        self.log.debug("%s service connected", service_id)
+
+    def _wait_for_gui(self, wait_sec: float = 0.5):
+        # Wait for GUI connected
+        self.log.debug("Waiting for GUI...")
+        while True:
+            response = self.bus.wait_for_response(Message("gui.status.request"))
+            if response and response.data.get("connected", False):
+                break
+
+            time.sleep(wait_sec)
+
+        self.log.debug("GUI connected")
+
+    def _wait_for_ready(self, wait_sec: float = 0.5):
+        # Wait for Mycroft ready
+        self.log.debug("Waiting for ready...")
+        while True:
+            response = self.bus.wait_for_response(Message("mycroft.ready.get"))
+            if response and response.data.get("ready", False):
+                break
+
+            time.sleep(wait_sec)
+
+        self.log.debug("Ready")

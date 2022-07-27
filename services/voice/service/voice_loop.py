@@ -34,6 +34,9 @@ def voice_loop(
     vad: SileroVoiceActivityDetector,
     stt: StreamingSTT,
 ):
+    # Name reported in recognizer_loop:wakeword
+    wake_word_name = config.get("listener", {}).get("wake_word", "hey mycroft")
+
     queue: "Queue[bytes]" = Queue()
     Thread(target=_audio_input, args=(queue,), daemon=True).start()
 
@@ -41,10 +44,15 @@ def voice_loop(
     command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
     chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
     is_recording = False
+    muted = False
     mycroft_session_id: Optional[str] = None
 
     def do_listen(message: Optional[Message] = None):
         nonlocal is_recording, mycroft_session_id
+        if muted:
+            LOG.warning("Not waking up since we're muted")
+            return
+
         if message:
             mycroft_session_id = message.data.get("mycroft_session_id")
         else:
@@ -54,6 +62,20 @@ def voice_loop(
             Message(
                 "recognizer_loop:awoken",
                 data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
+        bus.emit(
+            Message(
+                "recognizer_loop:wakeword",
+                data={"utterance": wake_word_name, "session": mycroft_session_id},
+            )
+        )
+        bus.emit(
+            Message(
+                "recognizer_loop:record_begin",
+                {
+                    "mycroft_session_id": mycroft_session_id,
+                },
             )
         )
 
@@ -69,8 +91,6 @@ def voice_loop(
             chunk_array = np.frombuffer(chunk, dtype=np.int16)
             is_speech = vad(chunk_array) >= VAD_THRESHOLD
             command.process(is_speech, seconds)
-
-    muted = False
 
     def handle_mute(_message):
         nonlocal muted
@@ -120,6 +140,14 @@ def voice_loop(
                 text = stt.stop() or ""
                 LOG.info("STT: %s", text)
 
+                bus.emit(
+                    Message(
+                        "recognizer_loop:record_end",
+                        {
+                            "mycroft_session_id": mycroft_session_id,
+                        },
+                    )
+                )
                 bus.emit(
                     Message(
                         "recognizer_loop:utterance",
