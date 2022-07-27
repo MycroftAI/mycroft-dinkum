@@ -16,18 +16,18 @@ import dataclasses
 import pickle
 from collections import namedtuple
 from datetime import date, datetime, time, timedelta
+from enum import Enum
 from pathlib import Path
 from time import sleep
 from typing import Any, Dict, List, Optional
-from enum import Enum
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import (
     AdaptIntent,
+    GuiClear,
     MycroftSkill,
     intent_handler,
     skill_api_method,
-    GuiClear,
 )
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import date_time_format, join_list, nice_time
@@ -36,13 +36,13 @@ from mycroft.util.time import now_local, to_system
 
 from .skill import (
     Alarm,
-    Alarms,
     AlarmMatcher,
+    Alarms,
+    StaticResources,
     build_day_of_week_repeat_rule,
     determine_next_occurrence,
-    nice_relative_time,
-    StaticResources,
     extract_repeat_rule,
+    nice_relative_time,
 )
 
 BEEP_GAP = 10

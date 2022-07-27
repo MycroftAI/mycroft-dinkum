@@ -26,7 +26,7 @@ Implementation Notes
 
 """
 
-from ..color import colorwheel, BLACK, calculate_intensity
+from ..color import BLACK, calculate_intensity, colorwheel
 from .comet import Comet
 
 

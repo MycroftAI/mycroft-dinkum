@@ -26,8 +26,8 @@ Implementation Notes
 
 """
 
-from . import Animation
 from ..color import BLACK, calculate_intensity
+from . import Animation
 
 
 class Comet(Animation):

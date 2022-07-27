@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 import itertools
+import logging
 import time
 from threading import Thread
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 from mycroft_bus_client import Message, MessageBusClient
 from smbus2 import SMBus
 
+from .led_animation import color
 from .led_animation.animation import Animation
-from .led_animation.animation.solid import Solid
 from .led_animation.animation.blink import Blink
 from .led_animation.animation.pulse import Pulse
 from .led_animation.animation.rainbowcomet import RainbowComet
-from .led_animation import color
+from .led_animation.animation.solid import Solid
 
 BUS_ID = 1
 DEVICE_ADDRESS = 0x04

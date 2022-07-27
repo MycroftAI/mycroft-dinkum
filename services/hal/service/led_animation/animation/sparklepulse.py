@@ -26,8 +26,8 @@ Implementation Notes
 
 """
 
-from .sparkle import Sparkle
 from ..helper import pulse_generator
+from .sparkle import Sparkle
 
 
 class SparklePulse(Sparkle):

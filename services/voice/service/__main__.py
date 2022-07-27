@@ -15,10 +15,10 @@
 from mycroft.service import DinkumService
 
 from .voice_loop import (
+    VoiceLoop,
     load_hotword_module,
     load_stt_module,
     load_vad_detector,
-    VoiceLoop,
 )
 
 

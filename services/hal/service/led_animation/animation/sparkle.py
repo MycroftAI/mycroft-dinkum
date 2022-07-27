@@ -26,6 +26,7 @@ Implementation Notes
 """
 
 import random
+
 from . import Animation
 
 __version__ = "0.0.0-auto.0"

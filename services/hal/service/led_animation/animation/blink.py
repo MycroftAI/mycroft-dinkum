@@ -26,8 +26,8 @@ Implementation Notes
 
 """
 
-from .colorcycle import ColorCycle
 from ..color import BLACK
+from .colorcycle import ColorCycle
 
 
 class Blink(ColorCycle):

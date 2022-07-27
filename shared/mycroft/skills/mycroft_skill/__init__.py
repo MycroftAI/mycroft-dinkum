@@ -19,4 +19,4 @@ from .decorators import (
     skill_api_method,
 )
 from .event_container import get_handler_name
-from .mycroft_skill import MycroftSkill, GuiClear, MessageSend
+from .mycroft_skill import GuiClear, MessageSend, MycroftSkill

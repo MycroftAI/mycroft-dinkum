@@ -14,20 +14,19 @@
 #
 import logging
 import time
-from http import HTTPStatus
 from enum import Enum, auto
+from http import HTTPStatus
 from typing import Optional
 from uuid import uuid4
 
+from mycroft.api import DeviceApi
+from mycroft.identity import IdentityManager
+from mycroft.skills import GuiClear, MessageSend, MycroftSkill
 from mycroft.util.network_utils import connected
 from mycroft_bus_client import Message, MessageBusClient
-from mycroft.api import DeviceApi
-from mycroft.skills import MycroftSkill, GuiClear, MessageSend
-from mycroft.identity import IdentityManager
 from requests import HTTPError
 
 from .awconnect import AwconnectClient
-
 
 INTERNET_RETRIES = 1
 INTERNET_WAIT_SEC = 5

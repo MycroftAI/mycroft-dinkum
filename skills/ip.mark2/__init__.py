@@ -19,7 +19,7 @@ from subprocess import CalledProcessError, check_output
 
 from adapt.intent import IntentBuilder
 from ifaddr import get_adapters
-from mycroft.skills import MycroftSkill, intent_handler, GuiClear
+from mycroft.skills import GuiClear, MycroftSkill, intent_handler
 
 
 def speakable_name(iface_name: str):

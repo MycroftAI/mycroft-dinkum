@@ -15,7 +15,7 @@
 from mycroft.service import DinkumService
 
 from .audio_ui import AudioUserInterface
-from .tts import load_tts_module, SpeakHandler
+from .tts import SpeakHandler, load_tts_module
 
 
 class AudioService(DinkumService):
@@ -55,6 +55,7 @@ class AudioService(DinkumService):
     * audio.initialize.ended
 
     """
+
     def __init__(self):
         super().__init__(service_id="audio")
 

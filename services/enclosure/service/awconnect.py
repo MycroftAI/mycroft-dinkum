@@ -2,8 +2,8 @@ import socket
 from threading import Thread
 from typing import Optional
 
-from mycroft_bus_client import Message, MessageBusClient
 from mycroft.util.log import LOG
+from mycroft_bus_client import Message, MessageBusClient
 
 SOCKET_PATH = "/awconnect/tmp/mycroft_socket"
 

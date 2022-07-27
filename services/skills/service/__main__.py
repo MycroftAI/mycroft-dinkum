@@ -14,8 +14,8 @@
 #
 import argparse
 
-from mycroft.service import DinkumService
 from lingua_franca import load_languages
+from mycroft.service import DinkumService
 
 from .load import create_skill_instance, load_skill_source
 

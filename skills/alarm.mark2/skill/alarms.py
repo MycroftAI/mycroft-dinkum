@@ -14,7 +14,7 @@
 import pickle
 from datetime import date, datetime
 from pathlib import Path
-from typing import Callable, Union, Optional, Iterable
+from typing import Callable, Iterable, Optional, Union
 
 from mycroft.util.time import now_local
 

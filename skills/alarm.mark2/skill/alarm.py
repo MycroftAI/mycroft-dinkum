@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Definition of an alarm."""
-from datetime import datetime, time
 from dataclasses import dataclass
+from datetime import datetime, time
 from typing import ClassVar, Optional, Tuple
 
-from mycroft.util.format import nice_date_time, nice_time
-from mycroft.util.time import now_local
-from mycroft.util.parse import extract_datetime
 from mycroft.skills.skill_data import RegexExtractor
+from mycroft.util.format import nice_date_time, nice_time
+from mycroft.util.parse import extract_datetime
+from mycroft.util.time import now_local
 
 from .repeat import (
+    build_day_of_week_repeat_rule,
     build_repeat_rule_description,
     determine_next_occurrence,
-    build_day_of_week_repeat_rule,
 )
 from .resources import StaticResources
 

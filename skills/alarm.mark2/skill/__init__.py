@@ -16,6 +16,7 @@ from .alarm import Alarm
 from .alarms import Alarms
 from .format import nice_relative_time
 from .match import AlarmMatcher
+from .parse import extract_repeat_rule
 from .repeat import (
     build_day_of_week_repeat_rule,
     build_repeat_rule_description,
@@ -23,4 +24,3 @@ from .repeat import (
     determine_next_occurrence,
 )
 from .resources import StaticResources
-from .parse import extract_repeat_rule

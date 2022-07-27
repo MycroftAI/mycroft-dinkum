@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import numpy as np
-
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT
 from mycroft.util.plugins import load_plugin

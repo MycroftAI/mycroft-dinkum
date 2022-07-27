@@ -21,10 +21,10 @@ from uuid import uuid4
 
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
-from mycroft_bus_client import Message, MessageBusClient
 from mycroft.skills.intent_service_interface import open_intent_envelope
 from mycroft.util.log import LOG
 from mycroft.util.parse import normalize
+from mycroft_bus_client import Message, MessageBusClient
 
 from .intent_services import (
     AdaptIntent,
@@ -36,15 +36,14 @@ from .intent_services import (
     RegexService,
 )
 from .session import (
-    Session,
-    SpeakAction,
-    ShowPageAction,
-    GetResponseAction,
     ClearDisplayAction,
-    WaitForIdleAction,
+    GetResponseAction,
     MessageAction,
+    Session,
+    ShowPageAction,
+    SpeakAction,
+    WaitForIdleAction,
 )
-
 
 # Seconds before home screen is shown again (mycroft.gui.idle event)
 IDLE_TIMEOUT = 15

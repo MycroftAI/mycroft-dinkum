@@ -28,7 +28,6 @@ from micropython import const
 
 from .helper import PixelMap, horizontal_strip_gridmap, vertical_strip_gridmap
 
-
 HORIZONTAL = const(1)
 VERTICAL = const(2)
 

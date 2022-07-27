@@ -15,7 +15,7 @@ import time
 import typing
 from collections import deque
 
-from mycroft.skills import AdaptIntent, intent_handler, GuiClear
+from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.fallback_skill import FallbackSkill
 from mycroft.util.log import LOG
 

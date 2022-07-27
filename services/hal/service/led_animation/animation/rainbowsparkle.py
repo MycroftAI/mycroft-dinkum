@@ -26,6 +26,7 @@ Implementation Notes
 """
 
 import random
+
 from adafruit_led_animation.animation.rainbow import Rainbow
 
 

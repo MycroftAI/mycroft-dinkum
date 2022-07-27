@@ -27,8 +27,9 @@ Implementation Notes
 """
 
 import random
-from .color import BLACK
+
 from . import MS_PER_SECOND, monotonic_ms
+from .color import BLACK
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_LED_Animation.git"

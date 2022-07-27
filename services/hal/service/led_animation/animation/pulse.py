@@ -26,8 +26,8 @@ Implementation Notes
 
 """
 
-from . import Animation
 from ..helper import pulse_generator
+from . import Animation
 
 
 class Pulse(Animation):

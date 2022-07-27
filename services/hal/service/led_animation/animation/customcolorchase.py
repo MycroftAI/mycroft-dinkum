@@ -27,8 +27,8 @@ Implementation Notes
 
 """
 
-from .chase import Chase
 from ..color import RAINBOW
+from .chase import Chase
 
 
 class CustomColorChase(Chase):

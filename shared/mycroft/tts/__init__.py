@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 from .cache import TextToSpeechCache
 
+
 class TTS(metaclass=ABCMeta):
     def __init__(
         self,
@@ -90,5 +91,3 @@ class TTSValidator(metaclass=ABCMeta):
     @abstractmethod
     def get_tts_class(self):
         """Return TTS class that this validator is for."""
-
-

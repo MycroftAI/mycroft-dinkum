@@ -17,14 +17,14 @@ from os.path import dirname, join
 from adapt.intent import IntentBuilder
 from mycroft.messagebus.message import Message
 from mycroft.skills import (
+    GuiClear,
+    MessageSend,
     MycroftSkill,
     intent_handler,
     skill_api_method,
-    GuiClear,
-    MessageSend,
 )
-from mycroft.util.parse import extract_number
 from mycroft.util import resolve_resource_file
+from mycroft.util.parse import extract_number
 
 
 class VolumeSkill(MycroftSkill):

@@ -22,6 +22,7 @@ import typing
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from itertools import chain
 from os import walk
 from os.path import abspath, basename, dirname, exists, join
@@ -31,7 +32,6 @@ from threading import Event, Lock, Timer
 from typing import Any, Dict, List, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
-from enum import Enum
 
 import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder

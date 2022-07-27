@@ -17,9 +17,9 @@ from os.path import exists, join
 from typing import Optional
 
 from adapt.intent import IntentBuilder
-from mycroft.skills import MycroftSkill, intent_handler, GuiClear
-from mycroft.skills.audioservice import AudioService
 from mycroft.messagebus.message import Message
+from mycroft.skills import GuiClear, MycroftSkill, intent_handler
+from mycroft.skills.audioservice import AudioService
 
 STATUS_KEYS = ["track", "artist", "album", "image"]
 

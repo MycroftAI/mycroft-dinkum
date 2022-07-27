@@ -18,11 +18,11 @@ These classes, decorators and functions are used to build skills for Mycroft.
 """
 from .intent_service import AdaptIntent
 from .mycroft_skill import (
+    GuiClear,
+    MessageSend,
     MycroftSkill,
     intent_file_handler,
     intent_handler,
     resting_screen_handler,
     skill_api_method,
-    GuiClear,
-    MessageSend,
 )

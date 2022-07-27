@@ -18,7 +18,6 @@ import time
 import RPi.GPIO as GPIO
 from mycroft_bus_client import Message, MessageBusClient
 
-
 # sj201Rev4+
 PINS = {"volume_up": 22, "volume_down": 23, "action": 24, "mute": 25}
 

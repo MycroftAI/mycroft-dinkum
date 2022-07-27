@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import AdaptIntent, MycroftSkill, intent_handler, GuiClear
+from mycroft.skills import AdaptIntent, GuiClear, MycroftSkill, intent_handler
 from mycroft.util.format import nice_date, nice_time
 from mycroft.util.time import now_local
 

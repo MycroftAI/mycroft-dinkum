@@ -70,6 +70,7 @@ class SkillGUI:
     def setup_default_handlers(self):
         """Sets the handlers for the default messages."""
         pass
+
     #     msg_type = self.build_message_type("set")
     #     self.skill.add_event(msg_type, self.gui_set)
 
