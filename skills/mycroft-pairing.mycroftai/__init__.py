@@ -52,8 +52,8 @@ class PairingSkill(MycroftSkill):
         self.state = str(uuid4())
         # TODO replace self.platform logic with call to enclosure capabilities
         self.nato_alphabet = None
-        self.mycroft_ready = False
-        self.pairing_code_retry_cnt = 0
+        # self.mycroft_ready = False
+        # self.pairing_code_retry_cnt = 0
 
         # These attributes track the status of the device activation
         self.device_activation_lock = Lock()
