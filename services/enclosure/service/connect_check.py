@@ -24,8 +24,9 @@ from mycroft_bus_client import Message, MessageBusClient
 from mycroft.api import DeviceApi
 from mycroft.skills import MycroftSkill, GuiClear, MessageSend
 from mycroft.identity import IdentityManager
-
 from requests import HTTPError
+
+from .awconnect import AwconnectClient
 
 
 INTERNET_RETRIES = 1
@@ -36,8 +37,10 @@ SERVER_AUTH_WAIT_SEC = 10
 
 MAX_PAIRING_CODE_RETRIES = 30
 
-PAIRING_SHOW_URL_WAIT_SEC = 1
-PAIRING_SPEAK_CODE_WAIT_SEC = 20
+FAILURE_RESTART_SEC = 10
+
+PAIRING_SHOW_URL_WAIT_SEC = 15
+PAIRING_SPEAK_CODE_WAIT_SEC = 25
 
 
 class Authentication(str, Enum):
@@ -57,6 +60,8 @@ class ConnectCheck(MycroftSkill):
         self.pairing_code_expiration = None
         self.pairing_state = str(uuid4())
         self.nato_alphabet = None
+
+        self._awconnect_client: Optional[AwconnectClient] = None
 
     def initialize(self):
         self.nato_alphabet = self.translate_namedvalues("codes")
@@ -99,6 +104,19 @@ class ConnectCheck(MycroftSkill):
                 data={"mycroft_session_id": self._mycroft_session_id},
             )
         )
+
+    def shutdown(self):
+        self._disconnect_from_awconnect()
+
+    def _connect_to_awconnect(self):
+        self._disconnect_from_awconnect()
+        self._awconnect_client = AwconnectClient(self.bus)
+        self._awconnect_client.start()
+
+    def _disconnect_from_awconnect(self):
+        if self._awconnect_client is not None:
+            self._awconnect_client.stop()
+            self._awconnect_client = None
 
     # -------------------------------------------------------------------------
 
@@ -158,12 +176,34 @@ class ConnectCheck(MycroftSkill):
         else:
             # Not connected to the internet, start wi-fi setup
             self.log.debug("Internet not connected")
-            self.bus.emit(
-                Message(
-                    "internet-connect.setup.start",
-                    data={"mycroft_session_id": mycroft_session_id},
+            try:
+                # Connect to awconnect container
+                self._connect_to_awconnect()
+                self.bus.emit(
+                    Message(
+                        "internet-connect.setup.start",
+                        data={"mycroft_session_id": mycroft_session_id},
+                    )
                 )
-            )
+            except Exception:
+                self.log.exception("Failed to connect to awconnect socket")
+
+                # Not sure what else to do besides show an error and restart
+                self.bus.emit(
+                    self.continue_session(
+                        dialog="unexpected.error.restarting",
+                        gui="wifi_failure_mark_ii.qml",
+                        message=Message("internet-connect.detect.start"),
+                        message_send=MessageSend.AT_END,
+                        message_delay=FAILURE_RESTART_SEC,
+                        gui_clear=GuiClear.NEVER,
+                        mycroft_session_id=mycroft_session_id,
+                    )
+                )
+
+    # -------------------------------------------------------------------------
+    # Wi-Fi Setup
+    # -------------------------------------------------------------------------
 
     def _wifi_setup_start(self, message: Message):
         mycroft_session_id = message.data.get("mycroft_session_id")

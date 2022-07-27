@@ -144,6 +144,7 @@ class NamespaceManager:
                 data = namespace.data
 
             namespace.data = data
+
             if namespace not in self.active_namespaces:
                 self._activate_namespace(namespace)
                 self.synchronize()

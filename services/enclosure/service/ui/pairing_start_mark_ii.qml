@@ -30,6 +30,18 @@ Mycroft.Delegate {
     bottomPadding: 0
     property int gridUnit: Mycroft.Units.gridUnit
 
+    property real timeLeft: 24.0
+
+    Timer {
+        id: progressTimer
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            root.timeLeft =  Math.max(0.0, root.timeLeft - 1.0);
+        }
+    }
+
     Rectangle {
         id: pairingStartBackground
         anchors.fill: parent
@@ -85,8 +97,11 @@ Mycroft.Delegate {
                 anchors.top: fourthLine.bottom
                 anchors.topMargin: gridUnit * 4
                 height: gridUnit
-                indeterminate: true
+                // indeterminate: true
                 width: gridUnit * 24
+                from: 0.0
+                to: 24.0
+                value: root.timeLeft
             }
         }
     }

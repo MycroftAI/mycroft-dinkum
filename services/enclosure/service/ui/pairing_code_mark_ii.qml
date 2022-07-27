@@ -28,6 +28,17 @@ Mycroft.Delegate {
     bottomPadding: 0
     topPadding: 0
     property int gridUnit: Mycroft.Units.gridUnit
+    property real timeLeft: 45.0
+
+    Timer {
+        id: progressTimer
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            root.timeLeft = Math.max(0.0, root.timeLeft - 1.0);
+        }
+    }
 
     Rectangle {
         id: background
@@ -37,7 +48,7 @@ Mycroft.Delegate {
         PairingLabel {
             id: pairingCode
             anchors.top: parent.top
-            anchors.topMargin: gridUnit * 11
+            anchors.topMargin: gridUnit * 8
             fontSize: 118
             fontStyle: "Black"
             heightUnits: 6
@@ -53,6 +64,19 @@ Mycroft.Delegate {
             heightUnits: 3
             text: "mycroft.ai/pair"
             textColor: "#2C3E50"
+        }
+
+        ProgressBar {
+            id: activationProgress
+            anchors.top: pairingUrl.bottom
+            anchors.topMargin: gridUnit * 4
+            anchors.horizontalCenter: parent.horizontalCenter
+            height: gridUnit
+            // indeterminate: true
+            width: gridUnit * 24
+            from: 0.0
+            to: 45.0
+            value: root.timeLeft
         }
     }
 }
