@@ -166,3 +166,15 @@ class DinkumService(ABC):
             time.sleep(wait_sec)
 
         self.log.debug("GUI connected")
+
+    def _wait_for_ready(self, wait_sec: float = 0.5):
+        # Wait for Mycroft ready
+        self.log.debug("Waiting for ready...")
+        while True:
+            response = self.bus.wait_for_response(Message("mycroft.ready.get"))
+            if response and response.data.get("ready", False):
+                break
+
+            time.sleep(wait_sec)
+
+        self.log.debug("Ready")

@@ -15,7 +15,9 @@
 from mycroft.service import DinkumService
 from mycroft_bus_client import Message
 
-IDLE_SKILL_ID = "homescreen.mycroftai"
+from .connect_check import ConnectCheck
+
+IDLE_SKILL_ID = "homescreen.mark2"
 
 
 class EnclosureService(DinkumService):
@@ -23,8 +25,10 @@ class EnclosureService(DinkumService):
         super().__init__(service_id="enclosure")
 
         self.led_session_id: Optional[str] = None
+        self.mycroft_ready = False
 
     def start(self):
+        self.bus.on("mycroft.ready.get", self.handle_ready_get)
         self._wait_for_gui()
 
         self.bus.on("recognizer_loop:awoken", self.handle_wake)
@@ -40,17 +44,34 @@ class EnclosureService(DinkumService):
             "gui.initialize.ended", lambda m: self.bus.emit(Message("mycroft.gui.idle"))
         )
 
-        # HACK: Show home screen
+        # Connected to internet + paired
+        self.bus.on("server-connect.authenticated", self.handle_server_authenticated)
+
+        self._connect_check = ConnectCheck(self.bus)
+        self._connect_check.load_data_files()
+        self._connect_check.initialize()
+        self._connect_check.start()
+
+    def stop(self):
+        pass
+
+    def handle_server_authenticated(self, _message: Message):
+        # Show home screen
         self.bus.emit(Message("mycroft.gui.idle"))
 
         # Request switch states so mute is correctly shown
         self.bus.emit(Message("mycroft.switch.report-states"))
 
-        # TODO: Make this request/response
+        # Inform skills that we're ready
+        self.mycroft_ready = True
         self.bus.emit(Message("mycroft.ready"))
 
-    def stop(self):
-        pass
+        self.log.info("Ready")
+
+    # -------------------------------------------------------------------------
+
+    def handle_ready_get(self, message):
+        self.bus.emit(message.response(data={"ready": self.mycroft_ready}))
 
     def handle_wake(self, message):
         self.led_session_id = message.data.get("mycroft_session_id")

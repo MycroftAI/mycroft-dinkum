@@ -144,16 +144,12 @@ class NamespaceManager:
                 data = namespace.data
 
             namespace.data = data
-
-            # DEBUG
-            self._activate_namespace(namespace)
-            self.synchronize()
-            # if namespace not in self.active_namespaces:
-            #     self._activate_namespace(namespace)
-            #     self.synchronize()
-            # else:
-            #     # Only send session data
-            #     self._update_namespace_data(namespace)
+            if namespace not in self.active_namespaces:
+                self._activate_namespace(namespace)
+                self.synchronize()
+            else:
+                # Only send session data
+                self._update_namespace_data(namespace)
 
             LOG.debug(
                 "Showing page %s on namespace %s with data %s",
@@ -215,7 +211,6 @@ class NamespaceManager:
         return namespace
 
     def _update_namespace_data(self, namespace: Namespace):
-        LOG.info(namespace)
         send_message_to_gui(
             {
                 "type": "mycroft.session.set",

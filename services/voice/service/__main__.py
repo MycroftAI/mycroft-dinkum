@@ -71,6 +71,7 @@ class VoiceService(DinkumService):
         self.stt = load_stt_module(self.config, self.bus)
 
     def run(self):
+        self._wait_for_ready()
         voice_loop(
             config=self.config,
             bus=self.bus,

@@ -1731,8 +1731,11 @@ class MycroftSkill:
         continue_session: bool = False,
         message_send: MessageSend = MessageSend.AT_START,
         message_delay: float = 0.0,
+        mycroft_session_id: Optional[str] = None,
     ) -> str:
-        mycroft_session_id = str(uuid4())
+        if mycroft_session_id is None:
+            mycroft_session_id = str(uuid4())
+
         message = Message(
             "mycroft.session.start",
             data={
