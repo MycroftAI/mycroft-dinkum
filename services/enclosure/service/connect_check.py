@@ -26,13 +26,9 @@ from mycroft.skills import MycroftSkill, GuiClear, MessageSend
 from mycroft.identity import IdentityManager
 
 from requests import HTTPError
-from dbus_next import BusType as DBusType
-from dbus_next.aio import MessageBus as DBusMessageBus
 
-NM_NAMESPACE = "org.freedesktop.NetworkManager"
-NM_PATH = "/org/freedesktop/NetworkManager"
 
-INTERNET_RETRIES = 3
+INTERNET_RETRIES = 1
 INTERNET_WAIT_SEC = 5
 
 SERVER_AUTH_RETRIES = 3
@@ -64,17 +60,34 @@ class ConnectCheck(MycroftSkill):
 
     def initialize(self):
         self.nato_alphabet = self.translate_namedvalues("codes")
+
         # Internet detection
-        self.bus.on("internet-connect.detect.start", self._check_internet)
-        self.bus.on("internet-connect.detected", self._check_pairing)
+        self.add_event("internet-connect.detect.start", self._check_internet)
+        self.add_event("internet-connect.detected", self._check_pairing)
 
         # WiFi setup step
-        self.bus.on("internet-connect.setup.start", self._connect_to_internet)
+        self.add_event("internet-connect.setup.start", self._wifi_setup_start)
+        self.add_event(
+            "hardware.awconnect.ap-activated",
+            self._wifi_setup_ap_activated,
+        )
+        self.add_event(
+            "hardware.awconnect.portal-viewed",
+            self._wifi_setup_portal_viewed,
+        )
+        self.add_event(
+            "hardware.awconnect.credentials-entered",
+            self._wifi_setup_credentials_entered,
+        )
+        self.add_event(
+            "hardware.awconnect.ap-deactivated",
+            self._wifi_setup_ap_deactivated,
+        )
 
         # Pairing steps
-        self.bus.on("server-connect.pairing.start", self._pairing_start)
-        self.bus.on("server-connect.pairing.show-code", self._pairing_show_code)
-        self.bus.on(
+        self.add_event("server-connect.pairing.start", self._pairing_start)
+        self.add_event("server-connect.pairing.show-code", self._pairing_show_code)
+        self.add_event(
             "server-connect.pairing.check-activation", self._pairing_check_activation
         )
 
@@ -134,6 +147,7 @@ class ConnectCheck(MycroftSkill):
         )
 
         if is_connected:
+            # Connected to the internet
             self.log.debug("Internet connected")
             self.bus.emit(
                 Message(
@@ -142,6 +156,7 @@ class ConnectCheck(MycroftSkill):
                 )
             )
         else:
+            # Not connected to the internet, start wi-fi setup
             self.log.debug("Internet not connected")
             self.bus.emit(
                 Message(
@@ -150,23 +165,91 @@ class ConnectCheck(MycroftSkill):
                 )
             )
 
-    def _connect_to_internet(self, message: Message):
+    def _wifi_setup_start(self, message: Message):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id != self._mycroft_session_id:
             # Different session now
             return
 
+        # Start wi-fi setup
         self.bus.emit(
             Message(
                 "internet-connect.setup.started",
                 data={"mycroft_session_id": mycroft_session_id},
             )
         )
-        # ...
+
+        self.bus.emit(
+            self.continue_session(
+                dialog="network-connection-needed",
+                gui="ap_starting_mark_ii.qml",
+                message=Message("hardware.awconnect.create-ap"),
+                gui_clear=GuiClear.NEVER,
+                mycroft_session_id=mycroft_session_id,
+            )
+        )
+
+    def _wifi_setup_ap_activated(self, message: Message):
+        # Access point has been activated over in awconnect.
+        # Setup will continue when the user views the portal page.
+        self.bus.emit(
+            self.continue_session(
+                dialog="access-point-created",
+                gui="access_point_select_mark_ii.qml",
+                gui_clear=GuiClear.NEVER,
+                mycroft_session_id=self._mycroft_session_id,
+            )
+        )
+
+    def _wifi_setup_portal_viewed(self, message: Message):
+        # User has viewed the portal page.
+        # Setup will continue when the user has entered their wi-fi credentials.
+        self.bus.emit(
+            self.continue_session(
+                dialog="choose-wifi-network",
+                gui="network_select_mark_ii.qml",
+                gui_clear=GuiClear.NEVER,
+                mycroft_session_id=self._mycroft_session_id,
+            )
+        )
+
+    def _wifi_setup_credentials_entered(self, message: Message):
+        # User has entered their wi-fi credentials.
+        # Setup will continue when the access point is deactivated.
+        #
+        # If the access point is reactivated, it indicates that wi-fi setup has
+        # failed.
+        self.bus.emit(
+            self.continue_session(
+                gui="connecting_mark_ii.qml",
+                gui_clear=GuiClear.NEVER,
+                mycroft_session_id=self._mycroft_session_id,
+            )
+        )
+
+    def _wifi_setup_ap_deactivated(self, message: Message):
+        # End wi-fi setup
         self.bus.emit(
             Message(
                 "internet-connect.setup.ended",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": self._mycroft_session_id},
+            )
+        )
+
+        self.bus.emit(
+            self.continue_session(
+                gui=(
+                    "wifi_success_mark_ii.qml",
+                    {"label": self.translate("connected")},
+                ),
+                gui_clear=GuiClear.NEVER,
+                message=Message(
+                    "internet-connect.detect.start",
+                    data={"mycroft_session_id": self._mycroft_session_id},
+                ),
+                message_send=MessageSend.AT_END,
+                message_delay=5.0,
+                mycroft_session_id=self._mycroft_session_id,
             )
         )
 

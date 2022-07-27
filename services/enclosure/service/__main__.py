@@ -68,6 +68,9 @@ class EnclosureService(DinkumService):
 
         self.log.info("Ready")
 
+        self._connect_check.default_shutdown()
+        self._connect_check = None
+
     # -------------------------------------------------------------------------
 
     def handle_ready_get(self, message):
