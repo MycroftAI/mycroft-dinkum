@@ -1,7 +1,0 @@
-__pycache__/
-*.qmlc
-settings.json
-
-# Pycharm project files
-.idea/
-.wh.*

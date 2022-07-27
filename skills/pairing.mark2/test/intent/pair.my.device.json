@@ -1,9 +1,0 @@
-{
-  "utterance": "let's pair my device",
-  "intent_type": "PairingIntent",
-  "intent": {
-    "PairingKeyword": "pair",
-    "DeviceKeyword": "device"
-  },
-  "expected_dialog": "already.paired"
-}
