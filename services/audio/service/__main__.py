@@ -12,86 +12,72 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
-import sys
-import time
-from threading import Event, Thread
-from typing import Any, Dict
-
-import sdnotify
-from mycroft.configuration import Configuration
-from mycroft.messagebus.client import create_client
-from mycroft_bus_client import Message, MessageBusClient
+from mycroft.service import DinkumService
 
 from .audio_ui import AudioUserInterface
 from .tts import load_tts_module, SpeakHandler
 
-SERVICE_ID = "audio"
-LOG = logging.getLogger(SERVICE_ID)
-NOTIFIER = sdnotify.SystemdNotifier()
-WATCHDOG_DELAY = 0.5
+
+class AudioService(DinkumService):
+    """
+    Service for playing audio and text to speech.
+
+    Input messages:
+    * speak
+      * Speak "utterance" with text to speech system
+    * speak.cache
+      * Cache audio for "utterance" (don't speak)
+    * mycroft.tts.stop
+      * Stop text to speech
+    * mycroft.audio.play-sound
+      * Play "uri" on sound effect channel
+    * mycroft.audio.service.play
+      * Stream "tracks" on music channel
+      * tracks - list of uris
+    * mycroft.audio.service.{pause,resume,stop}
+      * Pause/resume/stop music
+
+    Output messages:
+    * recognizer_loop:audio_output_start
+      * Start of text to speech
+    * recognizer_loop:audio_output_end
+      * End of text to speech
+    * mycroft.audio.service.position
+      * Music stream "position_ms" (milliseconds)
+      * Sent while music is playing
+    * mycroft.audio.service.{playing,paused,resumed,stopped}
+      * State changes of music stream
+
+    Service messages:
+    * audio.service.connected
+    * audio.service.connected.response
+    * audio.initialize.started
+    * audio.initialize.ended
+
+    """
+    def __init__(self):
+        super().__init__(service_id="audio")
+
+    def start(self):
+        # Text to speech plugin
+        self._tts = load_tts_module(self.config)
+
+        # Audio UI/HAL
+        self._audio_ui = AudioUserInterface(self.config)
+        self._audio_ui.initialize(self.bus)
+
+        # Handle "speak" events
+        self._speak_handler = SpeakHandler(self.config, self.bus, self._tts)
+        self._speak_handler.start()
+
+    def stop(self):
+        self._speak_handler.stop()
+        self._audio_ui.shutdown()
 
 
 def main():
     """Service entry point"""
-    logging.basicConfig(level=logging.DEBUG)
-    LOG.info("Starting service...")
-
-    try:
-        config = Configuration.get()
-        bus = _connect_to_bus(config)
-
-        # Text to speech plugin
-        tts = load_tts_module(config)
-
-        # Audio UI/HAL
-        audio_ui = AudioUserInterface(config)
-        audio_ui.initialize(bus)
-
-        speak_handler = SpeakHandler(config, bus, tts)
-        speak_handler.start()
-
-        # Start watchdog thread
-        Thread(target=_watchdog, daemon=True).start()
-
-        # Inform systemd that we successfully started
-        NOTIFIER.notify("READY=1")
-        bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
-
-        try:
-            # Wait for exit signal
-            Event().wait()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            speak_handler.stop()
-            audio_ui.shutdown()
-            bus.close()
-
-        LOG.info("Service is shutting down...")
-    except Exception:
-        LOG.exception("Service failed to start")
-
-
-def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
-    bus = create_client(config)
-    bus.run_in_thread()
-    bus.connected_event.wait()
-    bus.on(f"{SERVICE_ID}.service.connected", lambda m: bus.emit(m.response()))
-    bus.emit(Message(f"{SERVICE_ID}.initialize.started"))
-    LOG.info("Connected to Mycroft Core message bus")
-
-    return bus
-
-
-def _watchdog():
-    try:
-        while True:
-            # Prevent systemd from restarting service
-            NOTIFIER.notify("WATCHDOG=1")
-            time.sleep(WATCHDOG_DELAY)
-    except Exception:
-        LOG.exception("Unexpected error in watchdog thread")
+    AudioService().main()
 
 
 if __name__ == "__main__":

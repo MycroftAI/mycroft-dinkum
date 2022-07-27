@@ -20,6 +20,61 @@ from .volume import Mark2VolumeClient
 
 
 class HalService(DinkumService):
+    """
+    Service for controlling and getting input from Mark II specific hardware.
+
+    Hardware includes:
+    * LED ring
+      * 12 RGB LEDs
+      * On i2c bus 1 at 0x04
+    * Switches and buttons
+      * 3 buttons, 1 switch
+      * action
+        * Large button
+        * GPIO pin 24 (BCM)
+      * volume_up
+        * Small button (center)
+        * GPIO pin 22 (BCM)
+      * volume_down
+        * Small button (right)
+        * GPIO pin 23 (BCM)
+      * mute
+        * Switch (left)
+        * GPIO pin 25 (BCM)
+    * Amplifier
+      * On i2c bus 1 at 0x2F
+
+    Input messages:
+    * mycroft.volume.set
+      * Set volume to "percent"
+    * mycroft.volume.get
+      * Request volume as "percent"
+    * mycroft.switch.report-states
+      * Request publication of mycroft.switch.state for each switch/button
+    * mycroft.feedback.set-state
+      * Set LED "state"
+        * asleep
+        * awake
+        * thinking
+
+    Output messages:
+    * mycroft.switch.state
+      * State of a switch/button
+    * mycroft.volume.get.response
+      * Response to mycroft.volume.get
+    * mycroft.mic.mute
+      * Mute microphone (mute switch)
+    * mycroft.mic.unmute
+      * Unmute microphone (mute switch)
+
+    Service messages:
+    * hal.service.connected
+    * hal.service.connected.response
+    * hal.initialize.started
+    * hal.initialize.ended
+
+    """
+
     def __init__(self):
         super().__init__(service_id="hal")
 

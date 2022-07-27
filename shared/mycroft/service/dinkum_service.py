@@ -140,3 +140,17 @@ class DinkumService(ABC):
                 time.sleep(WATCHDOG_DELAY)
         except Exception:
             self.log.exception("Unexpected error in watchdog thread")
+
+    def _wait_for_service(self, service_id: str, wait_sec: float = 0.5):
+        # Wait for intent service
+        self.log.debug("Waiting for %s service...", service_id)
+        while True:
+            response = self.bus.wait_for_response(
+                Message(f"{service_id}.service.connected")
+            )
+            if response:
+                break
+
+            time.sleep(wait_sec)
+
+        LOG.debug("%s service connected", service_id)

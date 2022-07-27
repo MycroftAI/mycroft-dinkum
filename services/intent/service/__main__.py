@@ -12,78 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
-import sys
-import time
-from threading import Event, Thread
-from typing import Any, Dict
-
-import sdnotify
-from mycroft.configuration import Configuration
-from mycroft.messagebus.client import create_client
+from mycroft.service import DinkumService
 from mycroft.skills.event_scheduler import EventScheduler
-from mycroft_bus_client import Message, MessageBusClient
 
-from .intent_service import IntentService
+from .intent_service import IntentService as InternalIntentService
 
-SERVICE_ID = "intent"
-LOG = logging.getLogger(SERVICE_ID)
-NOTIFIER = sdnotify.SystemdNotifier()
-WATCHDOG_DELAY = 0.5
+
+class IntentService(DinkumService):
+    """
+    Service for recognizing intents and managing sessions.
+    """
+
+    def __init__(self):
+        super().__init__(service_id="intent")
+
+    def start(self):
+        self._intent_service = InternalIntentService(self.config, self.bus)
+        self._event_scheduler = EventScheduler(self.bus)
+
+    def stop(self):
+        self._intent_service.stop()
+        self._event_scheduler.shutdown()
 
 
 def main():
     """Service entry point"""
-    logging.basicConfig(level=logging.DEBUG)
-    LOG.info("Starting service...")
-
-    try:
-        config = Configuration.get()
-        bus = _connect_to_bus(config)
-        intent_service = IntentService(config, bus)
-        event_scheduler = EventScheduler(bus)
-
-        intent_service.start()
-
-        # Start watchdog thread
-        Thread(target=_watchdog, daemon=True).start()
-
-        # Inform systemd that we successfully started
-        NOTIFIER.notify("READY=1")
-        bus.emit(Message(f"{SERVICE_ID}.initialize.ended"))
-
-        try:
-            # Wait for exit
-            Event().wait()
-        except KeyboardInterrupt:
-            LOG.info("Service is shutting down...")
-        finally:
-            intent_service.stop()
-            event_scheduler.shutdown()
-            bus.close()
-    except Exception:
-        LOG.exception("Service failed to start")
-
-
-def _connect_to_bus(config: Dict[str, Any]) -> MessageBusClient:
-    bus = create_client(config)
-    bus.run_in_thread()
-    bus.connected_event.wait()
-    bus.on(f"{SERVICE_ID}.service.connected", lambda m: bus.emit(m.response()))
-    bus.emit(Message(f"{SERVICE_ID}.initialize.started"))
-    LOG.info("Connected to Mycroft Core message bus")
-
-    return bus
-
-
-def _watchdog():
-    try:
-        while True:
-            # Prevent systemd from restarting service
-            NOTIFIER.notify("WATCHDOG=1")
-            time.sleep(WATCHDOG_DELAY)
-    except Exception:
-        LOG.exception("Unexpected error in watchdog thread")
+    IntentService().main()
 
 
 if __name__ == "__main__":
