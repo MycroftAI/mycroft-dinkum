@@ -28,8 +28,8 @@ from requests import HTTPError
 
 from .awconnect import AwconnectClient
 
-INTERNET_RETRIES = 1
-INTERNET_WAIT_SEC = 5
+INTERNET_RETRIES = 2
+INTERNET_WAIT_SEC = 10
 
 SERVER_AUTH_RETRIES = 3
 SERVER_AUTH_WAIT_SEC = 10
