@@ -14,7 +14,7 @@
 
 from mycroft.api import DeviceApi
 from mycroft.identity import IdentityManager
-from mycroft.util import LOG
+from mycroft.util.log import LOG
 
 
 def get_device_name():

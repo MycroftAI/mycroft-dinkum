@@ -50,6 +50,12 @@ class SkillsService(DinkumService):
             self._skill_instance is not None
         ), f"Failed to create skill {self.args.skill_id}"
 
+    def run(self):
+        # Block skill from loading until ready
+        self._wait_for_ready()
+
+        super().run()
+
     def stop(self):
         self._skill_instance.default_shutdown()
 
