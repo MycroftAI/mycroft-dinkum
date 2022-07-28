@@ -23,11 +23,28 @@ from .silero_vad import SileroVoiceActivityDetector
 from .vad_command import VadCommand
 
 LOG = logging.getLogger("voice")
+
+# Seconds to wait for an audio chunk before erroring out
 AUDIO_TIMEOUT = 0.5
+
+# Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 2048
+
+# Onnx model path for Silero VAD
 VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
+
+# Threshold for silence detection (end of STT voice command)
 VAD_THRESHOLD = 0.2
-CHUNKS_TO_BUFFER = 2
+
+# Number of audio chunks to store for saving hotword WAV examples
+HOTWORD_CHUNKS_TO_BUFFER = 15
+
+# Number of audio chunks to use before hotword activation for STT.
+# Increasing this number will start to include the end of the hotword in the STT
+# voice command.
+STT_CHUNKS_TO_BUFFER = 2
+
+# Number of empty audio chunks to prepend to STT audio.
 AUTO_SILENCE_CHUNKS = 5
 
 
@@ -69,14 +86,20 @@ class VoiceLoop:
         # Audio chunks from arecord
         self.queue: "Queue[bytes]" = Queue()
 
+        # Buffered audio that's used to store hotword samples
+        self.hotword_audio_chunks = deque(maxlen=HOTWORD_CHUNKS_TO_BUFFER)
+
+        # Directory to cache hotword recordings
+        self.hotword_audio_dir = Path(get_cache_directory("hotword_recordings"))
+
         # Buffered audio that's sent to STT after wake
-        self.chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
+        self.stt_audio_chunks = deque(maxlen=STT_CHUNKS_TO_BUFFER)
 
         # Contains the audio from the last spoken voice command
-        self.last_audio = bytes()
+        self.stt_audio = bytes()
 
         # Directory to cache STT recordings
-        self.last_audio_dir = Path(get_cache_directory("stt_recordings"))
+        self.stt_audio_dir = Path(get_cache_directory("stt_recordings"))
 
     def start(self):
         # Start arecord in separate thread
@@ -93,11 +116,12 @@ class VoiceLoop:
             assert chunk, "Empty audio chunk"
 
             if self.muted:
-                self.chunk_buffer.clear()
+                self.stt_audio_chunks.clear()
                 chunk = bytes(len(chunk))
 
-            self.chunk_buffer.append(chunk)
+            self.stt_audio_chunks.append(chunk)
             if not self.is_recording:
+                self.hotword_audio_chunks.append(chunk)
                 self.hotword.update(chunk)
                 if self.listen_once:
                     # Fake detection for get_response
@@ -112,6 +136,12 @@ class VoiceLoop:
 
                 if hotword_detected:
                     self.log.info("Hotword detected!")
+
+                    # Save audio example
+                    self._save_hotword_audio()
+                    self.hotword_audio_chunks.clear()
+
+                    # Wake up
                     self.do_listen()
 
                     # Reset state of hotword
@@ -119,7 +149,7 @@ class VoiceLoop:
             else:
                 # In voice command
                 self.stt.update(chunk)
-                self.last_audio += chunk
+                self.stt_audio += chunk
                 seconds = _chunk_seconds(
                     len(chunk), sample_rate=16000, sample_width=2, channels=1
                 )
@@ -155,7 +185,7 @@ class VoiceLoop:
                             Message("recognizer_loop:speech.recognition.unknown")
                         )
 
-                    self._save_last_audio()
+                    self._save_stt_audio()
 
     def do_listen(self):
         if self.muted:
@@ -190,7 +220,7 @@ class VoiceLoop:
         )
 
         # Begin voice command
-        self.last_audio = bytes()
+        self.stt_audio = bytes()
         self.command.reset()
         self.stt.start()
         self.is_recording = True
@@ -198,7 +228,7 @@ class VoiceLoop:
         # Push audio buffer into STT
         buffered_chunks = [
             [bytes(AUDIO_CHUNK_SIZE)] * AUTO_SILENCE_CHUNKS,
-            self.chunk_buffer,
+            self.stt_audio_chunks,
         ]
         for buffered_chunk in itertools.chain.from_iterable(buffered_chunks):
             seconds = _chunk_seconds(
@@ -206,12 +236,12 @@ class VoiceLoop:
             )
 
             self.stt.update(buffered_chunk)
-            self.last_audio += buffered_chunk
+            self.stt_audio += buffered_chunk
             chunk_array = np.frombuffer(buffered_chunk, dtype=np.int16)
             is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
             self.command.process(is_speech, seconds)
 
-        self.chunk_buffer.clear()
+        self.stt_audio_chunks.clear()
 
     def handle_mute(self, _message):
         self.muted = True
@@ -225,14 +255,29 @@ class VoiceLoop:
         self.mycroft_session_id = message.data.get("mycroft_session_id")
         self.listen_once = True
 
-    def _save_last_audio(self):
+    def _save_hotword_audio(self):
         try:
-            wav_path = self.last_audio_dir / f"{time.monotonic_ns()}.wav"
+            wav_path = self.hotword_audio_dir / f"{time.monotonic_ns()}.wav"
             with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
                 wav_file.setframerate(16000)
                 wav_file.setsampwidth(2)
                 wav_file.setnchannels(1)
-                wav_file.writeframes(self.last_audio)
+
+                for chunk in self.hotword_audio_chunks:
+                    wav_file.writeframes(chunk)
+
+            LOG.debug("Wrote %s", wav_path)
+        except Exception:
+            LOG.exception("Error while saving STT audio")
+
+    def _save_stt_audio(self):
+        try:
+            wav_path = self.stt_audio_dir / f"{time.monotonic_ns()}.wav"
+            with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
+                wav_file.setframerate(16000)
+                wav_file.setsampwidth(2)
+                wav_file.setnchannels(1)
+                wav_file.writeframes(self.stt_audio)
 
             LOG.debug("Wrote %s", wav_path)
         except Exception:
