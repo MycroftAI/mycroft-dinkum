@@ -33,7 +33,7 @@ def download_remote_settings(api) -> Dict[str, Any]:
     location = None
     try:
         location = api.get_location()
-    except RequestException as e:
+    except:
         LOG.exception("RequestException fetching remote location")
 
     if location:

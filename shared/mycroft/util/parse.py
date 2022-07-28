@@ -1,5 +1,5 @@
 #
-# Copyright 2017 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,20 +27,10 @@ do most of the actual parsing. However methods may be wrapped specifically for
 use in Mycroft Skills.
 """
 
-from difflib import SequenceMatcher
 from warnings import warn
 
 from lingua_franca import get_default_loc
 from lingua_franca.parse import extract_datetime as _extract_datetime
-from lingua_franca.parse import (
-    extract_duration,
-    extract_number,
-    extract_numbers,
-    fuzzy_match,
-    get_gender,
-    match_one,
-    normalize,
-)
 
 from .log import LOG
 from .time import now_local

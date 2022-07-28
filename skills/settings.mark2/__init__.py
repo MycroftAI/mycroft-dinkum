@@ -12,16 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
-import time
-from datetime import datetime
-
 from mycroft.api import get_pantacor_device_id
 from mycroft.messagebus.message import Message
-from mycroft.skills import GuiClear, MycroftSkill, intent_handler
-from mycroft.util.log import LOG
+from mycroft.skills import GuiClear, MycroftSkill
 
-from .skill.device_id import get_device_name, get_mycroft_uuid
+from .skill.device_id import get_device_name
 
 # from .skill.versions import (
 #     get_mycroft_build_datetime,

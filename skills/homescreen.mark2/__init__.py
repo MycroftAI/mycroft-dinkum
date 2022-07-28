@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Skill to display a home screen (a.k.a. idle screen) on a GUI enabled device."""
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import AdaptIntent, GuiClear, MycroftSkill, intent_handler

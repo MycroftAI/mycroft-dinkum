@@ -11,13 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
-import typing
 from collections import deque
 
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.fallback_skill import FallbackSkill
-from mycroft.util.log import LOG
 
 MAX_DISPLAY_UTTERANCES = 4
 

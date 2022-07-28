@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from mycroft.util.log import LOG
+
 
 def hash_sentence(sentence: str):
     """Convert the sentence into a hash value used for the file name

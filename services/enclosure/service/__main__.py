@@ -14,6 +14,7 @@
 #
 import json
 import time
+from typing import Optional
 
 from mycroft.api import DeviceApi
 from mycroft.configuration.remote import (
