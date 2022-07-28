@@ -12,7 +12,7 @@ from typing import Optional
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
-from mycroft.util import check_for_signal, resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.log import LOG
 
 from .audio_hal import AudioHAL

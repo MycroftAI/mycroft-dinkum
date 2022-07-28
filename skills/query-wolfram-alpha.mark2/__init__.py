@@ -19,7 +19,7 @@ from mtranslate import translate
 from mycroft.messagebus.message import Message
 from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
-from mycroft.util import get_cache_directory
+from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.parse import normalize
 from requests import HTTPError
 

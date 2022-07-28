@@ -21,6 +21,9 @@ from typing import Any, Dict, Iterable, Optional, Union, cast
 
 import xdg.BaseDirectory
 
+from .remote import get_remote_settings_path
+from .util import load_commented_json, merge_dict
+
 LOG = logging.getLogger(__package__)
 
 _DIR = Path(__file__).parent
@@ -47,14 +50,8 @@ class Configuration:
 
     @staticmethod
     def load(config_path: Union[str, Path]) -> ConfigType:
-        with open(config_path, "r", encoding="utf-8") as config_file:
-            with io.StringIO() as uncommented_file:
-                for line in strip_comments(config_file):
-                    uncommented_file.write(line)
-
-                uncommented_file.seek(0)
-                config = json.load(uncommented_file)
-                return cast(ConfigType, config)
+        config = load_commented_json(config_path)
+        return cast(ConfigType, config)
 
     @staticmethod
     def get_paths() -> Iterable[Path]:
@@ -66,32 +63,12 @@ class Configuration:
             _DIR / "mycroft.conf",  # default
             Path(system_config),  # system
             Path("~").expanduser() / ".mycroft" / "mycroft",  # old user
-            Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / "mycroft.conf",
+            get_remote_settings_path(),  # selene
+            Path(xdg.BaseDirectory.xdg_config_home)
+            / "mycroft"
+            / "mycroft.conf",  # new user
         ]
 
         for path in maybe_paths:
             if path.is_file():
                 yield path
-
-
-def strip_comments(source: Iterable[str], comment: str = "//") -> Iterable[str]:
-    for line in source:
-        if not line.strip().startswith(comment):
-            yield line
-
-
-def merge_dict(base: dict, delta: dict):
-    """
-    Recursively merging configuration dictionaries.
-
-    Args:
-        base:  Target for merge
-        delta: Dictionary to merge into base
-    """
-
-    for d_key, d_val in delta.items():
-        b_val = base.get(d_key)
-        if isinstance(d_val, dict) and isinstance(b_val, dict):
-            merge_dict(b_val, d_val)
-        else:
-            base[d_key] = d_val

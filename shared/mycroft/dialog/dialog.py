@@ -22,7 +22,7 @@ import re
 from os.path import join
 from pathlib import Path
 
-from mycroft.util import resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.format import expand_options
 from mycroft.util.log import LOG
 

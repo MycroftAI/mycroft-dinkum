@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import json
 import time
 
+from mycroft.api import DeviceApi
 from mycroft.service import DinkumService
 from mycroft_bus_client import Message
 from mycroft.util.network_utils import check_system_clock_sync_status
+from mycroft.configuration.remote import (
+    download_remote_settings,
+    get_remote_settings_path,
+)
 
 from .connect_check import ConnectCheck
 
@@ -68,6 +74,7 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.switch.report-states"))
 
         self._sync_clock()
+        self._download_remote_settings()
 
         # Inform skills that we're ready
         self.mycroft_ready = True
@@ -85,6 +92,17 @@ class EnclosureService(DinkumService):
                 break
 
             time.sleep(CLOCK_SYNC_WAIT_SEC)
+
+    def _download_remote_settings(self):
+        self.log.debug("Downloading remote settings")
+        try:
+            api = DeviceApi()
+            remote_config = download_remote_settings(api)
+            settings_path = get_remote_settings_path()
+            with open(settings_path, "w", encoding="utf-8") as settings_file:
+                json.dump(remote_config, settings_file)
+        except Exception:
+            self.log.exception("Error downloading remote settings")
 
     # -------------------------------------------------------------------------
 

@@ -20,7 +20,7 @@ from copy import copy, deepcopy
 import requests
 from mycroft.configuration import Configuration
 from mycroft.identity import IdentityManager
-from mycroft.util import get_arch
+from mycroft.util.platform import get_arch
 from mycroft.version import VersionManager
 from requests import HTTPError, RequestException
 

@@ -23,7 +23,7 @@ from mycroft.skills import (
     intent_handler,
     skill_api_method,
 )
-from mycroft.util import resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.parse import extract_number
 
 

@@ -19,7 +19,7 @@ from typing import Optional
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
-from mycroft.util import resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 
 
 class SkillGUI:

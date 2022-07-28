@@ -21,7 +21,7 @@ from urllib.parse import quote
 from mycroft.messagebus import Message
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
-from mycroft.util import get_cache_directory
+from mycroft.util.file_utils import get_cache_directory
 
 from .stations.match import Match, match_station_from_utterance
 from .stations.station import (

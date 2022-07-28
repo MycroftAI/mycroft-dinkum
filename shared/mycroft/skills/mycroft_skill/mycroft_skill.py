@@ -41,7 +41,8 @@ from mycroft.dialog import load_dialogs
 from mycroft.enclosure.gui import SkillGUI
 from mycroft.filesystem import FileSystemAccess
 from mycroft.messagebus.message import Message
-from mycroft.util import camel_case_split, resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
+from mycroft.util.string_utils import camel_case_split
 from mycroft.util.format import join_list, pronounce_number
 from mycroft.util.log import LOG
 from mycroft.util.parse import extract_number, match_one

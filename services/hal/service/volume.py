@@ -17,7 +17,7 @@ import subprocess
 from math import exp, log
 from typing import Optional
 
-from mycroft.util import resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 from mycroft_bus_client import Message, MessageBusClient
 from smbus2 import SMBus
 

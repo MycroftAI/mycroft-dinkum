@@ -18,7 +18,7 @@ import time
 
 from behave import given
 from mycroft.messagebus import Message
-from mycroft.util import resolve_resource_file
+from mycroft.util.file_utils import resolve_resource_file
 
 CONFIG_CHANGE_TIMEOUT = 10
 
