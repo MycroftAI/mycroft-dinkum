@@ -30,7 +30,8 @@ Mycroft.Delegate {
     bottomPadding: 0
     property int gridUnit: Mycroft.Units.gridUnit
 
-    property real timeLeft: 24.0
+    property real timeLeft: 30.0
+    property string nextText: "Next (" + timeLeft + ")"
 
     Timer {
         id: progressTimer
@@ -39,6 +40,11 @@ Mycroft.Delegate {
         repeat: true
         onTriggered: {
             root.timeLeft =  Math.max(0.0, root.timeLeft - 1.0);
+            if (root.timeLeft <= 0) {
+                triggerGuiEvent("pairing.show-code", {});
+            }
+
+            root.nextText = "Next (" + root.timeLeft + ")";
         }
     }
 
@@ -92,16 +98,13 @@ Mycroft.Delegate {
                 textColor: "#22a7f0"
             }
 
-            ProgressBar {
-                id: connectionProgress
+            Button {
+                id: buttonNext
                 anchors.top: fourthLine.bottom
                 anchors.topMargin: gridUnit * 4
-                height: gridUnit
-                // indeterminate: true
-                width: gridUnit * 24
-                from: 0.0
-                to: 24.0
-                value: root.timeLeft
+                anchors.right: parent.right
+                text: root.nextText
+                onClicked: triggerGuiEvent("pairing.show-code", {})
             }
         }
     }

@@ -45,7 +45,7 @@ Item {
         anchors.baseline: parent.bottom
         anchors.horizontalCenter: center ? parent.horizontalCenter : undefined
         color: textColor
-        font.pixelSize: 47
+        font.pixelSize: 45
         font.styleName: "Bold"
     }
 }

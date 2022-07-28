@@ -28,7 +28,9 @@ Mycroft.Delegate {
     bottomPadding: 0
     topPadding: 0
     property int gridUnit: Mycroft.Units.gridUnit
-    property real timeLeft: 45.0
+
+    property real timeLeft: 60.0
+    property string activateText: "Activate (" + timeLeft + ")"
 
     Timer {
         id: progressTimer
@@ -37,6 +39,11 @@ Mycroft.Delegate {
         repeat: true
         onTriggered: {
             root.timeLeft = Math.max(0.0, root.timeLeft - 1.0);
+            if (root.timeLeft <= 0) {
+                triggerGuiEvent("pairing.check-activation", {});
+            }
+
+            root.activateText = "Activate (" + root.timeLeft + ")";
         }
     }
 
@@ -66,17 +73,13 @@ Mycroft.Delegate {
             textColor: "#2C3E50"
         }
 
-        ProgressBar {
+        Button {
             id: activationProgress
             anchors.top: pairingUrl.bottom
             anchors.topMargin: gridUnit * 4
             anchors.horizontalCenter: parent.horizontalCenter
-            height: gridUnit
-            // indeterminate: true
-            width: gridUnit * 24
-            from: 0.0
-            to: 45.0
-            value: root.timeLeft
+            text: root.activateText
+            onClicked: triggerGuiEvent("pairing.check-activation", {})
         }
     }
 }

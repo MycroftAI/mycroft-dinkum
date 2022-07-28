@@ -141,7 +141,7 @@ class DinkumService(ABC):
         except Exception:
             self.log.exception("Unexpected error in watchdog thread")
 
-    def _wait_for_service(self, service_id: str, wait_sec: float = 0.5):
+    def _wait_for_service(self, service_id: str, wait_sec: float = 1.0):
         # Wait for intent service
         self.log.debug("Waiting for %s service...", service_id)
         while True:
@@ -155,7 +155,7 @@ class DinkumService(ABC):
 
         self.log.debug("%s service connected", service_id)
 
-    def _wait_for_gui(self, wait_sec: float = 0.5):
+    def _wait_for_gui(self, wait_sec: float = 1.0):
         # Wait for GUI connected
         self.log.debug("Waiting for GUI...")
         while True:
@@ -167,7 +167,7 @@ class DinkumService(ABC):
 
         self.log.debug("GUI connected")
 
-    def _wait_for_ready(self, wait_sec: float = 0.5):
+    def _wait_for_ready(self, wait_sec: float = 1.0):
         # Wait for Mycroft ready
         self.log.debug("Waiting for ready...")
         while True:

@@ -19,17 +19,18 @@ from http import HTTPStatus
 from typing import Optional
 from uuid import uuid4
 
+import requests
 from mycroft.api import DeviceApi
 from mycroft.identity import IdentityManager
 from mycroft.skills import GuiClear, MessageSend, MycroftSkill
-from mycroft.util.network_utils import connected
 from mycroft_bus_client import Message, MessageBusClient
 from requests import HTTPError
 
 from .awconnect import AwconnectClient
 
-INTERNET_RETRIES = 2
-INTERNET_WAIT_SEC = 10
+INTERNET_RETRIES = 3
+INTERNET_TIMEOUT = 8
+INTERNET_WAIT_SEC = 8
 
 SERVER_AUTH_RETRIES = 3
 SERVER_AUTH_WAIT_SEC = 10
@@ -90,9 +91,15 @@ class ConnectCheck(MycroftSkill):
 
         # Pairing steps
         self.add_event("server-connect.pairing.start", self._pairing_start)
-        self.add_event("server-connect.pairing.show-code", self._pairing_show_code)
-        self.add_event(
-            "server-connect.pairing.check-activation", self._pairing_check_activation
+
+        # Send from GUI (button or timeout)
+        self.gui.register_handler(
+            "pairing.show-code", "pairing_start_mark_ii.qml", self._pairing_show_code
+        )
+        self.gui.register_handler(
+            "pairing.check-activation",
+            "pairing_code_mark_ii.qml",
+            self._pairing_check_activation,
         )
 
     def start(self):
@@ -144,7 +151,10 @@ class ConnectCheck(MycroftSkill):
                 "Checking for internet connection (%s/%s)", i + 1, INTERNET_RETRIES
             )
             try:
-                is_connected = connected()
+                is_connected = requests.get(
+                    "http://start.mycroft.ai/portal-check.html",
+                    timeout=INTERNET_TIMEOUT,
+                ).ok
                 if is_connected:
                     break
             except Exception:
@@ -384,37 +394,31 @@ class ConnectCheck(MycroftSkill):
             dialog="pairing.intro",
             mycroft_session_id=mycroft_session_id,
             gui_clear=GuiClear.NEVER,
-            message=Message("server-connect.pairing.show-code"),
-            message_send=MessageSend.AT_END,
-            message_delay=PAIRING_SHOW_URL_WAIT_SEC,
+            # message=Message("server-connect.pairing.show-code"),
+            # message_send=MessageSend.AT_END,
+            # message_delay=PAIRING_SHOW_URL_WAIT_SEC,
         )
         self.bus.emit(response)
 
     def _pairing_show_code(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
-
         dialog = self._speak_pairing_code()
         gui = self._display_pairing_code()
 
-        response = self.continue_session(
+        self._mycroft_session_id = self.emit_start_session(
             gui=gui,
             dialog=dialog,
-            mycroft_session_id=mycroft_session_id,
+            mycroft_session_id=self._mycroft_session_id,
             gui_clear=GuiClear.NEVER,
-            message=Message("server-connect.pairing.check-activation"),
-            message_send=MessageSend.AT_END,
-            message_delay=PAIRING_SPEAK_CODE_WAIT_SEC,
+            # message=Message("server-connect.pairing.check-activation"),
+            # message_send=MessageSend.AT_END,
+            # message_delay=PAIRING_SPEAK_CODE_WAIT_SEC,
         )
-        self.bus.emit(response)
 
     def _pairing_check_activation(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
+        # mycroft_session_id = message.data.get("mycroft_session_id")
+        # if mycroft_session_id != self._mycroft_session_id:
+        #     # Different session now
+        #     return
 
         self.log.debug("Checking for device activation")
         try:
@@ -424,7 +428,7 @@ class ConnectCheck(MycroftSkill):
             self.bus.emit(
                 Message(
                     "server-connect.pairing.ended",
-                    data={"mycroft_session_id": mycroft_session_id},
+                    data={"mycroft_session_id": self._mycroft_session_id},
                 )
             )
             self.bus.emit(Message("mycroft.paired", login))
