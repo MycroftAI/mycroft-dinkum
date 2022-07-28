@@ -168,6 +168,7 @@ class Alarm:
             alarmName="" if self.name is None else self.name.title(),
             alarmTime=display_time,
             alarmDays=display_days.title(),
+            recurring=self.has_repeat_rule,
         )
 
     def build_description_dialog(self, resources: StaticResources, use_24_hour: bool):

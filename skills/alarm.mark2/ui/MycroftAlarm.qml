@@ -87,7 +87,7 @@ Rectangle {
         opacity: alarmInfo ? 1.0 : 0.0
         fillMode: Image.PreserveAspectFit
         height: alarmCount >= 3 ? gridUnit * 2 : gridUnit * 7
-        source: "images/alarm-clock.svg"
+        source: alarmInfo.recurring ? "images/alarm-clock-recurring.svg" : "images/alarm-clock.svg"
     }
 
     Item {

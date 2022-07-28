@@ -1,2 +1,2 @@
-Alarm (created|set) for {{time}}, beginning in {{rel}}
-I've (created|set) an alarm for {{time}}, starting {{rel}} from now 
+Recurring alarm (created|set) for {{time}}, beginning in {{rel}}
+I've (created|set) a recurring alarm for {{time}}, starting {{rel}} from now

@@ -24,6 +24,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#22A7F0"
         alarmInfo: sessionData.activeAlarms.alarms[0]
         alarmCount: sessionData.activeAlarmCount
+        visible: sessionData.activeAlarmCount > 0
     }
 
     MycroftAlarm {
@@ -33,6 +34,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#40DBB0"
         alarmInfo: sessionData.activeAlarms.alarms[1]
         alarmCount: sessionData.activeAlarmCount
+        visible: sessionData.activeAlarmCount > 1
     }
 
     MycroftAlarm {
@@ -42,6 +44,7 @@ Mycroft.CardDelegate {
         backgroundColor: "#BDC3C7"
         alarmInfo: sessionData.activeAlarms.alarms[2]
         alarmCount: sessionData.activeAlarmCount
+        visible: sessionData.activeAlarmCount > 2
     }
 
     MycroftAlarm {
@@ -53,5 +56,6 @@ Mycroft.CardDelegate {
         backgroundColor: "#4DE0FF"
         alarmInfo: sessionData.activeAlarms.alarms[3]
         alarmCount: sessionData.activeAlarmCount
+        visible: sessionData.activeAlarmCount > 3
     }
 }

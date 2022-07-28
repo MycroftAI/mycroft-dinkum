@@ -650,10 +650,6 @@ class AlarmSkill(MycroftSkill):
 
     def _load_alarms(self):
         """Load any saved alarms into the active alarms list."""
-        # self.active_alarms = list()
-        # if self.save_path.exists():
-        #     with open(self.save_path, "rb") as data_file:
-        #         self.active_alarms = pickle.load(data_file)
         self.active_alarms = Alarms.load(self.save_path)
 
     def _save_alarms(self):

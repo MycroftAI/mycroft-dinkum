@@ -89,7 +89,6 @@ def build_repeat_rule_description(repeat_rule: str, static_resources) -> str:
     if repeat_description is None:
         repeat_description = join_list(day_names, static_resources.and_word[0])
 
-
     return repeat_description
 
 
