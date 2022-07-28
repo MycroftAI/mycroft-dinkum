@@ -152,6 +152,7 @@ class AudioUserInterface:
             # "mycroft.session.ended": self.handle_session_ended,
             "mycroft.audio.play-sound": self.handle_play_sound,
             "mycroft.tts.stop": self.handle_tts_stop,
+            "mycroft.tts.session.start": self.handle_tts_session_start,
             "mycroft.tts.chunk.start": self.handle_tts_chunk,
             "mycroft.audio.hal.media.ended": self.handle_media_finished,
             # stream
@@ -221,8 +222,11 @@ class AudioUserInterface:
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
         self._speech_finished.set()
 
+        # Restore background stream volume
+        self._unduck_volume()
+
     def _duck_volume(self):
-        """Stop TTS and lower background stream volumes during voice commands"""
+        """Lower background stream volumes during voice commands"""
         self._ahal.set_background_volume(0.3)
         LOG.info("Ducked volume")
 
@@ -272,6 +276,15 @@ class AudioUserInterface:
         """Ensures the text to speech queue is emptied"""
         while not self._speech_queue.empty():
             self._speech_queue.get()
+
+    def handle_tts_session_start(self, message):
+        tts_session_id = message.data.get("tts_session_id")
+
+        if tts_session_id != self._tts_session_id:
+            # Stop previous session
+            self._stop_tts()
+
+        self._tts_session_id = tts_session_id
 
     def handle_tts_chunk(self, message):
         """Queues a text to speech audio chunk to be played"""

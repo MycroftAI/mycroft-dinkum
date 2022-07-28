@@ -27,6 +27,7 @@ class SpeakHandler:
         self._cache_dirs = [cache_dir]
 
         self._speak_lock = RLock()
+        self._mycroft_session_id: Optional[str] = None
 
         self._segmenter: Optional[pysbd.Segmenter] = None
         self._load_segmenter()
@@ -34,6 +35,7 @@ class SpeakHandler:
     def start(self):
         self.bus.on("speak", self._handle_speak)
         self.bus.on("speak.cache", self._handle_speak)
+        self.bus.on("mycroft.tts.stop", self._handle_tts_stop)
 
     def stop(self):
         pass
@@ -43,6 +45,8 @@ class SpeakHandler:
             cache_only = message.msg_type == "speak.cache"
             utterance = message.data["utterance"]
             mycroft_session_id = message.data.get("mycroft_session_id")
+            self._mycroft_session_id = mycroft_session_id
+
             LOG.debug(
                 "Speak for session '%s': %s (cache=%s)",
                 mycroft_session_id,
@@ -51,13 +55,29 @@ class SpeakHandler:
             )
 
             with self._speak_lock:
+                # Begin TTS session
+                tts_session_id = message.data.get("tts_session_id") or str(uuid4())
+                self.bus.emit(
+                    Message(
+                        "mycroft.tts.session.start",
+                        data={
+                            "tts_session_id": tts_session_id,
+                            "mycroft_session_id": mycroft_session_id,
+                        },
+                    )
+                )
+
                 # Segment utterance into sentences using pysbd (Python Sentence Boundary Detector).
                 # NOTE: Segmentation is not thread safe
                 segments = self._segment(utterance)
-                tts_session_id = message.data.get("tts_session_id") or str(uuid4())
 
                 # Synthesize and cache each segment/chunk independently.
                 for i, sentence in enumerate(segments):
+                    if self._mycroft_session_id != mycroft_session_id:
+                        # New session has started
+                        self.log.debug("TTS session cancelled: %s", tts_session_id)
+                        break
+
                     cache_path = self._synthesize(sentence)
                     if cache_only:
                         # Don't speak, just cache the chunk
@@ -79,6 +99,10 @@ class SpeakHandler:
                     )
         except Exception:
             LOG.exception("Unexpected error handling speak")
+
+    def _handle_tts_stop(self, message: Message):
+        # Cancel any active TTS session
+        self._mycroft_session_id = None
 
     def _synthesize(self, text: str) -> Path:
         """Synthesize audio from text or use cached WAV if available"""

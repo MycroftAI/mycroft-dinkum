@@ -266,9 +266,9 @@ class VoiceLoop:
                 for chunk in self.hotword_audio_chunks:
                     wav_file.writeframes(chunk)
 
-            LOG.debug("Wrote %s", wav_path)
+            self.log.debug("Wrote %s", wav_path)
         except Exception:
-            LOG.exception("Error while saving STT audio")
+            self.log.exception("Error while saving STT audio")
 
     def _save_stt_audio(self):
         try:
@@ -279,9 +279,9 @@ class VoiceLoop:
                 wav_file.setnchannels(1)
                 wav_file.writeframes(self.stt_audio)
 
-            LOG.debug("Wrote %s", wav_path)
+            self.log.debug("Wrote %s", wav_path)
         except Exception:
-            LOG.exception("Error while saving STT audio")
+            self.log.exception("Error while saving STT audio")
 
 
 def _audio_input(queue: "Queue[bytes]"):
