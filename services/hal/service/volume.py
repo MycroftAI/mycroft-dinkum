@@ -101,6 +101,10 @@ class Mark2VolumeClient:
         self._current_volume = volume
         self.log.debug("Volume set to %s (hw=%s)", volume, tas_volume)
 
+        # Normalize to [0, 1]
+        norm_volume = volume / (self._volume_max - self._volume_min)
+        self.bus.emit(Message("hardware.volume", data={"volume": norm_volume}))
+
     def _calc_log_y(self, x):
         """given x produce y. takes in an int
         0-100 returns a log oriented hardware
