@@ -41,7 +41,6 @@ class EnclosureService(DinkumService):
         self.bus.on("mycroft.skill-response", self.handle_skill_response)
         self.bus.on("mycroft.session.started", self.handle_session_started)
         self.bus.on("mycroft.session.ended", self.handle_session_ended)
-        self.bus.on("mycroft.session.no-active-sessions", self.handle_idle)
         self.bus.on("mycroft.gui.idle", self.handle_idle)
         self.bus.on("mycroft.switch.state", self.handle_switch_state)
 
