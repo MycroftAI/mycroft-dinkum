@@ -16,13 +16,13 @@ import json
 import time
 
 from mycroft.api import DeviceApi
-from mycroft.service import DinkumService
-from mycroft_bus_client import Message
-from mycroft.util.network_utils import check_system_clock_sync_status
 from mycroft.configuration.remote import (
     download_remote_settings,
     get_remote_settings_path,
 )
+from mycroft.service import DinkumService
+from mycroft.util.network_utils import check_system_clock_sync_status
+from mycroft_bus_client import Message
 
 from .connect_check import ConnectCheck
 

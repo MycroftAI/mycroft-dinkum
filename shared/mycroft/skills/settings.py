@@ -59,8 +59,8 @@ import json
 import re
 from pathlib import Path
 
-from mycroft.util.string_utils import camel_case_split
 from mycroft.util.log import LOG
+from mycroft.util.string_utils import camel_case_split
 
 ONE_MINUTE = 60
 

@@ -18,7 +18,7 @@ from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from enum import Enum
 from pathlib import Path
-from time import sleep, monotonic
+from time import monotonic, sleep
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus.message import Message
