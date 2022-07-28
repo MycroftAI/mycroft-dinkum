@@ -16,3 +16,6 @@ class HotWordEngine(metaclass=ABCMeta):
 
     def shutdown(self):
         pass
+
+    def reset(self):
+        pass

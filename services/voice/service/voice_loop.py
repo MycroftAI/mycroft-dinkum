@@ -1,7 +1,10 @@
 import asyncio
 import json
+import itertools
 import logging
 import subprocess
+import wave
+import time
 from collections import deque
 from pathlib import Path
 from queue import Queue
@@ -12,6 +15,7 @@ from uuid import uuid4
 import numpy as np
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT
+from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import Message, MessageBusClient
 
@@ -24,6 +28,7 @@ AUDIO_CHUNK_SIZE = 2048
 VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
 VAD_THRESHOLD = 0.2
 CHUNKS_TO_BUFFER = 2
+AUTO_SILENCE_CHUNKS = 5
 
 
 class VoiceLoop:
@@ -46,8 +51,16 @@ class VoiceLoop:
 
         self.log = logging.getLogger("voice.loop")
 
+        # True if recording voice command for STT
         self.is_recording = False
+
+        # True if mic is muted
         self.muted = False
+
+        # True if we should treat the hotword as detected once (for get_response)
+        self.listen_once = False
+
+        # Current session id
         self.mycroft_session_id: Optional[str] = None
 
         # Name reported in recognizer_loop:wakeword
@@ -58,6 +71,12 @@ class VoiceLoop:
 
         # Buffered audio that's sent to STT after wake
         self.chunk_buffer = deque(maxlen=CHUNKS_TO_BUFFER)
+
+        # Contains the audio from the last spoken voice command
+        self.last_audio = bytes()
+
+        # Directory to cache STT recordings
+        self.last_audio_dir = Path(get_cache_directory("stt_recordings"))
 
     def start(self):
         # Start arecord in separate thread
@@ -80,12 +99,27 @@ class VoiceLoop:
             self.chunk_buffer.append(chunk)
             if not self.is_recording:
                 self.hotword.update(chunk)
-                if self.hotword.found_wake_word(None) and (not self.muted):
+                if self.listen_once:
+                    # Fake detection for get_response
+                    self.listen_once = False
+                    hotword_detected = True
+                else:
+                    # Normal hotword detection
+                    self.mycroft_session_id = None
+                    hotword_detected = self.hotword.found_wake_word(None) and (
+                        not self.muted
+                    )
+
+                if hotword_detected:
                     self.log.info("Hotword detected!")
                     self.do_listen()
+
+                    # Reset state of hotword
+                    self.hotword.reset()
             else:
                 # In voice command
                 self.stt.update(chunk)
+                self.last_audio += chunk
                 seconds = _chunk_seconds(
                     len(chunk), sample_rate=16000, sample_width=2, channels=1
                 )
@@ -121,14 +155,14 @@ class VoiceLoop:
                             Message("recognizer_loop:speech.recognition.unknown")
                         )
 
-    def do_listen(self, message: Optional[Message] = None):
+                    self._save_last_audio()
+
+    def do_listen(self):
         if self.muted:
             self.log.warning("Not waking up since we're muted")
             return
 
-        if message:
-            self.mycroft_session_id = message.data.get("mycroft_session_id")
-        else:
+        if self.mycroft_session_id is None:
             self.mycroft_session_id = str(uuid4())
 
         self.bus.emit(
@@ -156,21 +190,28 @@ class VoiceLoop:
         )
 
         # Begin voice command
+        self.last_audio = bytes()
         self.command.reset()
         self.stt.start()
         self.is_recording = True
 
         # Push audio buffer into STT
-        self.command.reset()
-        for buffered_chunk in self.chunk_buffer:
+        buffered_chunks = [
+            [bytes(AUDIO_CHUNK_SIZE)] * AUTO_SILENCE_CHUNKS,
+            self.chunk_buffer,
+        ]
+        for buffered_chunk in itertools.chain.from_iterable(buffered_chunks):
             seconds = _chunk_seconds(
                 len(buffered_chunk), sample_rate=16000, sample_width=2, channels=1
             )
 
             self.stt.update(buffered_chunk)
+            self.last_audio += buffered_chunk
             chunk_array = np.frombuffer(buffered_chunk, dtype=np.int16)
             is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
             self.command.process(is_speech, seconds)
+
+        self.chunk_buffer.clear()
 
     def handle_mute(self, _message):
         self.muted = True
@@ -181,7 +222,21 @@ class VoiceLoop:
         self.log.info("Unmuted microphone")
 
     def handle_listen(self, message):
-        self.do_listen(message)
+        self.mycroft_session_id = message.data.get("mycroft_session_id")
+        self.listen_once = True
+
+    def _save_last_audio(self):
+        try:
+            wav_path = self.last_audio_dir / f"{time.monotonic_ns()}.wav"
+            with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
+                wav_file.setframerate(16000)
+                wav_file.setsampwidth(2)
+                wav_file.setnchannels(1)
+                wav_file.writeframes(self.last_audio)
+
+            LOG.debug("Wrote %s", wav_path)
+        except Exception:
+            LOG.exception("Error while saving STT audio")
 
 
 def _audio_input(queue: "Queue[bytes]"):

@@ -18,7 +18,7 @@ from collections import namedtuple
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import GuiClear, MycroftSkill, intent_handler
@@ -205,7 +205,9 @@ class TimerSkill(MycroftSkill):
             gui_clear=GuiClear.NEVER,
         )
 
-    def raw_utterance(self, utterance: Optional[str]) -> Optional[Message]:
+    def raw_utterance(
+        self, utterance: Optional[str], state: Optional[Dict[str, Any]]
+    ) -> Optional[Message]:
         if self.voc_match(utterance, "cancel"):
             self.log.debug("Cancelled user response")
             return
