@@ -67,81 +67,81 @@ Item {
                 Layout.preferredHeight: Kirigami.Units.largeSpacing
             }
 
-            Kirigami.Heading {
-                id: versionsHeading
-                level: 2
-                Layout.alignment: Qt.AlignHCenter
-                text: "Mycroft-core"
-            }
+            // Kirigami.Heading {
+            //     id: versionsHeading
+            //     level: 2
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Mycroft-core"
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.smallSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.smallSpacing
+            // }
 
-            Label {
-                id: mycroftCoreVersionLabel
-                Layout.alignment: Qt.AlignHCenter
-                text: "Version: " + sessionData.mycroftCoreVersion
-            }
+            // Label {
+            //     id: mycroftCoreVersionLabel
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Version: " + sessionData.mycroftCoreVersion
+            // }
 
-            Label {
-                id: mycroftCoreCommitLabel
-                Layout.alignment: Qt.AlignHCenter
-                text: "Commit: " + sessionData.mycroftCoreCommit
-            }
+            // Label {
+            //     id: mycroftCoreCommitLabel
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Commit: " + sessionData.mycroftCoreCommit
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.largeSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
+            // }
 
-            Kirigami.Separator {
-                Layout.fillWidth: true
-            }
+            // Kirigami.Separator {
+            //     Layout.fillWidth: true
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.largeSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
+            // }
 
-            Kirigami.Heading {
-                id: updateDateHeading
-                level: 2
-                Layout.alignment: Qt.AlignHCenter
-                text: "Last updated"
-            }
+            // Kirigami.Heading {
+            //     id: updateDateHeading
+            //     level: 2
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Last updated"
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.smallSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.smallSpacing
+            // }
 
-            Label {
-                id: mycroftContainerBuildDateLabel
-                Layout.alignment: Qt.AlignHCenter
-                text: "Mycroft Container: " + sessionData.mycroftContainerBuildDate
-            }
+            // Label {
+            //     id: mycroftContainerBuildDateLabel
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Mycroft Container: " + sessionData.mycroftContainerBuildDate
+            // }
 
-            Label {
-                id: mycroftSkillsUpdateDateLabel
-                Layout.alignment: Qt.AlignHCenter
-                text: "Mycroft Skills: " + sessionData.mycroftSkillsUpdateDate
-            }
+            // Label {
+            //     id: mycroftSkillsUpdateDateLabel
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "Mycroft Skills: " + sessionData.mycroftSkillsUpdateDate
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.largeSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
+            // }
 
-            Kirigami.Separator {
-                Layout.fillWidth: true
-            }
+            // Kirigami.Separator {
+            //     Layout.fillWidth: true
+            // }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.largeSpacing
-            }
+            // Item {
+            //     Layout.fillWidth: true
+            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
+            // }
 
             Kirigami.Heading {
                 id: deviceIdHeading
@@ -158,14 +158,14 @@ Item {
             Label {
                 id: deviceNameLabel
                 Layout.alignment: Qt.AlignHCenter
-                text: "Device Name: " + sessionData.deviceName
+                text: "Name: " + sessionData.deviceName
             }
 
-            Label {
-                id: mycroftUUIDLabel
-                Layout.alignment: Qt.AlignHCenter
-                text: "Mycroft UUID: " + sessionData.mycroftUUID
-            }
+            // Label {
+            //     id: mycroftUUIDLabel
+            //     Layout.alignment: Qt.AlignHCenter
+            //     text: "UUID: " + sessionData.mycroftUUID
+            // }
 
             Label {
                 id: pantacorDeviceIdLabel
@@ -210,7 +210,7 @@ Item {
                 level: 2
                 wrapMode: Text.WordWrap
                 font.bold: true
-                text: "Device Settings"
+                text: "Back"
                 Layout.fillWidth: true
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 2
             }
@@ -219,7 +219,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: {
-                triggerGuiEvent("mycroft.device.settings", {})
+                triggerGuiEvent("mycroft.device.settings.close", {})
             }
         }
     }

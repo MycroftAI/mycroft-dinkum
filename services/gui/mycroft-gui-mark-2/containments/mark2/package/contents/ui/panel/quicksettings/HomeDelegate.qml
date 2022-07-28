@@ -24,7 +24,7 @@ Delegate {
     iconSource: "go-home"
     text: i18n("Standby Face")
     onClicked: {
-        Mycroft.MycroftController.sendRequest("mycroft.stop", {});
+        Mycroft.MycroftController.sendRequest("mycroft.gui.idle", {});
         for(var i in plasmoid.nativeInterface) {
             print(i+" "+plasmoid.nativeInterface[i]);
         }

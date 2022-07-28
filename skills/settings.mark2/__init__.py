@@ -58,20 +58,21 @@ class Mark2(MycroftSkill):
 
         Registers messagebus handlers and sets default gui values.
         """
-        self.add_event("mycroft.device.settings", self.handle_device_settings)
+        self.add_event("mycroft.device.settings", self.show_device_settings_about)
+        # self.add_event("mycroft.device.settings", self.handle_device_settings)
         self.gui.register_handler(
             "mycroft.device.settings.close",
             "all.qml",
             self.handle_close_device_settings,
         )
-        self.gui.register_handler(
-            "mycroft.device.settings.about",
-            "all.qml",
-            self.show_device_settings_about,
-        )
-        self.gui.register_handler(
-            "mycroft.device.settings", "all.qml", self.handle_device_settings
-        )
+        # self.gui.register_handler(
+        #     "mycroft.device.settings.about",
+        #     "all.qml",
+        #     self.show_device_settings_about,
+        # )
+        # self.gui.register_handler(
+        #     "mycroft.device.settings", "all.qml", self.handle_device_settings
+        # )
 
         # self.brightness_dict = self.translate_namedvalues("brightness.levels")
         # self.gui["volume"] = 0
@@ -482,7 +483,7 @@ class Mark2(MycroftSkill):
         # self.gui.show_page("all.qml", override_idle=True)
 
         device_name = get_device_name()
-        mycroft_uuid = get_mycroft_uuid()
+        # mycroft_uuid = get_mycroft_uuid()
         pantacor_device_id = get_pantacor_device_id()
 
         self.emit_start_session(
@@ -491,7 +492,7 @@ class Mark2(MycroftSkill):
                 {
                     "state": "settings/about",
                     "deviceName": device_name,
-                    "mycroftUUID": mycroft_uuid,
+                    # "mycroftUUID": mycroft_uuid,
                     "pantacorDeviceId": pantacor_device_id,
                 },
             ),

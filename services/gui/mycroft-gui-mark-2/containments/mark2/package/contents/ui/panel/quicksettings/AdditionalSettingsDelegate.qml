@@ -23,7 +23,7 @@ import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
     iconSource: "settings-configure"
-    text: i18n("Additional Settings")
+    text: i18n("About")
     onClicked: {
         Mycroft.MycroftController.sendRequest("mycroft.device.settings", {})
     }
