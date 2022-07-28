@@ -34,7 +34,20 @@ from lingua_franca import get_default_loc
 # TODO 21.08 - remove import of private method _translate_word
 # Consider whether the remaining items here are necessary.
 # TODO 21.08 - move nice_duration methods to Lingua Franca.
-from lingua_franca.format import _translate_word, pronounce_number
+from lingua_franca.format import (
+    NUMBER_TUPLE,
+    DateTimeFormat,
+    _translate_word,
+    date_time_format,
+    expand_options,
+    join_list,
+    nice_date,
+    nice_date_time,
+    nice_number,
+    nice_time,
+    nice_year,
+    pronounce_number,
+)
 
 
 class TimeResolution(Enum):
