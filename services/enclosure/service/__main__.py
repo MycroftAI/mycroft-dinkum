@@ -12,12 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import time
+
 from mycroft.service import DinkumService
 from mycroft_bus_client import Message
+from mycroft.util.network_utils import check_system_clock_sync_status
 
 from .connect_check import ConnectCheck
 
 IDLE_SKILL_ID = "homescreen.mark2"
+
+CLOCK_SYNC_RETIRES = 10
+CLOCK_SYNC_WAIT_SEC = 1
 
 
 class EnclosureService(DinkumService):
@@ -62,6 +68,8 @@ class EnclosureService(DinkumService):
         # Request switch states so mute is correctly shown
         self.bus.emit(Message("mycroft.switch.report-states"))
 
+        self._sync_clock()
+
         # Inform skills that we're ready
         self.mycroft_ready = True
         self.bus.emit(Message("mycroft.ready"))
@@ -70,6 +78,14 @@ class EnclosureService(DinkumService):
 
         self._connect_check.default_shutdown()
         self._connect_check = None
+
+    def _sync_clock(self):
+        for i in range(CLOCK_SYNC_RETIRES):
+            self.log.debug("Checking for clock sync (%s/%s)", i + 1, CLOCK_SYNC_RETIRES)
+            if check_system_clock_sync_status():
+                break
+
+            time.sleep(CLOCK_SYNC_WAIT_SEC)
 
     # -------------------------------------------------------------------------
 
