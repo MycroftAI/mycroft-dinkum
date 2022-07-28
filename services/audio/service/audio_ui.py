@@ -136,6 +136,7 @@ class AudioUserInterface:
         self._speech_queue = queue.Queue()
         self._speech_thread: typing.Optional[threading.Thread] = None
         self._tts_session_id: typing.Optional[str] = None
+        self._mycroft_session_id: typing.Optional[str] = None
         self._speech_finished = threading.Event()
 
         self._activity_id: typing.Optional[str] = None
@@ -278,29 +279,30 @@ class AudioUserInterface:
             self._speech_queue.get()
 
     def handle_tts_session_start(self, message):
-        tts_session_id = message.data.get("tts_session_id")
+        mycroft_session_id = message.data.get("mycroft_session_id")
 
-        if tts_session_id != self._tts_session_id:
+        if mycroft_session_id != self._mycroft_session_id:
             # Stop previous session
             self._stop_tts()
 
-        self._tts_session_id = tts_session_id
+        self._mycroft_session_id = mycroft_session_id
+        self._tts_session_id = message.data.get("tts_session_id")
 
     def handle_tts_chunk(self, message):
         """Queues a text to speech audio chunk to be played"""
         uri = message.data["uri"]
-        tts_session_id = message.data.get("tts_session_id", "")
+        mycroft_session_id = message.data.get("mycroft_session_id", "")
 
-        if tts_session_id != self._tts_session_id:
+        if mycroft_session_id != self._mycroft_session_id:
             # Doesn't match session from tts.session.start
-            self.log.debug(
-                "Dropping TTS chunk from cancelled session: %s", tts_session_id
+            LOG.debug(
+                "Dropping TTS chunk from cancelled session: %s", mycroft_session_id
             )
             return
 
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
-        mycroft_session_id = message.data.get("mycroft_session_id")
+        tts_session_id = message.data.get("tts_session_id")
 
         request = TTSRequest(
             uri=uri,
