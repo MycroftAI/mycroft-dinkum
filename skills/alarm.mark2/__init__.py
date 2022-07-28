@@ -18,7 +18,7 @@ from collections import namedtuple
 from datetime import date, datetime, time, timedelta
 from enum import Enum
 from pathlib import Path
-from time import sleep
+from time import sleep, monotonic
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus.message import Message
@@ -102,10 +102,8 @@ class AlarmSkill(MycroftSkill):
             beep4=4,
             chimes=22,
         )
-        # self._state: Optional[State] = None
         self._partial_alarm: Optional[Alarm] = None
-        # self._cancel_matches = None
-        # self._init_skill_control()
+        self._expired_session_id: Optional[str] = None
 
     @property
     def expired_alarms(self) -> List[Alarm]:
@@ -127,7 +125,7 @@ class AlarmSkill(MycroftSkill):
         alarm_sound_dir = Path(__file__).parent.joinpath("sounds")
         alarm_sound_path = alarm_sound_dir.joinpath(self.alarm_sound_name + ".mp3")
 
-        return alarm_sound_path
+        return alarm_sound_path.absolute()
 
     @property
     def use_24_hour(self) -> bool:
@@ -146,7 +144,7 @@ class AlarmSkill(MycroftSkill):
                 "handle_cancel_alarm",
                 "handle_change_alarm_sound",
             ],
-            active=["handle_cancel_alarm", "handle_snooze_alarm"],
+            active=["handle_cancel_alarm"],
             wait_reply=[],
             wait_confirm=[],
         )
@@ -156,11 +154,6 @@ class AlarmSkill(MycroftSkill):
         """Executes immediately the constructor for further initialization."""
         self._load_resources()
         self._load_alarms()
-        # if self.active_alarms:
-        #     if self.skill_service_initializing:
-        #         self.add_event("mycroft.ready", self.handle_mycroft_ready, once=True)
-        #     else:
-        #         self._initialize_active_alarms()
         self._initialize_active_alarms()
 
         # TODO: remove the "private.mycroftai.has_alarm" event in favor of the
@@ -168,6 +161,7 @@ class AlarmSkill(MycroftSkill):
         self.add_event("private.mycroftai.has_alarm", self.handle_has_alarm)
         self.add_event("skill.alarm.query-active", self.handle_active_alarm_query)
         self.add_event("skill.alarm.query-expired", self.handle_expired_alarm_query)
+        self.add_event("mycroft.session.ended", self.handle_session_ended)
 
     def handle_mycroft_ready(self):
         """Does the things that need to happen when the device is ready for use."""
@@ -194,7 +188,7 @@ class AlarmSkill(MycroftSkill):
             name_regex=self.resources.load_regex_file("name"),
             next_words=self.resources.load_list_file("next"),
             repeat_phrases=self.resources.load_vocabulary_file("recurring"),
-            repeat_rules=self.resources.load_named_value_file("recurring"),
+            repeat_rules=self.resources.load_named_value_file("recurrence"),
             today=self.resources.load_dialog_file("today"),
             tonight=self.resources.load_dialog_file("tonight"),
             weekdays=list(date_time_translations["weekday"].values()),
@@ -241,6 +235,16 @@ class AlarmSkill(MycroftSkill):
         event = message.response(data=event_data)
         self.bus.emit(event)
 
+    def handle_session_ended(self, message: Message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._expired_session_id:
+            self._expired_session_id = None
+            self.log.debug("Expired alarm session ended")
+
+            # Stop expired alarms when user navigates away from GUI session
+            if self.expired_alarms:
+                self._stop_expired_alarms()
+
     # -------------------------------------------------------------------------
 
     @intent_handler(
@@ -270,17 +274,19 @@ class AlarmSkill(MycroftSkill):
             dialog = "alarm-exists"
         elif not alarm.has_datetime:
             # Missing date/time
+            self.log.debug("Need date/time, asking user for response")
             return self.continue_session(
                 dialog="ask-alarm-time",
                 expect_response=True,
-                state={"state": State.SET_MISSING_TIME},
+                state={"state": State.SET_MISSING_TIME.value},
             )
         elif alarm.is_missing_repeat_rule:
             # Missing a repeat rule
+            self.log.debug("Need repeat rule, asking user for response")
             return self.continue_session(
                 dialog="ask-alarm-recurrence",
                 expect_response=True,
-                state={"state": State.SET_MISSING_REPEAT},
+                state={"state": State.SET_MISSING_REPEAT.value},
             )
         else:
             # We have everything we need to schedule the alarm
@@ -473,18 +479,6 @@ class AlarmSkill(MycroftSkill):
         gui = self._display_alarms(matches)
         return dialog, gui
 
-    # # @intent_handler("snooze.intent")
-    # @intent_handler(AdaptIntent("snooze"))
-    # def handle_snooze_alarm(self, message: Message):
-    #     """Snooze an expired alarm for the requested time.
-
-    #     If no time provided by user, defaults to 9 mins.
-    #     """
-    #     with self.activity():
-    #         if self.expired_alarms:
-    #             utterance = message.data["utterance"]
-    #             self._snooze_alarm(utterance)
-
     @intent_handler(AdaptIntent().require("show").require("alarm"))
     def handle_show_alarms(self, _):
         """Handles showing the alarms screen if it is hidden."""
@@ -530,42 +524,19 @@ class AlarmSkill(MycroftSkill):
 
         return dialog
 
-    def _snooze_alarm(self, utterance: str):
-        """Snoozes an alarm based on the user's request.
+    def stop(self):
+        """Respond to system stop commands."""
+        if self.expired_alarms:
+            self._stop_expired_alarms()
 
-        Args:
-            utterance: the user's snooze request
-        """
-        self._stop_expired_alarms()
-        snooze_minutes = extract_number(utterance)
-        if not snooze_minutes:
-            snooze_minutes = 9
-        for alarm in self.expired_alarms:
-            alarm.snooze = alarm.date_time + timedelta(minutes=snooze_minutes)
-
-    def _schedule_snooze(self):
-        """Schedule the alarm to sound when the snooze time expires."""
-        for alarm in self.expired_alarms:
-            self.cancel_scheduled_event("SnoozeAlarm")
-            if alarm.snooze:
-                self.log.info("Snoozing alarm: %s", alarm.description)
-                self.schedule_event(
-                    self._expire_alarm, to_system(alarm.snooze), name="SnoozeAlarm"
-                )
-                break
-
-    # def stop(self):
-    #     """Respond to system stop commands."""
-    #     if self.expired_alarms:
-    #         self._stop_expired_alarms()
-    #         return True
-    #     else:
-    #         return False
+        return self.end_session(gui_clear=GuiClear.AT_END)
 
     def _display_expired_alarms(self):
         """Displays the alarms that have expired upon their expiration."""
         gui = self._display_alarms(self.expired_alarms)
-        self.emit_start_session(gui=gui)
+        self._expired_session_id = self.emit_start_session(
+            gui=gui, continue_session=True, gui_clear=GuiClear.NEVER
+        )
 
     def _display_alarms(self, alarms: List[Alarm]):
         """Displays the alarms matching a set, cancel or status request.
@@ -588,12 +559,6 @@ class AlarmSkill(MycroftSkill):
 
         return gui_page, gui_data
 
-    def _pause_expired_alarms(self):
-        """Pause showing expired alarms when snoozing."""
-        self.log.info("Stopping expired alarm")
-        self._stop_beeping()
-        self._save_alarms()
-
     def _stop_expired_alarms(self):
         """Stop communicating expired alarms to the user."""
         self.log.info("Stopping expired alarm")
@@ -612,14 +577,6 @@ class AlarmSkill(MycroftSkill):
     def _clear_expired_alarms(self):
         """The remove expired alarms from the list of active alarms."""
         self.active_alarms.clear_expired()
-        # for alarm in self.expired_alarms:
-        #     if alarm.repeat_rule is None:
-        #         self.active_alarms.remove(alarm)
-        #     else:
-        #         alarm.date_time = determine_next_occurrence(
-        #             alarm.repeat_rule, alarm.date_time
-        #         )
-        # self.active_alarms.sort(key=lambda _alarm: _alarm.date_time)
 
     def _schedule_next_alarm(self):
         local_date_time = now_local()
@@ -635,18 +592,17 @@ class AlarmSkill(MycroftSkill):
 
     def _expire_alarm(self):
         """When an alarm expires, show it on the display and play a sound."""
-        # self.change_state("active")
-        expired_alarm = self.expired_alarms[-1]
-        self.log.info(f"Alarm expired at {expired_alarm.date_time.time()}")
-        self._schedule_alarm_sound()
-        self._display_expired_alarms()
-        self._schedule_next_alarm()
-        # self.change_state("inactive")
+        if self.expired_alarms:
+            expired_alarm = self.expired_alarms[-1]
+            self.log.info(f"Alarm expired at {expired_alarm.date_time.time()}")
+            self._schedule_alarm_sound()
+            self._display_expired_alarms()
+            self._schedule_next_alarm()
 
     def _schedule_alarm_sound(self):
         """Schedules and event to play the sound configured by the user."""
         self.cancel_scheduled_event("AlarmBeep")
-        self.beep_start_time = datetime.now()
+        self.beep_start_time = monotonic()
         self.schedule_repeating_event(
             self._play_alarm_sound,
             when=datetime.now(),
@@ -675,7 +631,7 @@ class AlarmSkill(MycroftSkill):
     def _check_max_beeping_time(self):
         """Stops the alarm beeping loop after a period of time."""
         # TODO: make max beeping time configurable
-        elapsed_beep_time = (datetime.now() - self.beep_start_time).total_seconds()
+        elapsed_beep_time = monotonic() - self.beep_start_time
         if elapsed_beep_time > TEN_MINUTES:
             self.log.info(
                 "Maximum alarm sound time exceeded, automatically quieting alarm"
@@ -712,6 +668,7 @@ class AlarmSkill(MycroftSkill):
             self.log.debug("Cancelled user response")
             return
 
+        self.log.debug("User response: %s (state=%s)", utterance, state)
         dialog = None
         gui = None
 
@@ -731,14 +688,15 @@ class AlarmSkill(MycroftSkill):
                 self.log.debug(self._partial_alarm)
 
                 if not self._partial_alarm.has_datetime:
-                    # Failed to parse date/time
+                    self.log.warning("Failed to parse date/time: %s", utterance)
                     dialog = "alarm-not-scheduled"
                 elif self._partial_alarm.is_missing_repeat_rule:
                     # Still missing a repeat rule
+                    self.log.debug("Need repeat rule, asking user for response")
                     return self.continue_session(
                         dialog="ask-alarm-recurrence",
                         expect_response=True,
-                        state={"state": State.SET_MISSING_REPEAT},
+                        state={"state": State.SET_MISSING_REPEAT.value},
                     )
                 else:
                     alarm_complete = True
@@ -750,7 +708,7 @@ class AlarmSkill(MycroftSkill):
                 self.log.debug(self._partial_alarm)
 
                 if not self._partial_alarm.has_repeat_rule:
-                    # Failed to parse repeat rule
+                    self.log.warning("Failed to parse repeat rule: %s", utterance)
                     dialog = "alarm-not-scheduled"
                 else:
                     alarm_complete = True

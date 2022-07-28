@@ -290,15 +290,18 @@ class AudioUserInterface:
         """Queues a text to speech audio chunk to be played"""
         uri = message.data["uri"]
         tts_session_id = message.data.get("tts_session_id", "")
+
+        if tts_session_id != self._tts_session_id:
+            # Doesn't match session from tts.session.start
+            self.log.debug(
+                "Dropping TTS chunk from cancelled session: %s", tts_session_id
+            )
+            return
+
         chunk_index = message.data.get("chunk_index", 0)
         num_chunks = message.data.get("num_chunks", 1)
         mycroft_session_id = message.data.get("mycroft_session_id")
 
-        if tts_session_id != self._tts_session_id:
-            # Stop previous session
-            self._stop_tts()
-
-        self._tts_session_id = tts_session_id
         request = TTSRequest(
             uri=uri,
             tts_session_id=tts_session_id,

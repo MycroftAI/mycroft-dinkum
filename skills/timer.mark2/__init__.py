@@ -219,6 +219,7 @@ class TimerSkill(MycroftSkill):
             self.log.debug("Cancelled user response")
             return
 
+        self.log.debug("User response: %s (state=%s)", utterance, state)
         state = state or {}
         state_name = state.get("state")
 
@@ -747,8 +748,6 @@ class TimerSkill(MycroftSkill):
         Runs once every two seconds via a repeating event.
         """
         if self.expired_timers:
-            self.log.debug("%s expired timer(s)", len(self.expired_timers))
-
             if self._expired_session_id is None:
                 # Beep and show timer GUI
                 gui = ("timer_mark_ii.qml", self._get_gui_data())
@@ -768,9 +767,6 @@ class TimerSkill(MycroftSkill):
         When a user says "stop" while one or more expired timers are beeping, cancel
         the expired timers.  If there are no expired timers, but some active timers,
         ask the user if the stop command was intended to cancel all active timers.
-
-        Returns:
-            A boolean indicating if the stop message was consumed by this skill.
         """
         dialog = None
         if self.expired_timers:

@@ -234,9 +234,13 @@ class IntentService:
         self._disable_idle_timeout()
         mycroft_session_id = message.data.get("mycroft_session_id")
         with self._session_lock:
+            sessions_to_abort = []
             for session in self._sessions.values():
                 if session.id != mycroft_session_id:
-                    session.aborted = True
+                    sessions_to_abort.append(session)
+
+            for session in sessions_to_abort:
+                self.abort_session(session.id)
 
     def handle_stop(self, message: Message):
         skill_id = message.data.get("skill_id")

@@ -34,12 +34,15 @@ def build_day_of_week_repeat_rule(utterance: str, repeat_phrases: dict) -> str:
     Returns:
         next recurrence of alarm and an iCal repeat rule (rrule)
     """
+    # Case insensitive comparison
+    utterance = utterance.lower()
+
     repeat_rule = None
     repeat_days = set()
     for repeat_phrase in repeat_phrases:
-        if repeat_phrase in utterance:
+        if repeat_phrase.lower() in utterance:
             day_numbers = repeat_phrases[repeat_phrase].split()
-            repeat_days = {int(day) for day in day_numbers}
+            repeat_days.update({int(day) for day in day_numbers})
 
     if repeat_days:
         days = [DAY_ABBREVIATIONS[day] for day in repeat_days]
@@ -78,16 +81,14 @@ def build_repeat_rule_description(repeat_rule: str, static_resources) -> str:
     repeat_description = None
     day_names = []
     days_of_week = convert_day_of_week(repeat_rule)
-    day_numbers = days_of_week.split()
-    for phrase, days in static_resources.repeat_rules.items():
-        if days == days_of_week:
-            repeat_description = phrase
-            break  # accept the first perfect match
-        elif days in day_numbers:
-            day_names.append(phrase)
+    day_numbers = days_of_week.split(",")
+    for day_name, day_number in static_resources.repeat_rules.items():
+        if day_number in days_of_week:
+            day_names.append(day_name)
 
     if repeat_description is None:
-        repeat_description = join_list(day_names, static_resources.and_word)
+        repeat_description = join_list(day_names, static_resources.and_word[0])
+
 
     return repeat_description
 
