@@ -394,9 +394,6 @@ class ConnectCheck(MycroftSkill):
             dialog="pairing.intro",
             mycroft_session_id=mycroft_session_id,
             gui_clear=GuiClear.NEVER,
-            # message=Message("server-connect.pairing.show-code"),
-            # message_send=MessageSend.AT_END,
-            # message_delay=PAIRING_SHOW_URL_WAIT_SEC,
         )
         self.bus.emit(response)
 
@@ -404,22 +401,23 @@ class ConnectCheck(MycroftSkill):
         dialog = self._speak_pairing_code()
         gui = self._display_pairing_code()
 
+        # Close previous session
+        self.bus.emit(
+            self.end_session(
+                mycroft_session_id=self._mycroft_session_id,
+                gui_clear=GuiClear.NEVER,
+            )
+        )
+
         self._mycroft_session_id = self.emit_start_session(
             gui=gui,
             dialog=dialog,
             mycroft_session_id=self._mycroft_session_id,
             gui_clear=GuiClear.NEVER,
-            # message=Message("server-connect.pairing.check-activation"),
-            # message_send=MessageSend.AT_END,
-            # message_delay=PAIRING_SPEAK_CODE_WAIT_SEC,
+            continue_session=True,
         )
 
     def _pairing_check_activation(self, message: Message):
-        # mycroft_session_id = message.data.get("mycroft_session_id")
-        # if mycroft_session_id != self._mycroft_session_id:
-        #     # Different session now
-        #     return
-
         self.log.debug("Checking for device activation")
         try:
             self.log.info("Pairing successful")
@@ -437,6 +435,7 @@ class ConnectCheck(MycroftSkill):
                 dialog="pairing.paired",
                 gui="pairing_success_mark_ii.qml",
                 gui_clear=GuiClear.NEVER,
+                mycroft_session_id=self._mycroft_session_id,
                 message=Message("server-connect.authenticated"),
                 message_send=MessageSend.AT_END,
             )
