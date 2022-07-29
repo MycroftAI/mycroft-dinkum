@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A skill to set one or more timers for things like a kitchen timer."""
-import pickle
+import json
 import time
 from collections import namedtuple
 from datetime import timedelta
@@ -40,6 +40,7 @@ from .skill import (
 ONE_DAY = 86400
 ONE_HOUR = 3600
 ONE_MINUTE = 60
+SERIALIZE_VERSION = 1
 
 StaticResources = namedtuple(
     "StaticResources",
@@ -82,7 +83,7 @@ class TimerSkill(MycroftSkill):
 
         self.timer_index = 0
         self.display_group = 0
-        self.save_path = Path(self.file_system.path).joinpath("save_timers")
+        self.save_path = Path(self.file_system.path, "save_timers.json")
         self.showing_expired_timers = False
 
         self._expired_session_id: Optional[str] = None
@@ -842,27 +843,39 @@ class TimerSkill(MycroftSkill):
 
     def _save_timers(self):
         """Write a serialized version of the data to the specified file name."""
-        if self.active_timers:
-            with open(self.save_path, "wb") as data_file:
-                pickle.dump(self.active_timers, data_file, pickle.HIGHEST_PROTOCOL)
-        else:
-            if self.save_path.exists():
-                self.save_path.unlink()
-
-            self._stop_display_update()
-            self._stop_expiration_check()
+        timer_dicts = [timer.to_dict() for timer in self.active_timers]
+        self.save_path.parent.mkdir(parents=True, exist_ok=True)
+        self.log.debug("Saving timers to %s", self.save_path)
+        with open(self.save_path, "w", encoding="utf-8") as data_file:
+            json.dump(
+                {"version": SERIALIZE_VERSION, "timers": timer_dicts},
+                data_file,
+                ensure_ascii=False,
+                indent=4,
+            )
 
     def _load_timers(self):
-        """Load any saved timers into the active timers list.
-
-        Returns:
-            None if the file does not exist or the deserialized data in the file.
-        """
+        """Load any saved timers into the active timers list"""
         self.active_timers = list()
         if self.save_path.exists():
+            self.log.debug("Loading timers from %s", self.save_path)
             try:
-                with open(self.save_path, "rb") as data_file:
-                    self.active_timers = pickle.load(data_file)
+                with open(self.save_path, "r", encoding="utf-8") as data_file:
+                    save_info = json.load(data_file)
+                    version = save_info.get("version")
+                    if version != SERIALIZE_VERSION:
+                        LOG.warning(
+                            "Expected verson %s, got %s for %s",
+                            SERIALIZE_VERSION,
+                            version,
+                            self.save_path,
+                        )
+
+                    timer_dicts = save_info.get("timers", [])
+                    self.active_timers = [
+                        CountdownTimer.from_dict(timer_dict)
+                        for timer_dict in timer_dicts
+                    ]
             except Exception:
                 self.log.exception("Failed to load active timers: %s", self.save_path)
 

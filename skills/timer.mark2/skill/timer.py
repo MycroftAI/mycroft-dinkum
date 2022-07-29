@@ -12,29 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a timer object."""
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Optional
 
+from dataclasses_json import config, dataclass_json
+from marshmallow import fields
 from mycroft.util.format import nice_duration
 from mycroft.util.time import now_utc
 
-from .util import format_timedelta
+from .util import decode_timedelta, encode_timedelta, format_timedelta
 
 BACKGROUND_COLORS = ("#22A7F0", "#40DBB0", "#BDC3C7", "#4DE0FF")
 
 
+@dataclass_json
+@dataclass
 class CountdownTimer:
     """Data attributes that define a timer."""
 
-    _speakable_duration = None
+    duration: timedelta = field(
+        metadata=config(
+            encoder=encode_timedelta,
+            decoder=decode_timedelta,
+        )
+    )
+    name: str
+    index: Optional[int] = None
+    expiration: Optional[datetime] = field(
+        default=None,
+        metadata=config(
+            encoder=datetime.isoformat,
+            decoder=datetime.fromisoformat,
+            mm_field=fields.DateTime(format="iso"),
+        ),
+    )
+    expiration_announced: bool = False
+    ordinal: int = 0
 
-    def __init__(self, duration: timedelta, name: str, index=None):
-        self.duration = duration
-        self.name = name
-        self.index = index
-        self.expiration = now_utc() + duration
-        self.expiration_announced = False
-        self.ordinal = 0
+    def __post_init__(self):
+        self._speakable_duration = None
+
+        if self.expiration is None:
+            self.expiration = now_utc() + self.duration
 
     @property
     def expired(self) -> bool:

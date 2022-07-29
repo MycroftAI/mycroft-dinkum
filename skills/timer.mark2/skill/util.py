@@ -14,7 +14,7 @@
 """Utility functions for the timer skill."""
 import re
 from datetime import timedelta
-from typing import Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import pronounce_number
@@ -169,3 +169,19 @@ def extract_timer_name(
         LOG.info("No timer name extracted from utterance")
 
     return timer_name
+
+
+def encode_timedelta(duration: timedelta) -> Dict[str, int]:
+    return {
+        "days": duration.days,
+        "seconds": duration.seconds,
+        "microseconds": duration.microseconds,
+    }
+
+
+def decode_timedelta(value: Dict[str, int]) -> timedelta:
+    return timedelta(
+        days=value.get("days", 0),
+        seconds=value.get("seconds", 0),
+        microseconds=value.get("microseconds", 0),
+    )

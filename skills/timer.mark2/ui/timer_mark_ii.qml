@@ -19,6 +19,13 @@ import Mycroft 1.0 as Mycroft
 Mycroft.CardDelegate {
     id: timerScreen
 
+    Rectangle {
+        id: noTimers
+        color: "#22A7F0"
+        visible: sessionData.activeTimerCount <= 0
+        anchors.fill: parent
+    }
+
     MycroftTimer {
         id: timerOne
         backgroundColor: "#22A7F0"
