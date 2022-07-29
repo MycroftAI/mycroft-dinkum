@@ -14,7 +14,7 @@
 """Logic to match one or more alarms to a user's request."""
 import re
 from copy import copy
-from typing import List, Optional, Iterable
+from typing import Iterable, List, Optional
 
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.log import LOG

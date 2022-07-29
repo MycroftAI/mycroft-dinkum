@@ -158,7 +158,6 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.gui.idle"))
 
 
-
 def main():
     """Service entry point"""
     EnclosureService().main()

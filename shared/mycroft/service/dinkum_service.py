@@ -19,7 +19,7 @@ import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from threading import Event, Thread
-from typing import Any, Dict, Optional, Collection
+from typing import Any, Collection, Dict, Optional
 
 import sdnotify
 from mycroft.configuration import Configuration

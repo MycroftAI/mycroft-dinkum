@@ -20,9 +20,9 @@ from dataclasses_json import config, dataclass_json
 from marshmallow import fields
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import nice_date_time, nice_time
+from mycroft.util.log import LOG
 from mycroft.util.parse import extract_datetime
 from mycroft.util.time import now_local
-from mycroft.util.log import LOG
 
 from .repeat import (
     build_day_of_week_repeat_rule,
