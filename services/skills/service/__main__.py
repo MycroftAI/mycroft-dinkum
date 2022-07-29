@@ -16,6 +16,8 @@ import argparse
 
 from lingua_franca import load_languages
 from mycroft.service import DinkumService
+from mycroft.skills import MycroftSkill
+from mycroft_bus_client import Message
 
 from .load import create_skill_instance, load_skill_source
 
@@ -26,16 +28,36 @@ class SkillsService(DinkumService):
     """
 
     def __init__(self, args: argparse.Namespace):
-        super().__init__(service_id="intent")
+        super().__init__(service_id=args.skill_id)
         self.args = args
+        self._skill_instance: Optional[MycroftSkill] = None
 
     def start(self):
+        pass
+
+    def after_start(self):
+        super().after_start()
+
+        # Block skill from loading until ready.
+        #
+        # We have to do this because remote settings won't be synced until then,
+        # and we'll load a stale config.
+        self._wait_for_ready()
         self._load_language()
 
         # We can't register intents until the intent service is up
         self._wait_for_service("intent")
+        self._load_skill()
 
-        # Load the skill
+    def stop(self):
+        if self._skill_instance is not None:
+            self._skill_instance.default_shutdown()
+
+    def _load_language(self):
+        lang_code = self.config.get("lang", "en-us")
+        load_languages([lang_code, "en-us"])
+
+    def _load_skill(self):
         self._skill_module = load_skill_source(
             self.args.skill_directory, self.args.skill_id
         )
@@ -49,19 +71,6 @@ class SkillsService(DinkumService):
         assert (
             self._skill_instance is not None
         ), f"Failed to create skill {self.args.skill_id}"
-
-    def run(self):
-        # Block skill from loading until ready
-        self._wait_for_ready()
-
-        super().run()
-
-    def stop(self):
-        self._skill_instance.default_shutdown()
-
-    def _load_language(self):
-        lang_code = self.config.get("lang", "en-us")
-        load_languages([lang_code, "en-us"])
 
 
 def main():

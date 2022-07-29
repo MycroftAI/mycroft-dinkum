@@ -17,8 +17,9 @@ import signal
 import sys
 import time
 from abc import ABC, abstractmethod
+from enum import Enum
 from threading import Event, Thread
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Collection
 
 import sdnotify
 from mycroft.configuration import Configuration
@@ -29,6 +30,13 @@ from mycroft_bus_client import Message, MessageBusClient
 WATCHDOG_DELAY = 0.5
 
 
+class ServiceState(str, Enum):
+    NOT_STARTED = "not_started"
+    STARTED = "started"
+    RUNNING = "running"
+    STOPPING = "stopping"
+
+
 class DinkumService(ABC):
     """Shared base class for dinkum services"""
 
@@ -36,21 +44,31 @@ class DinkumService(ABC):
         self.service_id = service_id
         self.log = logging.getLogger(self.service_id)
         self._notifier = sdnotify.SystemdNotifier()
+        self._state: ServiceState = ServiceState.NOT_STARTED
+
+    @property
+    def state(self):
+        return self._state
 
     def main(self):
         """Service entry point"""
         try:
+            self._state = ServiceState.NOT_STARTED
             self.before_start()
             self.start()
+            self._state = ServiceState.STARTED
             self.after_start()
 
             try:
+                self._state = ServiceState.RUNNING
                 self.run()
             except KeyboardInterrupt:
                 pass
             finally:
+                self._state = ServiceState.STOPPING
                 self.stop()
                 self.after_stop()
+                self._state = ServiceState.NOT_STARTED
         except Exception:
             self.log.exception("Service failed to start")
 
@@ -121,8 +139,8 @@ class DinkumService(ABC):
         self.bus.run_in_thread()
         self.bus.connected_event.wait()
         self.bus.on(
-            f"{self.service_id}.service.connected",
-            lambda m: self.bus.emit(m.response()),
+            f"{self.service_id}.service.state",
+            lambda m: self.bus.emit(m.response(data={"state": self.state.value})),
         )
         self.bus.emit(Message(f"{self.service_id}.initialize.started"))
         self.log.info("Connected to Mycroft Core message bus")
@@ -141,14 +159,22 @@ class DinkumService(ABC):
         except Exception:
             self.log.exception("Unexpected error in watchdog thread")
 
-    def _wait_for_service(self, service_id: str, wait_sec: float = 1.0):
+    def _wait_for_service(
+        self,
+        service_id: str,
+        states: Optional[Collection[ServiceState]] = None,
+        wait_sec: float = 1.0,
+    ):
+        if states is None:
+            states = {ServiceState.RUNNING}
+
         # Wait for intent service
         self.log.debug("Waiting for %s service...", service_id)
         while True:
             response = self.bus.wait_for_response(
-                Message(f"{service_id}.service.connected")
+                Message(f"{service_id}.service.state")
             )
-            if response:
+            if response and (response.data.get("state") in states):
                 break
 
             time.sleep(wait_sec)

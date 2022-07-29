@@ -52,9 +52,7 @@ class EnclosureService(DinkumService):
         self.bus.on("mycroft.switch.state", self.handle_switch_state)
 
         # Return to idle screen if GUI reconnects
-        self.bus.on(
-            "gui.initialize.ended", lambda m: self.bus.emit(Message("mycroft.gui.idle"))
-        )
+        self.bus.on("gui.initialize.ended", self.handle_gui_reconnect)
 
         # Connected to internet + paired
         self.bus.on("server-connect.authenticated", self.handle_server_authenticated)
@@ -68,9 +66,6 @@ class EnclosureService(DinkumService):
         pass
 
     def handle_server_authenticated(self, _message: Message):
-        # Show home screen
-        self.bus.emit(Message("mycroft.gui.idle"))
-
         # Request switch states so mute is correctly shown
         self.bus.emit(Message("mycroft.switch.report-states"))
 
@@ -80,11 +75,16 @@ class EnclosureService(DinkumService):
         # Inform skills that we're ready
         self.mycroft_ready = True
         self.bus.emit(Message("mycroft.ready"))
-
         self.log.info("Ready")
+
+        self.log.debug("Waiting for idle skill: %s", IDLE_SKILL_ID)
+        self._wait_for_service(IDLE_SKILL_ID)
+        self.bus.emit(Message("mycroft.gui.idle"))
 
         self._connect_check.default_shutdown()
         self._connect_check = None
+
+        self.log.debug("Completed start up successfully")
 
     def _sync_clock(self):
         for i in range(CLOCK_SYNC_RETIRES):
@@ -152,6 +152,11 @@ class EnclosureService(DinkumService):
         elif (name == "action") and (state == "on"):
             # Action button wakes up device
             self.bus.emit(Message("mycroft.mic.listen"))
+
+    def handle_gui_reconnect(self, _message):
+        # Show idle skill GUI
+        self.bus.emit(Message("mycroft.gui.idle"))
+
 
 
 def main():
