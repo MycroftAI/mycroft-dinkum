@@ -23,7 +23,7 @@ Mycroft.CardDelegate {
         id: alarmOne
         backgroundColor: "#22A7F0"
         alarmInfo: sessionData.activeAlarms.alarms[0]
-        alarmCount: sessionData.activeAlarmCount
+        alarmCount: sessionData.activeAlarms.alarms.length
         visible: sessionData.activeAlarmCount > 0
     }
 
@@ -33,7 +33,7 @@ Mycroft.CardDelegate {
         anchors.leftMargin: gridUnit * 2
         backgroundColor: "#40DBB0"
         alarmInfo: sessionData.activeAlarms.alarms[1]
-        alarmCount: sessionData.activeAlarmCount
+        alarmCount: sessionData.activeAlarms.alarms.length
         visible: sessionData.activeAlarmCount > 1
     }
 
@@ -43,7 +43,7 @@ Mycroft.CardDelegate {
         anchors.topMargin: gridUnit * 2
         backgroundColor: "#BDC3C7"
         alarmInfo: sessionData.activeAlarms.alarms[2]
-        alarmCount: sessionData.activeAlarmCount
+        alarmCount: sessionData.activeAlarms.alarms.length
         visible: sessionData.activeAlarmCount > 2
     }
 
@@ -55,7 +55,7 @@ Mycroft.CardDelegate {
         anchors.leftMargin: gridUnit * 2
         backgroundColor: "#4DE0FF"
         alarmInfo: sessionData.activeAlarms.alarms[3]
-        alarmCount: sessionData.activeAlarmCount
+        alarmCount: sessionData.activeAlarms.alarms.length
         visible: sessionData.activeAlarmCount > 3
     }
 }

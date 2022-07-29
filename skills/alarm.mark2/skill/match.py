@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Logic to match one or more alarms to a user's request."""
+import re
 from copy import copy
-from typing import List, Optional
+from typing import List, Optional, Iterable
 
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.log import LOG
@@ -21,6 +22,10 @@ from mycroft.util.log import LOG
 from .alarm import Alarm
 from .parse import extract_alarm_datetime
 from .repeat import build_day_of_week_repeat_rule
+from .resources import StaticResources
+
+# HACK: Work around incorrect STT
+STT_SUBS = {"to": "2", "too": "2", "for": "4"}
 
 
 class AlarmMatcher:
@@ -64,7 +69,7 @@ class AlarmMatcher:
                         break
                 break
 
-    def _extract_alarm_name(self, static_resources) -> Optional[str]:
+    def _extract_alarm_name(self, static_resources: StaticResources) -> Optional[str]:
         """Attempts to extract a alarm name from an utterance.
 
         If the regex name matching logic returns no matches, it might be
@@ -79,10 +84,8 @@ class AlarmMatcher:
         possible_names = {alarm.name for alarm in self.alarms}
 
         name_extractor = RegexExtractor("name", static_resources.name_regex)
-        maybe_alarm_name = name_extractor.extract(self.utterance)
-        if maybe_alarm_name in possible_names:
-            alarm_name = maybe_alarm_name
-        else:
+        alarm_name = name_extractor.extract(self.utterance)
+        if alarm_name not in possible_names:
             # Attempt to extract a name from a "cancel alarm" utterance
             words = self.utterance.split()
             possible_name = " ".join(words[1:])
@@ -118,6 +121,8 @@ class AlarmMatcher:
         elif self.requested_next:
             self.matches = [self.alarms[0]]
 
+        LOG.debug(self.requested_name)
+
         if self.requested_name is not None:
             self._match_alarm_to_name()
         elif self.requested_repeat_rule is not None:
@@ -136,11 +141,15 @@ class AlarmMatcher:
         Returns:
             Alarm matching the name requested by the user.
         """
+        names_to_try = {self.requested_name, f"alarm {self.requested_name}"}
+
+        # HACK: Work around incorrect STT
+        for subbed_name in apply_stt_subs(self.requested_name):
+            names_to_try.add(subbed_name)
+            names_to_try.add(f"alarm {subbed_name}")
+
         for alarm in self.alarms:
-            match = alarm.name == self.requested_name or alarm.name == "alarm " + str(
-                self.requested_name
-            )
-            if match:
+            if alarm.name.lower() in names_to_try:
                 self.matches.append(alarm)
                 LOG.info(f"Match found for alarm name '{self.requested_name}'")
                 break
@@ -162,3 +171,8 @@ class AlarmMatcher:
                         f"Match found for repeat rule '{self.requested_repeat_rule}'"
                     )
                     break
+
+
+def apply_stt_subs(name: str) -> Iterable[str]:
+    for original_word, new_word in STT_SUBS.items():
+        yield re.sub(r"\b" + re.escape(original_word) + r"\b", new_word, name)

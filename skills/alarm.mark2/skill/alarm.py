@@ -13,7 +13,7 @@
 # limitations under the License.
 """Definition of an alarm."""
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import ClassVar, Optional, Tuple
 
 from dataclasses_json import config, dataclass_json
@@ -22,6 +22,7 @@ from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import nice_date_time, nice_time
 from mycroft.util.parse import extract_datetime
 from mycroft.util.time import now_local
+from mycroft.util.log import LOG
 
 from .repeat import (
     build_day_of_week_repeat_rule,
@@ -104,7 +105,11 @@ class Alarm:
                 midnight_requested = any(
                     [word in utterance for word in resources.midnight_words]
                 )
-                if not midnight_requested:
+                if midnight_requested:
+                    # Correct to next midnight
+                    if alarm_datetime < now_local():
+                        alarm_datetime += timedelta(days=1)
+                else:
                     alarm_datetime = None
                     remaining_utterance = utterance
 
@@ -135,6 +140,9 @@ class Alarm:
         # Extract name
         name_extractor = RegexExtractor("name", resources.name_regex)
         alarm_name = name_extractor.extract(remaining_utterance)
+        if alarm_name in resources.repeat_phrases:
+            # Ensure "set alarm for weekdays" doesn't create an alarm named "weekdays"
+            alarm_name = None
 
         # Extract repeat rule
         repeat_in_utterance, repeat_rule = Alarm.repeat_rule_from_utterance(

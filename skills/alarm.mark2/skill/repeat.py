@@ -13,18 +13,23 @@
 # limitations under the License.
 """Repeat functions for the Mycroft Alarm Skill."""
 from datetime import datetime, timedelta
+from typing import Dict
 
 from dateutil.rrule import rrulestr
 from mycroft.util.format import join_list
 from mycroft.util.log import LOG
 from mycroft.util.time import now_local
 
+from .resources import StaticResources
+
 DAY_ABBREVIATIONS = ("SU", "MO", "TU", "WE", "TH", "FR", "SA")
 DAY_OF_WEEK_RULE = "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY="
 
 
 # TODO: Support more complex alarms, e.g. first monday, monthly, etc
-def build_day_of_week_repeat_rule(utterance: str, repeat_phrases: dict) -> str:
+def build_day_of_week_repeat_rule(
+    utterance: str, repeat_phrases: Dict[str, str]
+) -> str:
     """Create a repeat rule in iCal rrule format.
 
     Arguments:
@@ -68,7 +73,9 @@ def determine_next_occurrence(repeat_rule: str, start_datetime: datetime):
     return next_occurrence
 
 
-def build_repeat_rule_description(repeat_rule: str, static_resources) -> str:
+def build_repeat_rule_description(
+    repeat_rule: str, static_resources: StaticResources
+) -> str:
     """Create a textual description of the repeat rule.
 
     Arguments:
@@ -81,10 +88,21 @@ def build_repeat_rule_description(repeat_rule: str, static_resources) -> str:
     repeat_description = None
     day_names = []
     days_of_week = convert_day_of_week(repeat_rule)
-    day_numbers = days_of_week.split(",")
-    for day_name, day_number in static_resources.repeat_rules.items():
-        if day_number in days_of_week:
-            day_names.append(day_name)
+
+    # Use a set since ordering is not important
+    day_numbers = set(days_of_week.split())
+
+    for rule_day_name, rule_day_number_str in static_resources.repeat_rules.items():
+        rule_day_numbers = set(rule_day_number_str.split())
+        if day_numbers == rule_day_numbers:
+            # Exact match
+            repeat_description = rule_day_name
+            break
+
+        for rule_day_number in rule_day_numbers:
+            if rule_day_number in day_numbers:
+                # Add day to list
+                day_names.append(rule_day_name)
 
     if repeat_description is None:
         repeat_description = join_list(day_names, static_resources.and_word[0])

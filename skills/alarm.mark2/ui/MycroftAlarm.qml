@@ -28,6 +28,7 @@ Rectangle {
     property var alarmInfo
     property int alarmCount
 
+
     color: alarmInfo ? backgroundColor : "transparent"
     height: alarmCount <= 2 ? gridUnit * 26 : gridUnit * 12
     radius: 16
@@ -78,21 +79,39 @@ Rectangle {
     // when the screen is split in to quadrants.  When screen is split in half or
     // not at all, the icon appears under the alarm name.
     Image {
-        id: alarmClockImage
-        anchors.top: alarmCount >= 3 ? parent.top : alarmName.bottom
-        anchors.topMargin: alarmCount >= 3 ? gridUnit : gridUnit * 2
+        id: alarmClockImageUpperLeft
+        visible: alarmCount >= 3
+        anchors.top: parent.top
+        anchors.topMargin: gridUnit
+        anchors.leftMargin: gridUnit
         anchors.left: parent.left
-        anchors.leftMargin: alarmCount >= 3 ? gridUnit : 0
-        anchors.horizontalCenter: alarmCount >= 3 ? undefined : parent.horizontalCenter
         opacity: alarmInfo ? 1.0 : 0.0
         fillMode: Image.PreserveAspectFit
-        height: alarmCount >= 3 ? gridUnit * 2 : gridUnit * 7
+        height: gridUnit * 2
+        source: alarmInfo.recurring ? "images/alarm-clock-recurring.svg" : "images/alarm-clock.svg"
+    }
+
+    // Wordaround because anchors.horizontalCenter is read-only.
+    //
+    // Only one of the alarm images is shown at a given time.
+    // Without this workaround, the clock image will have the wrong horizontal
+    // center if you show a single alarm and more than two alarms without
+    // clearing the namespace.
+    Image {
+        id: alarmClockImageCentered
+        visible: alarmCount <= 2
+        anchors.top: alarmName.bottom
+        anchors.topMargin: gridUnit * 2
+        anchors.horizontalCenter: parent.horizontalCenter
+        opacity: alarmInfo ? 1.0 : 0.0
+        fillMode: Image.PreserveAspectFit
+        height: gridUnit * 7
         source: alarmInfo.recurring ? "images/alarm-clock-recurring.svg" : "images/alarm-clock.svg"
     }
 
     Item {
         id: alarmTime
-        anchors.top: alarmClockImage.bottom
+        anchors.top: alarmCount >= 3 ? alarmClockImageUpperLeft.bottom : alarmClockImageCentered.bottom
         height: {
             if (alarmCount === 1) {
                 return gridUnit * 7

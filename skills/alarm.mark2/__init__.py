@@ -546,7 +546,7 @@ class AlarmSkill(MycroftSkill):
             alarms: the alarms to display
         """
         gui_page = "alarm_mark_ii.qml"
-        gui_data = {}
+        gui_data = {"activeAlarms": {}, "activeAlarmCount": 0}
 
         display_data = []
         for index, alarm in enumerate(alarms):
@@ -556,7 +556,7 @@ class AlarmSkill(MycroftSkill):
             display_data.append(alarm_display)
         if alarms:
             gui_data["activeAlarms"] = dict(alarms=display_data)
-            gui_data["activeAlarmCount"] = len(alarms)
+            gui_data["activeAlarmCount"] = len(display_data)
 
         return gui_page, gui_data
 
