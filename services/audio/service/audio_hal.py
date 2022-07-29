@@ -60,11 +60,13 @@ class AudioHAL:
         self,
         audio_sample_rate: int = 48000,
         audio_channels: int = 2,
+        audio_width: int = 2,
         audio_chunk_size: int = 2048,
     ):
         # Mixer settings
         self.audio_sample_rate = audio_sample_rate
         self.audio_channels = audio_channels
+        self.audio_width = audio_width
         self.audio_chunk_size = audio_chunk_size
 
         # Cache of mixer chunks
@@ -265,7 +267,7 @@ class AudioHAL:
                 self._fg_cache[file_path_str] = chunk
 
         duration_sec = chunk.contents.alen / (
-            self.audio_sample_rate * self.audio_channels
+            self.audio_sample_rate * self.audio_channels * self.audio_width
         )
 
         self._fg_media_ids[channel] = media_id
