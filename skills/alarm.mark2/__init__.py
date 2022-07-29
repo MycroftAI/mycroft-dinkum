@@ -94,7 +94,7 @@ class AlarmSkill(MycroftSkill):
         self.static_resources = None
         # self.active_alarms = []
         self.active_alarms = Alarms()
-        self.save_path = Path(self.file_system.path).joinpath("saved_alarms")
+        self.save_path = Path(self.file_system.path, "saved_alarms.json")
         self.sound_duration = dict(
             bell=5,
             escalate=32,
@@ -155,6 +155,7 @@ class AlarmSkill(MycroftSkill):
         self._load_resources()
         self._load_alarms()
         self._initialize_active_alarms()
+        self._send_alarm_status()
 
         # TODO: remove the "private.mycroftai.has_alarm" event in favor of the
         #   "skill.alarm.query-active" event.

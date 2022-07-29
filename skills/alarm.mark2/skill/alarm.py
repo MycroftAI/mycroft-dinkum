@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Definition of an alarm."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time
 from typing import ClassVar, Optional, Tuple
 
+from dataclasses_json import config, dataclass_json
+from marshmallow import fields
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import nice_date_time, nice_time
 from mycroft.util.parse import extract_datetime
@@ -31,6 +33,7 @@ from .resources import StaticResources
 BACKGROUND_COLORS = ("#22A7F0", "#40DBB0", "#BDC3C7", "#4DE0FF")
 
 
+@dataclass_json
 @dataclass
 class Alarm:
     """Defines the attributes of an alarm.
@@ -42,15 +45,20 @@ class Alarm:
         repeat_rule: defines the repeating behavior of the alarm.  Valid
             repeat_rules include None for a one-shot alarm or any other
             iCalendar rule from RFC <https://tools.ietf.org/html/rfc5545>.
-        snooze: the date and time the alarm should sound after the snooze expires
     """
 
     MISSING_REPEAT_RULE: ClassVar[str] = "<MISSING>"
 
     name: Optional[str] = None
-    date_time: Optional[datetime] = None
+    date_time: Optional[datetime] = field(
+        default=None,
+        metadata=config(
+            encoder=datetime.isoformat,
+            decoder=datetime.fromisoformat,
+            mm_field=fields.DateTime(format="iso"),
+        ),
+    )
     repeat_rule: Optional[str] = None
-    snooze: Optional[datetime] = None
     description: Optional[str] = None
 
     def __post_init__(self):

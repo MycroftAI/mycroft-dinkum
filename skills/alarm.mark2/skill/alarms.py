@@ -11,15 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pickle
+import json
 from datetime import date, datetime
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional, Union
 
+from mycroft.util.log import LOG
 from mycroft.util.time import now_local
 
 from .alarm import Alarm
 from .repeat import determine_next_occurrence
+
+SERIALIZE_VERSION = 1
 
 
 class Alarms:
@@ -140,19 +143,43 @@ class Alarms:
 
     @staticmethod
     def load(load_path: Union[str, Path]) -> "Alarms":
+        alarms = []
         load_path = Path(load_path)
-        alarms = list()
         if load_path.exists():
-            with open(load_path, "rb") as data_file:
-                alarms = pickle.load(data_file)
+            LOG.debug("Loading alarms from %s", load_path)
+
+            try:
+                with open(load_path, "r", encoding="utf-8") as data_file:
+                    save_info = json.load(data_file)
+                    version = save_info.get("version")
+                    if version != SERIALIZE_VERSION:
+                        LOG.warning(
+                            "Expected verson %s, got %s for %s",
+                            SERIALIZE_VERSION,
+                            version,
+                            load_path,
+                        )
+
+                    alarm_dicts = save_info.get("alarms", [])
+                    alarms = [Alarm.from_dict(alarm_dict) for alarm_dict in alarm_dicts]
+            except Exception:
+                LOG.exception("Error while loading alarms")
 
         return Alarms(alarms)
 
     def save(self, save_path: Union[str, Path]):
-        if self.alarms:
-            with open(save_path, "wb") as data_file:
-                pickle.dump(self.alarms, data_file, pickle.HIGHEST_PROTOCOL)
-        else:
-            save_path = Path(save_path)
-            if save_path.exists():
-                save_path.unlink()
+        alarm_dicts = [alarm.to_dict() for alarm in self.alarms]
+
+        # Create intermediary directories, if necessary
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Serialize as JSON
+        LOG.debug("Saving alarms to %s", save_path)
+        with open(save_path, "w", encoding="utf-8") as data_file:
+            json.dump(
+                {"version": SERIALIZE_VERSION, "alarms": alarm_dicts},
+                data_file,
+                ensure_ascii=False,
+                indent=4,
+            )
