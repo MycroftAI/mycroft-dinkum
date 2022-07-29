@@ -92,7 +92,7 @@ class ConnectCheck(MycroftSkill):
         # Pairing steps
         self.add_event("server-connect.pairing.start", self._pairing_start)
 
-        # Send from GUI (button or timeout)
+        # Sent from GUI (button or timeout)
         self.gui.register_handler(
             "pairing.show-code", "pairing_start_mark_ii.qml", self._pairing_show_code
         )
@@ -101,6 +101,9 @@ class ConnectCheck(MycroftSkill):
             "pairing_code_mark_ii.qml",
             self._pairing_check_activation,
         )
+
+        # Tutorial
+        self.add_event("server-connect.tutorial.start", self._tutorial_start)
 
     def start(self):
         self._mycroft_session_id = self.emit_start_session(continue_session=True)
@@ -174,7 +177,7 @@ class ConnectCheck(MycroftSkill):
         )
 
         if is_connected:
-            # Connected to the internet
+            # Connected to the internet, check pairing next
             self.log.debug("Internet connected")
             self.bus.emit(
                 Message(
@@ -355,6 +358,7 @@ class ConnectCheck(MycroftSkill):
         )
 
         if server_state == Authentication.NOT_AUTHENTICATED:
+            # Not paired, start pairing process
             self.log.debug("Device is not paired")
             self.bus.emit(
                 Message(
@@ -366,6 +370,7 @@ class ConnectCheck(MycroftSkill):
             # Show failure page and retry
             self.log.warning("Server was unavailable. Retrying...")
         else:
+            # Paired already, continue in enclosure
             self.log.debug("Device is already paired")
             self.bus.emit(
                 Message(
@@ -380,6 +385,7 @@ class ConnectCheck(MycroftSkill):
             # Different session now
             return
 
+        # Start pairing
         self.bus.emit(
             Message(
                 "server-connect.pairing.started",
@@ -392,12 +398,12 @@ class ConnectCheck(MycroftSkill):
         response = self.continue_session(
             gui="pairing_start_mark_ii.qml",
             dialog="pairing.intro",
-            mycroft_session_id=mycroft_session_id,
             gui_clear=GuiClear.NEVER,
         )
         self.bus.emit(response)
 
     def _pairing_show_code(self, message: Message):
+        # Speak pairing code to user
         dialog = self._speak_pairing_code()
         gui = self._display_pairing_code()
 
@@ -431,13 +437,14 @@ class ConnectCheck(MycroftSkill):
             )
             self.bus.emit(Message("mycroft.paired", login))
 
+            # Pairing complete, begin tutorial
             response = self.end_session(
-                dialog="pairing.paired",
                 gui="pairing_success_mark_ii.qml",
                 gui_clear=GuiClear.NEVER,
                 mycroft_session_id=self._mycroft_session_id,
-                message=Message("server-connect.authenticated"),
+                message=Message("server-connect.tutorial.start"),
                 message_send=MessageSend.AT_END,
+                message_delay=3,
             )
             self.bus.emit(response)
         except Exception:
@@ -509,3 +516,36 @@ class ConnectCheck(MycroftSkill):
             else:
                 self.log.info("Identity file saved.")
                 break
+
+    # -------------------------------------------------------------------------
+    # Tutorial
+    # -------------------------------------------------------------------------
+
+    def _tutorial_start(self, message: Message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._mycroft_session_id:
+            # Different session now
+            return
+
+        self.bus.emit(
+            Message(
+                "server-connect.tutorial.started",
+                data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
+
+        # Continue in enclosure once tutorial is over
+        response = self.end_session(
+            dialog="pairing.paired",
+            gui="pairing_done_mark_ii.qml",
+            gui_clear=GuiClear.NEVER,
+            message=Message("server-connect.authenticated"),
+            message_send=MessageSend.AT_END,
+        )
+        self.bus.emit(response)
+        self.bus.emit(
+            Message(
+                "server-connect.tutorial.ended",
+                data={"mycroft_session_id": mycroft_session_id},
+            )
+        )
