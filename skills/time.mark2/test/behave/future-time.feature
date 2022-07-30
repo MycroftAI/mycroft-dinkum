@@ -3,7 +3,7 @@ Feature: Future time
   Scenario Outline: what's the future time in the device's local time zone
     Given an english speaking user
      When the user says "<local future time request>"
-     Then "time.mycroftai" should reply with dialog from "time-future-local.dialog"
+     Then "time.mark2" should reply with dialog from "time-future-local.dialog"
 
   Examples:
     | local future time request |
@@ -12,7 +12,6 @@ Feature: Future time
     | the time 8 hours from now please |
     | what's the time in 8 hours |
     | what will be the time in 8 hours |
-    | when is it 8 hours from now |
     | in 8 hours what time will it be |
     | what time will it be in 36 hours |
     | what time will it be in 90 minutes |
@@ -23,7 +22,7 @@ Feature: Future time
   Scenario Outline: what's the future time in a location
     Given an english speaking user
      When the user says "<future time request for location>"
-     Then "time.mycroftai" should reply with dialog from "time-future-location.dialog"
+     Then "time.mark2" should reply with dialog from "time-future-location.dialog"
 
   Examples:
      | future time request for location |
@@ -38,7 +37,7 @@ Feature: Future time
   Scenario Outline: what's the future time in an imaginary location
     Given an english speaking user
      When the user says "<future time in location request>"
-     Then "time.mycroftai" should reply with dialog from "location-not-found.dialog"
+     Then "time.mark2" should reply with dialog from "location-not-found.dialog"
 
   Examples: what time examples
     | future time in location request |

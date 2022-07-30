@@ -4,7 +4,7 @@ Feature: Current Time
   Scenario Outline: what time is it
     Given an english speaking user
      When the user says "<local current time request>"
-     Then "time.mycroftai" should reply with dialog from "time-current-local.dialog"
+     Then "time.mark2" should reply with dialog from "time-current-local.dialog"
 
   Examples:
     | local current time request |
@@ -38,7 +38,7 @@ Feature: Current Time
   Scenario Outline: what's the time in a location
     Given an english speaking user
      When the user says "<current time in location request>"
-     Then "time.mycroftai" should reply with dialog from "time-current-location.dialog"
+     Then "time.mark2" should reply with dialog from "time-current-location.dialog"
 
   Examples: what time examples
     | current time in location request |
@@ -47,22 +47,22 @@ Feature: Current Time
     | check the time in baltimore |
     | what time is it in sydney |
 
-  @xfail
-  # jira MS-100 https://mycroft.atlassian.net/browse/MS-100
-  Scenario Outline: Failing what's the time in a location
-    Given an english speaking user
-     When the user says "<current time in location request>"
-     Then "time.mycroftai" should reply with dialog from "time-current-location.dialog"
+  # @xfail
+  # # jira MS-100 https://mycroft.atlassian.net/browse/MS-100
+  # Scenario Outline: Failing what's the time in a location
+  #   Given an english speaking user
+  #    When the user says "<current time in location request>"
+  #    Then "time.mark2" should reply with dialog from "time-current-location.dialog"
 
-  Examples:
-    | current time in location request |
-    | check the time in Washington DC |
-    | time in Toronto |
+  # Examples:
+  #   | current time in location request |
+  #   | check the time in Washington DC |
+  #   | time in Toronto |
 
   Scenario Outline: what's the time in an imaginary location
     Given an english speaking user
      When the user says "<current time in location request>"
-     Then "time.mycroftai" should reply with dialog from "location-not-found.dialog"
+     Then "time.mark2" should reply with dialog from "location-not-found.dialog"
 
   Examples: what time examples
     | current time in location request |

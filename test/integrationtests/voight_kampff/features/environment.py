@@ -101,6 +101,7 @@ class VoightKampffClient:
                 data={
                     "utterances": [text],
                     "response_skill_id": response_skill_id,
+                    "mycroft_session_id": self.mycroft_session_id,
                 },
             )
         )
