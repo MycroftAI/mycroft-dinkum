@@ -584,3 +584,4 @@ class ConnectCheck(MycroftSkill):
             self.log.exception("Error downloading remote settings")
 
         self.bus.emit(Message("server-connect.startup-finished"))
+        self.bus.emit(self.end_session(gui_clear=GuiClear.NEVER))
