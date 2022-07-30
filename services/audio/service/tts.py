@@ -75,7 +75,7 @@ class SpeakHandler:
                 for i, sentence in enumerate(segments):
                     if self._mycroft_session_id != mycroft_session_id:
                         # New session has started
-                        self.log.debug("TTS session cancelled: %s", tts_session_id)
+                        LOG.debug("TTS session cancelled: %s", tts_session_id)
 
                         # Ensure TTS session is finished
                         self.bus.emit(
