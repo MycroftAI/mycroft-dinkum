@@ -14,10 +14,6 @@
 #
 """Step functions for the Home Screen Skill behave tests."""
 from pathlib import Path
-from test.integrationtests.voight_kampff import (
-    VoightKampffCriteriaMatcher,
-    VoightKampffMessageMatcher,
-)
 
 from behave import then
 
@@ -25,9 +21,8 @@ from behave import then
 @then("the wallpaper should be changed")
 def check_wallpaper_changed(context):
     """When the wallpaper changes, an event is emitted on the bus."""
-    event_matcher = VoightKampffMessageMatcher(context, "homescreen.wallpaper.changed")
-    event_matcher.match()
-    assert event_matcher.match_found, event_matcher.error_message
+    message = context.client.wait_for_message("homescreen.wallpaper.changed")
+    assert message is not None, "Wallpaper was not changed"
 
 
 @then("the wallpaper should be changed to {name}")
@@ -35,19 +30,11 @@ def check_wallpaper_changed_green(context, name):
     """When the wallpaper changes, an event is emitted on the bus with the name."""
     # Strip quotes
     name = name.replace('"', "")
+    message = context.client.wait_for_message("homescreen.wallpaper.changed")
+    assert message is not None, "Wallpaper was not changed"
 
-    def match_name(message):
-        actual_name = message.data.get("name")
-        if actual_name:
-            actual_name = Path(actual_name).stem
+    actual_name = message.data.get("name")
+    if actual_name:
+        actual_name = Path(actual_name).stem
 
-        if actual_name != name:
-            return False, f"Expected {name}, got {actual_name}"
-
-        return True, ""
-
-    event_matcher = VoightKampffCriteriaMatcher(
-        context, "homescreen.wallpaper.changed", match_name
-    )
-    event_matcher.match()
-    assert event_matcher.match_found, event_matcher.error_message
+    assert actual_name == name, f"Expected '{name}', got '{actual_name}'"
