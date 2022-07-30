@@ -76,6 +76,17 @@ class SpeakHandler:
                     if self._mycroft_session_id != mycroft_session_id:
                         # New session has started
                         self.log.debug("TTS session cancelled: %s", tts_session_id)
+
+                        # Ensure TTS session is finished
+                        self.bus.emit(
+                            Message(
+                                "mycroft.tts.session.end",
+                                data={
+                                    "tts_session_id": tts_session_id,
+                                    "mycroft_session_id": mycroft_session_id,
+                                },
+                            )
+                        )
                         break
 
                     cache_path = self._synthesize(sentence)

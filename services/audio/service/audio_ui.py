@@ -154,6 +154,7 @@ class AudioUserInterface:
             "mycroft.audio.play-sound": self.handle_play_sound,
             "mycroft.tts.stop": self.handle_tts_stop,
             "mycroft.tts.session.start": self.handle_tts_session_start,
+            "mycroft.tts.session.end": self.handle_tts_session_end,
             "mycroft.tts.chunk.start": self.handle_tts_chunk,
             "mycroft.audio.hal.media.ended": self.handle_media_finished,
             # stream
@@ -288,21 +289,36 @@ class AudioUserInterface:
         self._mycroft_session_id = mycroft_session_id
         self._tts_session_id = message.data.get("tts_session_id")
 
+    def handle_tts_session_end(self, message):
+        """Manual request for end of TTS session"""
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        tts_session_id = message.data.get("tts_session_id")
+        self._finish_tts_session(
+            session_id=tts_session_id,
+            mycroft_session_id=mycroft_session_id,
+        )
+
     def handle_tts_chunk(self, message):
         """Queues a text to speech audio chunk to be played"""
         uri = message.data["uri"]
         mycroft_session_id = message.data.get("mycroft_session_id", "")
+        chunk_index = message.data.get("chunk_index", 0)
+        num_chunks = message.data.get("num_chunks", 1)
+        tts_session_id = message.data.get("tts_session_id")
 
         if mycroft_session_id != self._mycroft_session_id:
             # Doesn't match session from tts.session.start
             LOG.debug(
                 "Dropping TTS chunk from cancelled session: %s", mycroft_session_id
             )
-            return
 
-        chunk_index = message.data.get("chunk_index", 0)
-        num_chunks = message.data.get("num_chunks", 1)
-        tts_session_id = message.data.get("tts_session_id")
+            if chunk_index >= (num_chunks - 1):
+                # Ensure TTS session is finished
+                self._finish_tts_session(
+                    session_id=tts_session_id,
+                    mycroft_session_id=mycroft_session_id,
+                )
+            return
 
         request = TTSRequest(
             uri=uri,
@@ -421,7 +437,6 @@ class AudioUserInterface:
     def _finish_tts_session(
         self,
         session_id: str,
-        # skill_id: typing.Optional[str] = None,
         mycroft_session_id: typing.Optional[str] = None,
     ):
         # Report speaking finished for speak(wait=True)
