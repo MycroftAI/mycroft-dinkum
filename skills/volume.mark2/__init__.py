@@ -63,8 +63,8 @@ class VolumeSkill(MycroftSkill):
             "default_level", VolumeSkill.VOLUME_WORDS["normal"]
         )
         self.volume_sound = resolve_resource_file("snd/beep.wav")
-        self.vol_before_mute = None
         self._translate_volume_words()
+        self.vol_before_mute = None
 
     def initialize(self):
         # Register handlers to detect percentages as reported by STT
@@ -248,7 +248,7 @@ class VolumeSkill(MycroftSkill):
             dialog = "mute.volume"
 
         self.vol_before_mute = self.__get_system_volume()
-        message = Message("mycroft.volume.set", data={"percent": 0})
+        message = Message("mycroft.volume.mute")
         return self.end_session(
             dialog=dialog, message=message, message_send=MessageSend.AT_END
         )
@@ -268,16 +268,15 @@ class VolumeSkill(MycroftSkill):
     @intent_handler(IntentBuilder("UnmuteVolume").require("Volume").require("Unmute"))
     def handle_unmute_volume(self, message):
         dialog = None
-        if message.data.get("speak_message", True):
-            dialog = ("reset.volume", {"volume": self.settings["default_level"]})
-
         if self.vol_before_mute is None:
             vol = self.__level_to_volume(self.settings["default_level"])
         else:
             vol = self.vol_before_mute
 
-        percent = self._volume_to_percent(vol)
-        message = Message("mycroft.volume.set", data={"percent": percent})
+        if message.data.get("speak_message", True):
+            dialog = ("reset.volume", {"volume": vol})
+
+        message = Message("mycroft.volume.unmute")
         return self.end_session(
             dialog=dialog, message=message, message_send=MessageSend.AT_START
         )

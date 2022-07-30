@@ -11,7 +11,7 @@ Feature: volume control
     | increase volume |
     | turn it up |
     | volume up |
-    | louder |
+    # | louder |
     | more sound |
     | more audio |
     | higher volume |
@@ -36,7 +36,7 @@ Feature: volume control
     | less sound |
     | lower volume |
     | reduce volume |
-    | quieter |
+    # | quieter |
     | less volume |
     | lower sound |
     | make it quieter |
@@ -47,7 +47,7 @@ Feature: volume control
     Given an english speaking user
      And the volume is set to 5
      When the user says "<change volume to a number>"
-     Then "mycroft-volume" should reply with dialog from "set.volume.dialog"
+     Then "volume.mark2" should reply with dialog from "set.volume.dialog"
       And the volume should be "<expected level>"
 
   Examples: change volume to a number between 0 and 10
@@ -65,7 +65,7 @@ Feature: volume control
     Given an english speaking user
      And the volume is set to 5
      When the user says "<change volume to a percent>"
-     Then "mycroft-volume" should reply with dialog from "set.volume.percent.dialog"
+     Then "volume.mark2" should reply with dialog from "set.volume.percent.dialog"
       And the volume should be "<expected level>"
 
   Examples: change volume to a percent
@@ -76,7 +76,7 @@ Feature: volume control
     Given an english speaking user
      And the volume is set to 5
      When the user says "<max volume>"
-     Then "mycroft-volume" should reply with dialog from "max.volume.dialog"
+     Then "volume.mark2" should reply with dialog from "max.volume.dialog"
       And the volume should be "10"
 
   Examples: max volume
@@ -101,7 +101,7 @@ Feature: volume control
     Given an english speaking user
      And the volume is set to 5
      When the user says "<volume status>"
-     Then "mycroft-volume" should reply with dialog from "volume.is.dialog"
+     Then "volume.mark2" should reply with dialog from "volume.is.dialog"
 
   Examples: volume status
     | volume status |
@@ -129,30 +129,30 @@ Feature: volume control
     | what level is the volume set to |
     | what level is the volume at |
 
-  @xfail
-  # "Reset" is currently used synonymously with "unmute"
-  # This test presumes a default volume, rather than pre-mute volume.
-  Scenario Outline: reset volume
-    Given an english speaking user
-     And the volume is set to 10
-     When the user says "<reset volume>"
-     Then "mycroft-volume" should reply with dialog from "reset.volume.dialog"
-      And the volume should be "5"
+  # @xfail
+  # # "Reset" is currently used synonymously with "unmute"
+  # # This test presumes a default volume, rather than pre-mute volume.
+  # Scenario Outline: reset volume
+  #   Given an english speaking user
+  #    And the volume is set to 10
+  #    When the user says "<reset volume>"
+  #    Then "volume.mark2" should reply with dialog from "reset.volume.dialog"
+  #     And the volume should be "5"
 
-  Examples: reset volume
-    | reset volume |
-    | reset volume |
-    | default volume |
-    | go to default volume |
-    | restore volume |
-    | change volume to default volume |
-    | set volume to default volume |
+  # Examples: reset volume
+  #   | reset volume |
+  #   | reset volume |
+  #   | default volume |
+  #   | go to default volume |
+  #   | restore volume |
+  #   | change volume to default volume |
+  #   | set volume to default volume |
 
   Scenario Outline: mute audio
     Given an english speaking user
      And the volume is set to 5
      When the user says "<mute audio>"
-     Then "mycroft-volume" should reply with dialog from "mute.volume.dialog"
+     Then "volume.mark2" should reply with dialog from "mute.volume.dialog"
       And the volume should be "0"
 
   Examples: mute audio
@@ -170,7 +170,7 @@ Feature: volume control
      And the volume is set to 6
      And Mycroft audio is muted
      When the user says "<unmute audio>"
-     Then "mycroft-volume" should reply with dialog from "reset.volume.dialog"
+     Then "volume.mark2" should reply with dialog from "reset.volume.dialog"
       And the volume should be "6"
 
   Examples: unmute audio
@@ -184,7 +184,7 @@ Feature: volume control
      And the volume is set to 4
      And Mycroft audio is muted
      When the user says "<unmute audio>"
-     Then "mycroft-volume" should reply with dialog from "reset.volume.dialog"
+     Then "volume.mark2" should reply with dialog from "reset.volume.dialog"
       And the volume should be "4"
 
   Examples: unmute audio

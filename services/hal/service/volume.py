@@ -45,11 +45,18 @@ class Mark2VolumeClient:
         self._volume_max: int = 100
         self._volume_step: int = 10
         self._current_volume: int = 60
+        self._volume_before_mute: int = self._current_volume
+
+    @property
+    def is_muted(self) -> bool:
+        return self._current_volume == self._volume_min
 
     def start(self):
         self.bus.on("mycroft.switch.state", self._handle_switch_state)
         self.bus.on("mycroft.volume.set", self._handle_volume_set)
         self.bus.on("mycroft.volume.get", self._handle_volume_get)
+        self.bus.on("mycroft.volume.mute", self._handle_volume_mute)
+        self.bus.on("mycroft.volume.unmute", self._handle_volume_unmute)
         self.set_volume(self._current_volume)
 
     def _handle_switch_state(self, message: Message):
@@ -88,7 +95,20 @@ class Mark2VolumeClient:
     def _handle_volume_get(self, message: Message):
         # Not really a percent: actually in [0,1]
         percent = self._current_volume / (self._volume_max - self._volume_min)
-        self.bus.emit(message.response(data={"percent": percent}))
+        self.bus.emit(
+            message.response(data={"percent": percent, "muted": self.is_muted})
+        )
+
+    def _handle_volume_mute(self, _message: Message):
+        if not self.is_muted:
+            self.log.debug("Muting volume")
+            self._volume_before_mute = self._current_volume
+            self.set_volume(self._volume_min)
+
+    def _handle_volume_unmute(self, _message: Message):
+        if self.is_muted:
+            self.log.debug("Unmuting volume")
+            self.set_volume(self._volume_before_mute)
 
     def stop(self):
         pass
