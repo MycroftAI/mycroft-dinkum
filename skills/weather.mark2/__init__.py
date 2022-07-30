@@ -538,22 +538,23 @@ class WeatherSkill(MycroftSkill):
             message: Message Bus event information from the intent parser
         """
         dialog = None
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            forecast, timeframe = weather.get_next_precipitation(intent_data)
-            intent_data.timeframe = timeframe
-            dialog_args = intent_data, self.weather_config, forecast
-            precipitation_dialog = get_dialog_for_timeframe(
-                intent_data.timeframe, dialog_args
-            )
-            precipitation_dialog.build_next_precipitation_dialog()
-            spoken_percentage = self.translate(
-                "percentage-number",
-                data=dict(number=precipitation_dialog.data["percent"]),
-            )
-            precipitation_dialog.data.update(percent=spoken_percentage)
-            dialog = (precipitation_dialog.name, precipitation_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                forecast, timeframe = weather.get_next_precipitation(intent_data)
+                intent_data.timeframe = timeframe
+                dialog_args = intent_data, self.weather_config, forecast
+                precipitation_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
+                )
+                precipitation_dialog.build_next_precipitation_dialog()
+                spoken_percentage = self.translate(
+                    "percentage-number",
+                    data=dict(number=precipitation_dialog.data["percent"]),
+                )
+                precipitation_dialog.data.update(percent=spoken_percentage)
+                dialog = (precipitation_dialog.name, precipitation_dialog.data)
 
         return self.end_session(dialog=dialog)
 
@@ -571,22 +572,23 @@ class WeatherSkill(MycroftSkill):
             message: Message Bus event information from the intent parser
         """
         dialog = None
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            dialog_args = intent_data, self.weather_config, intent_weather
-            humidity_dialog = get_dialog_for_timeframe(
-                intent_data.timeframe, dialog_args
-            )
-            humidity_dialog.build_humidity_dialog()
-            humidity_dialog.data.update(
-                percent=self.translate(
-                    "percentage-number",
-                    data=dict(number=humidity_dialog.data["percent"]),
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                dialog_args = intent_data, self.weather_config, intent_weather
+                humidity_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
                 )
-            )
-            dialog = (humidity_dialog.name, humidity_dialog.data)
+                humidity_dialog.build_humidity_dialog()
+                humidity_dialog.data.update(
+                    percent=self.translate(
+                        "percentage-number",
+                        data=dict(number=humidity_dialog.data["percent"]),
+                    )
+                )
+                dialog = (humidity_dialog.name, humidity_dialog.data)
 
         return self.end_session(dialog=dialog)
 
@@ -607,19 +609,20 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            dialog_args = intent_data, self.weather_config, intent_weather
-            sunrise_dialog = get_dialog_for_timeframe(
-                intent_data.timeframe, dialog_args
-            )
-            sunrise_dialog.build_sunrise_dialog()
-            dialog = (sunrise_dialog.name, sunrise_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                dialog_args = intent_data, self.weather_config, intent_weather
+                sunrise_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
+                )
+                sunrise_dialog.build_sunrise_dialog()
+                dialog = (sunrise_dialog.name, sunrise_dialog.data)
 
-            weather_location = self._build_display_location(intent_data)
-            gui = self._display_sunrise_sunset(intent_weather, weather_location)
+                weather_location = self._build_display_location(intent_data)
+                gui = self._display_sunrise_sunset(intent_weather, weather_location)
 
         return self.end_session(dialog=dialog, gui=gui)
 
@@ -640,17 +643,20 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            dialog_args = intent_data, self.weather_config, intent_weather
-            sunset_dialog = get_dialog_for_timeframe(intent_data.timeframe, dialog_args)
-            sunset_dialog.build_sunset_dialog()
-            dialog = (sunset_dialog.name, sunset_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                dialog_args = intent_data, self.weather_config, intent_weather
+                sunset_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
+                )
+                sunset_dialog.build_sunset_dialog()
+                dialog = (sunset_dialog.name, sunset_dialog.data)
 
-            weather_location = self._build_display_location(intent_data)
-            gui = self._display_sunrise_sunset(intent_weather, weather_location)
+                weather_location = self._build_display_location(intent_data)
+                gui = self._display_sunrise_sunset(intent_weather, weather_location)
 
         return self.end_session(dialog=dialog, gui=gui)
 
@@ -702,28 +708,29 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            weather_location = self._build_display_location(intent_data)
-            gui = [
-                self._display_current_conditions(weather, weather_location),
-                self._display_more_current_conditions(weather, weather_location),
-            ]
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                weather_location = self._build_display_location(intent_data)
+                gui = [
+                    self._display_current_conditions(weather, weather_location),
+                    self._display_more_current_conditions(weather, weather_location),
+                ]
 
-            weather_dialog = CurrentDialog(
-                intent_data, self.weather_config, weather.current
-            )
-            weather_dialog.build_weather_dialog()
-            high_low_dialog = CurrentDialog(
-                intent_data, self.weather_config, weather.current
-            )
-            high_low_dialog.build_high_low_temperature_dialog()
+                weather_dialog = CurrentDialog(
+                    intent_data, self.weather_config, weather.current
+                )
+                weather_dialog.build_weather_dialog()
+                high_low_dialog = CurrentDialog(
+                    intent_data, self.weather_config, weather.current
+                )
+                high_low_dialog.build_high_low_temperature_dialog()
 
-            dialog = [
-                (weather_dialog.name, weather_dialog.data),
-                (high_low_dialog.name, high_low_dialog.data),
-            ]
+                dialog = [
+                    (weather_dialog.name, weather_dialog.data),
+                    (high_low_dialog.name, high_low_dialog.data),
+                ]
 
         return dialog, gui
 
@@ -804,17 +811,20 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            try:
-                forecast = weather.get_forecast_for_hour(intent_data)
-            except IndexError:
-                dialog = "forty-eight.hours.available"
-            else:
-                hourly_dialog = HourlyDialog(intent_data, self.weather_config, forecast)
-                hourly_dialog.build_weather_dialog()
-                dialog = (hourly_dialog.name, hourly_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                try:
+                    forecast = weather.get_forecast_for_hour(intent_data)
+                except IndexError:
+                    dialog = "forty-eight.hours.available"
+                else:
+                    hourly_dialog = HourlyDialog(
+                        intent_data, self.weather_config, forecast
+                    )
+                    hourly_dialog.build_weather_dialog()
+                    dialog = (hourly_dialog.name, hourly_dialog.data)
 
         return dialog, gui
 
@@ -862,7 +872,7 @@ class WeatherSkill(MycroftSkill):
         gui = None
 
         intent_data = WeatherIntent(message, self.lang)
-        weather = self._get_weather(intent_data)
+        weather, dialog = self._get_weather(intent_data)
         if weather is not None:
             forecast = weather.get_forecast_for_date(intent_data)
             forecast_dialogs = self._build_forecast_dialogs([forecast], intent_data)
@@ -899,12 +909,12 @@ class WeatherSkill(MycroftSkill):
         gui = None
 
         intent_data = WeatherIntent(message, self.lang)
-        weather = self._get_weather(intent_data)
+        weather, dialog = self._get_weather(intent_data)
         if weather is not None:
             try:
                 forecast = weather.get_forecast_for_multiple_days(days)
             except IndexError:
-                self.speak_dialog("seven.days.available", wait=True)
+                dialog = "seven.days.available"
                 forecast = weather.get_forecast_for_multiple_days(7)
 
             forecast_dialogs = self._build_forecast_dialogs(forecast, intent_data)
@@ -922,13 +932,14 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            forecast = weather.get_weekend_forecast()
-            forecast_dialogs = self._build_forecast_dialogs(forecast, intent_data)
-            dialog = [(d.name, d.data) for d in forecast_dialogs]
-            gui = self._display_multi_day_forecast(forecast, intent_data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                forecast = weather.get_weekend_forecast()
+                forecast_dialogs = self._build_forecast_dialogs(forecast, intent_data)
+                dialog = [(d.name, d.data) for d in forecast_dialogs]
+                gui = self._display_multi_day_forecast(forecast, intent_data)
 
         return dialog, gui
 
@@ -963,7 +974,7 @@ class WeatherSkill(MycroftSkill):
         gui = None
 
         intent_data = WeatherIntent(message, self.lang)
-        weather = self._get_weather(intent_data)
+        weather, dialog = self._get_weather(intent_data)
         if weather is not None:
             forecast = weather.get_forecast_for_multiple_days(7)
             forecast_dialogs = self._build_weekly_condition_dialogs(
@@ -1055,16 +1066,17 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            dialog_args = intent_data, self.weather_config, intent_weather
-            temperature_dialog = get_dialog_for_timeframe(
-                intent_data.timeframe, dialog_args
-            )
-            temperature_dialog.build_temperature_dialog(temperature_type)
-            dialog = (temperature_dialog.name, temperature_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                dialog_args = intent_data, self.weather_config, intent_weather
+                temperature_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
+                )
+                temperature_dialog.build_temperature_dialog(temperature_type)
+                dialog = (temperature_dialog.name, temperature_dialog.data)
 
         return dialog, gui
 
@@ -1078,15 +1090,16 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            condition_dialog = self._build_condition_dialog(
-                intent_weather, intent_data, condition
-            )
-            dialog = (condition_dialog.name, condition_dialog.data)
-            self.log.debug(dialog)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                condition_dialog = self._build_condition_dialog(
+                    intent_weather, intent_data, condition
+                )
+                dialog = (condition_dialog.name, condition_dialog.data)
+                self.log.debug(dialog)
 
         return dialog, gui
 
@@ -1117,17 +1130,20 @@ class WeatherSkill(MycroftSkill):
         dialog = None
         gui = None
 
-        intent_data = self._get_intent_data(message)
-        weather = self._get_weather(intent_data)
-        if weather is not None:
-            intent_weather = weather.get_weather_for_intent(intent_data)
-            intent_weather.wind_direction = self.translate(
-                intent_weather.wind_direction
-            )
-            dialog_args = intent_data, self.weather_config, intent_weather
-            wind_dialog = get_dialog_for_timeframe(intent_data.timeframe, dialog_args)
-            wind_dialog.build_wind_dialog()
-            dialog = (wind_dialog.name, wind_dialog.data)
+        intent_data, dialog = self._get_intent_data(message)
+        if intent_data is not None:
+            weather, dialog = self._get_weather(intent_data)
+            if weather is not None:
+                intent_weather = weather.get_weather_for_intent(intent_data)
+                intent_weather.wind_direction = self.translate(
+                    intent_weather.wind_direction
+                )
+                dialog_args = intent_data, self.weather_config, intent_weather
+                wind_dialog = get_dialog_for_timeframe(
+                    intent_data.timeframe, dialog_args
+                )
+                wind_dialog.build_wind_dialog()
+                dialog = (wind_dialog.name, wind_dialog.data)
 
         return dialog, gui
 
@@ -1141,10 +1157,11 @@ class WeatherSkill(MycroftSkill):
             parsed information about the intent
         """
         intent_data = None
+        dialog = None
         try:
             intent_data = WeatherIntent(message, self.lang)
         except ValueError:
-            self.speak_dialog("cant.get.forecast", wait=True)
+            dialog = "cant.get.forecast"
         else:
             if self.voc_match(intent_data.utterance, "relative-time"):
                 intent_data.timeframe = HOURLY
@@ -1154,7 +1171,7 @@ class WeatherSkill(MycroftSkill):
                 if not self.voc_match(intent_data.utterance, "today"):
                     intent_data.timeframe = DAILY
 
-        return intent_data
+        return intent_data, dialog
 
     def _get_weather(self, intent_data: WeatherIntent) -> WeatherReport:
         """Call the Open Weather Map One Call API to get weather information
@@ -1166,6 +1183,7 @@ class WeatherSkill(MycroftSkill):
             An object representing the data returned by the API
         """
         weather = None
+        dialog = None
         if intent_data is not None:
             try:
                 latitude, longitude = self._determine_weather_location(intent_data)
@@ -1174,19 +1192,18 @@ class WeatherSkill(MycroftSkill):
                 )
             except HTTPError as api_error:
                 self.log.exception("Weather API failure")
-                self._handle_api_error(api_error)
+                dialog = self._handle_api_error(api_error)
             except LocationNotFoundError:
                 self.log.exception("City not found.")
-                self.speak_dialog(
+                dialog = (
                     "location-not-found",
-                    data=dict(location=intent_data.location),
-                    wait=True,
+                    dict(location=intent_data.location),
                 )
             except Exception:
                 self.log.exception("Unexpected error retrieving weather")
-                self.speak_dialog("cant-get-forecast", wait=True)
+                dialog = "cant-get-forecast"
 
-        return weather
+        return weather, dialog
 
     def _handle_api_error(self, exception: HTTPError):
         """Communicate an error condition to the user.
@@ -1194,10 +1211,13 @@ class WeatherSkill(MycroftSkill):
         Args:
             exception: the HTTPError returned by the API call
         """
+        dialog = None
         if exception.response.status_code == 401:
             self.bus.emit(Message("mycroft.not.paired"))
         else:
-            self.speak_dialog("cant.get.forecast", wait=True)
+            dialog = "cant.get.forecast"
+
+        return dialog
 
     def _determine_weather_location(
         self, intent_data: WeatherIntent
@@ -1218,35 +1238,6 @@ class WeatherSkill(MycroftSkill):
             longitude = intent_data.geolocation["longitude"]
 
         return latitude, longitude
-
-    def _speak_weather(self, dialog):
-        """Instruct device to speak the contents of the specified dialog.
-
-        :param dialog: the dialog that will be spoken
-        """
-        self.log.info("Speaking dialog: " + dialog.name)
-        self.speak_dialog(dialog.name, dialog.data, wait=True)
-
-    def _speak_multiple_dialogs(self, dialogs: WeatherDialog):
-        """Speak multiple dialogs in a single TTS session.
-
-        This has been created for the Mark II MVP as a temporary work around.
-        """
-        dialog_file_names = list()
-        dialog_strings = list()
-        for dialog in dialogs:
-            dialog_file_names.append(dialog.name)
-            dialog_strings.append(self.dialog_renderer.render(dialog.name, dialog.data))
-            if not dialog_strings[-1].endswith("."):
-                dialog_strings[-1] += "."
-
-        # Speak in a single TTS session
-        # Report the dialog files used in speak meta for VK tests.
-        self.speak(
-            " ".join(dialog_strings),
-            wait=True,
-            meta={"dialog": dialog_file_names},
-        )
 
 
 def create_skill():

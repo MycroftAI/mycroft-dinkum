@@ -3,7 +3,7 @@ Feature: Mycroft Weather Skill current weather at a specified location
   Scenario Outline: User asks for the current weather in a location
     Given an english speaking user
      When the user says "<what is the current weather in location>"
-     Then "mycroft-weather.mycroftai" should reply with dialog that includes "current-weather-location.dialog"
+     Then "weather.mark2" should reply with dialog from "current-weather-location.dialog"
 
   Examples: what is the current local weather in a location
     | what is the current weather in location |
@@ -20,22 +20,22 @@ Feature: Mycroft Weather Skill current weather at a specified location
     | what is it like outside in baltimore today |
 
 
-  @xfail
-  Scenario Outline: FAILING User asks for the current weather in a location
-    Given an english speaking user
-     When the user says "<what is the current weather in location>"
-     Then "mycroft-weather.mycroftai" should reply with dialog that includes "current-weather-location.dialog"
+  # @xfail
+  # Scenario Outline: FAILING User asks for the current weather in a location
+  #   Given an english speaking user
+  #    When the user says "<what is the current weather in location>"
+  #    Then "weather.mark2" should reply with dialog from "current-weather-location.dialog"
 
-  Examples: what is the current local weather in a location
-    | what is the current weather in location |
-    | what's the current weather conditions in Washington, D.C. |
+  # Examples: what is the current local weather in a location
+  #   | what is the current weather in location |
+  #   | what's the current weather conditions in Washington, D.C. |
 
 
   Scenario Outline: User asks for the current weather in an unknown location
     Given an english speaking user
      When the user says "<what is the current weather in location>"
-     Then "mycroft-weather.mycroftai" should reply with dialog that includes "location-not-found.dialog"
+     Then "weather.mark2" should reply with dialog from "location-not-found.dialog"
 
   Examples: what is the current local weather in a location
     | what is the current weather in location |
-    | tell me the current weather in Missouri |
+    | tell me the current weather in Asgard |

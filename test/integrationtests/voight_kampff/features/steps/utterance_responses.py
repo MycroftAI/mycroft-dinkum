@@ -35,106 +35,10 @@ from test.integrationtests.voight_kampff import (
 
 LOG = logging.getLogger("Voight Kampff")
 
-# def find_dialog(skill_path, dialog, lang):
-#     """Check the usual location for dialogs.
-
-#     TODO: subfolders
-#     """
-#     if exists(join(skill_path, "dialog")):
-#         return join(skill_path, "dialog", lang, dialog)
-#     else:
-#         return join(skill_path, "locale", lang, dialog)
-
-
-# def load_dialog_file(dialog_path):
-#     """Load dialog files and get the contents."""
-#     with open(dialog_path) as f:
-#         lines = f.readlines()
-#     return [l.strip().lower() for l in lines if l.strip() != "" and l.strip()[0] != "#"]
-
-
-# def load_dialog_list(skill_path, dialog):
-#     """Load dialog from files into a single list.
-
-#     Args:
-#         skill (MycroftSkill): skill to load dialog from
-#         dialog (list): Dialog names (str) to load
-
-#     Returns:
-#         tuple (list of Expanded dialog strings, debug string)
-#     """
-#     dialog_path = find_dialog(skill_path, dialog)
-
-#     debug = "Opening {}\n".format(dialog_path)
-#     return load_dialog_file(dialog_path), debug
-
-
-# def dialog_from_sentence(sentence, skill_path, lang):
-#     """Find dialog file from example sentence.
-
-#     Args:
-#         sentence (str): Text to match
-#         skill_path (str): path to skill directory
-#         lang (str): language code to use
-
-#     Returns (str): Dialog file best matching the sentence.
-#     """
-#     dialog_paths = join(skill_path, "dialog", lang, "*.dialog")
-#     best = (None, 0)
-#     for path in glob(dialog_paths):
-#         patterns = load_dialog_file(path)
-#         match, _ = _match_dialog_patterns(patterns, sentence.lower())
-#         if match is not False:
-#             if len(patterns[match]) > best[1]:
-#                 best = (path, len(patterns[match]))
-#     if best[0] is not None:
-#         return basename(best[0])
-#     else:
-#         return None
-
-
-# def _match_dialog_patterns(dialogs, sentence):
-#     """Match sentence against a list of dialog patterns.
-
-#     Returns index of found match.
-#     """
-#     # Allow custom fields to be anything
-#     dialogs = [re.sub(r"{.*?\}", r".*", dia) for dia in dialogs]
-#     # Remove left over '}'
-#     dialogs = [re.sub(r"\}", r"", dia) for dia in dialogs]
-#     dialogs = [re.sub(r" .* ", r" .*", dia) for dia in dialogs]
-#     # Merge consequtive .*'s into a single .*
-#     dialogs = [re.sub(r"\.\*( \.\*)+", r".*", dia) for dia in dialogs]
-#     # Remove double whitespaces
-#     dialogs = ["^" + " ".join(dia.split()) for dia in dialogs]
-#     debug = "MATCHING: {}\n".format(sentence)
-#     for index, regex in enumerate(dialogs):
-#         match = re.match(regex, sentence)
-#         debug += "---------------\n"
-#         debug += "{} {}\n".format(regex, match is not None)
-#         if match:
-#             return index, debug
-#     else:
-#         return False, debug
-
 
 @given("an english speaking user")
 def given_english(context):
     context.lang = "en-us"
-
-
-# @given("a {timeout} seconds timeout")
-# @given("a {timeout} second timeout")
-# def given_timeout(context, timeout):
-#     """Set the timeout for the steps in this scenario."""
-#     context.step_timeout = float(timeout)
-
-
-# @given("a {timeout} minutes timeout")
-# @given("a {timeout} minute timeout")
-# def given_timeout(context, timeout):
-#     """Set the timeout for the steps in this scenario."""
-#     context.step_timeout = float(timeout) * 60
 
 
 @when('the user says "{text}"')

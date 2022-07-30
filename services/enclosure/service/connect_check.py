@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import json
 import logging
 import time
-import json
 from enum import Enum, auto
 from http import HTTPStatus
 from typing import Optional
@@ -22,15 +22,15 @@ from uuid import uuid4
 
 import requests
 from mycroft.api import DeviceApi
-from mycroft.identity import IdentityManager
-from mycroft.skills import GuiClear, MessageSend, MycroftSkill
-from mycroft_bus_client import Message, MessageBusClient
-from mycroft.util.network_utils import check_system_clock_sync_status
-from requests import HTTPError
 from mycroft.configuration.remote import (
     download_remote_settings,
     get_remote_settings_path,
 )
+from mycroft.identity import IdentityManager
+from mycroft.skills import GuiClear, MessageSend, MycroftSkill
+from mycroft.util.network_utils import check_system_clock_sync_status
+from mycroft_bus_client import Message, MessageBusClient
+from requests import HTTPError
 
 from .awconnect import AwconnectClient
 

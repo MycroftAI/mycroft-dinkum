@@ -233,39 +233,7 @@ class VoightKampffClient:
 
 
 def before_all(context):
-    # log = create_voight_kampff_logger()
-    # bus = InterceptAllBusClient()
-    # bus_connected = Event()
-    # bus.once("open", bus_connected.set)
-
-    # Thread(target=bus.run_forever, daemon=True).start()
-
-    # Wait for connection
-    # log.info("Waiting for messagebus connection...")
-    # bus_connected.wait()
-
-    # log.info('Waiting for skills to be loaded...')
-    # start = monotonic()
-    # while True:
-    #     response = bus.wait_for_response(Message('mycroft.skills.all_loaded'))
-    #     if response and response.data['status']:
-    #         break
-    #     elif monotonic() - start >= 2 * 60:
-    #         raise Exception('Timeout waiting for skills to become ready.')
-    #     else:
-    #         sleep(1)
-
-    # context.bus = bus
-    # context.step_timeout = 10  # Reset the step_timeout to 10 seconds
-    # context.matched_message = None
-    # context.log = log
-    # context.config = Configuration.get()
     context.client = VoightKampffClient()
-
-
-# def after_step(context, step):
-#     context.client.wait_for_skill()
-#     context.client.reset_state()
 
 
 def before_feature(context, feature):
