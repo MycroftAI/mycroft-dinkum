@@ -33,31 +33,30 @@ class SkillsService(DinkumService):
         self._skill_instance: Optional[MycroftSkill] = None
 
     def start(self):
-        pass
-
-    def after_start(self):
-        super().after_start()
-
-        # Block skill from loading until ready.
-        #
-        # We have to do this because remote settings won't be synced until then,
-        # and we'll load a stale config.
-        self._wait_for_ready()
         self._load_language()
 
         # We can't register intents until the intent service is up
         self._wait_for_service("intent")
         self._load_skill()
 
+    def after_start(self):
+        super().after_start()
+
+        # Block skill from running until ready.
+        self._wait_for_ready()
+
     def stop(self):
         if self._skill_instance is not None:
             self._skill_instance.default_shutdown()
+            self._skill_instance = None
 
     def _load_language(self):
+        """Load language for Lingua Franca"""
         lang_code = self.config.get("lang", "en-us")
         load_languages([lang_code, "en-us"])
 
     def _load_skill(self):
+        """Load/create skill instance and initialize"""
         self._skill_module = load_skill_source(
             self.args.skill_directory, self.args.skill_id
         )

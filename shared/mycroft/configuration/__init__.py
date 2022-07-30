@@ -34,14 +34,17 @@ class Configuration:
     __config: Optional[ConfigType] = None
 
     @staticmethod
-    def get(*args, **kwargs) -> ConfigType:
+    def get(*args, cache: bool = True, **kwargs) -> ConfigType:
         """Get singleton configuration (load if necessary)"""
-        if Configuration.__config is None:
+        if (not cache) or (Configuration.__config is None):
             config: ConfigType = {}
             for config_path in Configuration.get_paths():
                 LOG.debug("Loading config file: %s", config_path)
-                delta_config = Configuration.load(config_path)
-                merge_dict(config, delta_config)
+                try:
+                    delta_config = Configuration.load(config_path)
+                    merge_dict(config, delta_config)
+                except Exception:
+                    LOG.exception("Error loading config file: %s", config_path)
 
             Configuration.__config = config
 

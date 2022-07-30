@@ -16,21 +16,12 @@ import json
 import time
 from typing import Optional
 
-from mycroft.api import DeviceApi
-from mycroft.configuration.remote import (
-    download_remote_settings,
-    get_remote_settings_path,
-)
 from mycroft.service import DinkumService
-from mycroft.util.network_utils import check_system_clock_sync_status
 from mycroft_bus_client import Message
 
 from .connect_check import ConnectCheck
 
 IDLE_SKILL_ID = "homescreen.mark2"
-
-CLOCK_SYNC_RETIRES = 10
-CLOCK_SYNC_WAIT_SEC = 1
 
 
 class EnclosureService(DinkumService):
@@ -55,7 +46,7 @@ class EnclosureService(DinkumService):
         self.bus.on("gui.initialize.ended", self.handle_gui_reconnect)
 
         # Connected to internet + paired
-        self.bus.on("server-connect.authenticated", self.handle_server_authenticated)
+        self.bus.on("server-connect.startup-finished", self.handle_startup_finished)
 
         self._connect_check = ConnectCheck(self.bus)
         self._connect_check.load_data_files()
@@ -65,45 +56,26 @@ class EnclosureService(DinkumService):
     def stop(self):
         pass
 
-    def handle_server_authenticated(self, _message: Message):
+    def handle_startup_finished(self, _message: Message):
         # Request switch states so mute is correctly shown
         self.bus.emit(Message("mycroft.switch.report-states"))
 
-        self._sync_clock()
-        self._download_remote_settings()
+        # Inform services that config may have changed
+        self.bus.emit(Message("configuraton.updated"))
 
         # Inform skills that we're ready
         self.mycroft_ready = True
         self.bus.emit(Message("mycroft.ready"))
         self.log.info("Ready")
 
-        self.log.debug("Waiting for idle skill: %s", IDLE_SKILL_ID)
-        self._wait_for_service(IDLE_SKILL_ID)
+        # Show idle screen
         self.bus.emit(Message("mycroft.gui.idle"))
 
+        # Stop connect check activity
         self._connect_check.default_shutdown()
         self._connect_check = None
 
         self.log.debug("Completed start up successfully")
-
-    def _sync_clock(self):
-        for i in range(CLOCK_SYNC_RETIRES):
-            self.log.debug("Checking for clock sync (%s/%s)", i + 1, CLOCK_SYNC_RETIRES)
-            if check_system_clock_sync_status():
-                break
-
-            time.sleep(CLOCK_SYNC_WAIT_SEC)
-
-    def _download_remote_settings(self):
-        self.log.debug("Downloading remote settings")
-        try:
-            api = DeviceApi()
-            remote_config = download_remote_settings(api)
-            settings_path = get_remote_settings_path()
-            with open(settings_path, "w", encoding="utf-8") as settings_file:
-                json.dump(remote_config, settings_file)
-        except Exception:
-            self.log.exception("Error downloading remote settings")
 
     # -------------------------------------------------------------------------
 

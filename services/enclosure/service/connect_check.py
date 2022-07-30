@@ -14,6 +14,7 @@
 #
 import logging
 import time
+import json
 from enum import Enum, auto
 from http import HTTPStatus
 from typing import Optional
@@ -24,7 +25,12 @@ from mycroft.api import DeviceApi
 from mycroft.identity import IdentityManager
 from mycroft.skills import GuiClear, MessageSend, MycroftSkill
 from mycroft_bus_client import Message, MessageBusClient
+from mycroft.util.network_utils import check_system_clock_sync_status
 from requests import HTTPError
+from mycroft.configuration.remote import (
+    download_remote_settings,
+    get_remote_settings_path,
+)
 
 from .awconnect import AwconnectClient
 
@@ -41,6 +47,9 @@ FAILURE_RESTART_SEC = 10
 
 PAIRING_SHOW_URL_WAIT_SEC = 15
 PAIRING_SPEAK_CODE_WAIT_SEC = 25
+
+CLOCK_SYNC_RETIRES = 10
+CLOCK_SYNC_WAIT_SEC = 1
 
 
 class Authentication(str, Enum):
@@ -105,6 +114,12 @@ class ConnectCheck(MycroftSkill):
         # Tutorial
         self.add_event("server-connect.tutorial.start", self._tutorial_start)
 
+        # After pairing check or tutorial
+        self.add_event("server-connect.authenticated", self._sync_clock)
+        self.add_event(
+            "server-connect.download-settings", self._download_remote_settings
+        )
+
     def start(self):
         self._mycroft_session_id = self.emit_start_session(continue_session=True)
         self.bus.emit(
@@ -118,36 +133,42 @@ class ConnectCheck(MycroftSkill):
         self._disconnect_from_awconnect()
 
     def _connect_to_awconnect(self):
+        """Connect to Pantacor awconnect container socket"""
         self._disconnect_from_awconnect()
         self._awconnect_client = AwconnectClient(self.bus)
         self._awconnect_client.start()
 
     def _disconnect_from_awconnect(self):
+        """Disconnect from Pantacor awconnect container socket"""
         if self._awconnect_client is not None:
             self._awconnect_client.stop()
             self._awconnect_client = None
 
+    def _fail_and_restart(self):
+        self.bus.emit(
+            self.continue_session(
+                dialog="unexpected.error.restarting",
+                gui="wifi_failure_mark_ii.qml",
+                message=Message("internet-connect.detect.start"),
+                message_send=MessageSend.AT_END,
+                message_delay=FAILURE_RESTART_SEC,
+                gui_clear=GuiClear.NEVER,
+            )
+        )
+
     # -------------------------------------------------------------------------
 
     def _check_internet(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
-
+        self.log.debug("Starting internet detection")
         self.bus.emit(
             self.continue_session(
-                gui="connecting_mark_ii.qml", gui_clear=GuiClear.NEVER
+                gui=("startup_sequence_mark_ii.qml", {"step": 1}),
+                gui_clear=GuiClear.NEVER,
+                message=Message("internet-connect.detect.started"),
             )
         )
 
         # Start detection
-        self.bus.emit(
-            Message(
-                "internet-connect.detect.started",
-                data={"mycroft_session_id": self._mycroft_session_id},
-            )
-        )
         is_connected = False
         for i in range(INTERNET_RETRIES):
             self.log.debug(
@@ -166,64 +187,45 @@ class ConnectCheck(MycroftSkill):
             time.sleep(INTERNET_WAIT_SEC)
 
         # End detection
+        self.log.debug("Ended internet detection: connected=%s", is_connected)
         self.bus.emit(
             Message(
                 "internet-connect.detect.ended",
                 data={
                     "connected": is_connected,
-                    "mycroft_session_id": mycroft_session_id,
                 },
             )
         )
 
         if is_connected:
             # Connected to the internet, check pairing next
-            self.log.debug("Internet connected")
             self.bus.emit(
                 Message(
                     "internet-connect.detected",
-                    data={"mycroft_session_id": mycroft_session_id},
                 )
             )
         else:
             # Not connected to the internet, start wi-fi setup
-            self.log.debug("Internet not connected")
             try:
                 # Connect to awconnect container
                 self._connect_to_awconnect()
                 self.bus.emit(
                     Message(
                         "internet-connect.setup.start",
-                        data={"mycroft_session_id": mycroft_session_id},
                     )
                 )
             except Exception:
                 self.log.exception("Failed to connect to awconnect socket")
 
                 # Not sure what else to do besides show an error and restart
-                self.bus.emit(
-                    self.continue_session(
-                        dialog="unexpected.error.restarting",
-                        gui="wifi_failure_mark_ii.qml",
-                        message=Message("internet-connect.detect.start"),
-                        message_send=MessageSend.AT_END,
-                        message_delay=FAILURE_RESTART_SEC,
-                        gui_clear=GuiClear.NEVER,
-                        mycroft_session_id=mycroft_session_id,
-                    )
-                )
+                self._fail_and_restart()
 
     # -------------------------------------------------------------------------
     # Wi-Fi Setup
     # -------------------------------------------------------------------------
 
     def _wifi_setup_start(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
-
-        # Start wi-fi setup
+        self.log.debug("Starting wi-fi setup")
         self.bus.emit(
             Message(
                 "internet-connect.setup.started",
@@ -237,7 +239,6 @@ class ConnectCheck(MycroftSkill):
                 gui="ap_starting_mark_ii.qml",
                 message=Message("hardware.awconnect.create-ap"),
                 gui_clear=GuiClear.NEVER,
-                mycroft_session_id=mycroft_session_id,
             )
         )
 
@@ -310,24 +311,17 @@ class ConnectCheck(MycroftSkill):
     # -------------------------------------------------------------------------
 
     def _check_pairing(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
-
-        self.bus.emit(
-            self.continue_session(
-                gui="server_connect_mark_ii.qml", gui_clear=GuiClear.NEVER
-            )
-        )
+        self.log.debug("Started server authentication")
 
         # Start authentication
         self.bus.emit(
-            Message(
-                "server-connect.authentication.started",
-                data={"mycroft_session_id": mycroft_session_id},
+            self.continue_session(
+                gui=("startup_sequence_mark_ii.qml", {"step": 2}),
+                gui_clear=GuiClear.NEVER,
+                message=Message("server-connect.authentication.started"),
             )
         )
+
         server_state = Authentication.SERVER_UNAVAILABLE
         for i in range(SERVER_AUTH_RETRIES):
             self.log.debug("Checking if paired (%s/%s)", i + 1, SERVER_AUTH_RETRIES)
@@ -347,43 +341,38 @@ class ConnectCheck(MycroftSkill):
                 time.sleep(SERVER_AUTH_WAIT_SEC)
 
         # End authentication
+        self.log.debug("Ended server authentication: state=%s", server_state.value)
         self.bus.emit(
             Message(
                 "server-connect.authentication.ended",
                 data={
                     "state": server_state.value,
-                    "mycroft_session_id": mycroft_session_id,
                 },
             )
         )
 
         if server_state == Authentication.NOT_AUTHENTICATED:
             # Not paired, start pairing process
-            self.log.debug("Device is not paired")
             self.bus.emit(
                 Message(
                     "server-connect.pairing.start",
-                    data={"mycroft_session_id": mycroft_session_id},
                 )
             )
         elif server_state == Authentication.SERVER_UNAVAILABLE:
             # Show failure page and retry
             self.log.warning("Server was unavailable. Retrying...")
+            self._fail_and_restart()
         else:
             # Paired already, continue in enclosure
-            self.log.debug("Device is already paired")
             self.bus.emit(
                 Message(
                     "server-connect.authenticated",
-                    data={"mycroft_session_id": mycroft_session_id},
                 )
             )
 
     def _pairing_start(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
+        """Get pairing code and guide user through the process"""
+        self.log.debug("Started pairing")
 
         # Start pairing
         self.bus.emit(
@@ -403,7 +392,7 @@ class ConnectCheck(MycroftSkill):
         self.bus.emit(response)
 
     def _pairing_show_code(self, message: Message):
-        # Speak pairing code to user
+        """Speak pairing code to user"""
         dialog = self._speak_pairing_code()
         gui = self._display_pairing_code()
 
@@ -424,6 +413,7 @@ class ConnectCheck(MycroftSkill):
         )
 
     def _pairing_check_activation(self, message: Message):
+        """Check if activation with mycroft.ai was successful"""
         self.log.debug("Checking for device activation")
         try:
             self.log.info("Pairing successful")
@@ -481,8 +471,6 @@ class ConnectCheck(MycroftSkill):
         self.log.debug("Speaking pairing code")
         pairing_code_utterance = map(self.nato_alphabet.get, self.pairing_code)
         speak_data = dict(code=". ".join(pairing_code_utterance) + ".")
-        # TODO - There is a bug in the Mark 1 where the pairing code display is
-        # immediately cleared if we do not wait for this dialog to be spoken.
         return "pairing.code", speak_data
 
     def _save_identity(self, login: dict):
@@ -522,11 +510,7 @@ class ConnectCheck(MycroftSkill):
     # -------------------------------------------------------------------------
 
     def _tutorial_start(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id != self._mycroft_session_id:
-            # Different session now
-            return
-
+        """Give user a quick tutorial on how to get started"""
         self.bus.emit(
             Message(
                 "server-connect.tutorial.started",
@@ -534,8 +518,8 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
-        # Continue in enclosure once tutorial is over
-        response = self.end_session(
+        # Continue with clock sync, etc.
+        response = self.continue_session(
             dialog="pairing.paired",
             gui="pairing_done_mark_ii.qml",
             gui_clear=GuiClear.NEVER,
@@ -546,6 +530,57 @@ class ConnectCheck(MycroftSkill):
         self.bus.emit(
             Message(
                 "server-connect.tutorial.ended",
-                data={"mycroft_session_id": mycroft_session_id},
             )
         )
+
+    # -------------------------------------------------------------------------
+    # NTP clock sync
+    # -------------------------------------------------------------------------
+
+    def _sync_clock(self):
+        """Block until system clock is synced with NTP"""
+        response = self.continue_session(
+            gui=("startup_sequence_mark_ii.qml", {"step": 3}),
+            gui_clear=GuiClear.NEVER,
+        )
+        self.bus.emit(response)
+
+        try:
+            for i in range(CLOCK_SYNC_RETIRES):
+                self.log.debug(
+                    "Checking for clock sync (%s/%s)", i + 1, CLOCK_SYNC_RETIRES
+                )
+                if check_system_clock_sync_status():
+                    break
+
+                time.sleep(CLOCK_SYNC_WAIT_SEC)
+        except Exception:
+            self.log.exception("Error while syncing clock")
+
+        self.bus.emit(Message("server-connect.download-settings"))
+
+    # -------------------------------------------------------------------------
+    # Remote settings from mycroft.ai
+    # -------------------------------------------------------------------------
+
+    def _download_remote_settings(self):
+        """Download user config from mycroft.ai"""
+        response = self.continue_session(
+            gui=("startup_sequence_mark_ii.qml", {"step": 4}),
+            gui_clear=GuiClear.NEVER,
+        )
+        self.bus.emit(response)
+
+        self.log.debug("Downloading remote settings")
+        try:
+            api = DeviceApi()
+            remote_config = download_remote_settings(api)
+            settings_path = get_remote_settings_path()
+
+            # Save to ~/.config/mycroft/mycroft.remote.conf
+            with open(settings_path, "w", encoding="utf-8") as settings_file:
+                json.dump(remote_config, settings_file)
+        except Exception:
+            self.log.exception("Error downloading remote settings")
+
+        self.bus.emit(Message("server-connect.startup-finished"))

@@ -133,17 +133,28 @@ class DinkumService(ABC):
         """Shut down code called after stop()"""
         self.bus.close()
 
+    # -------------------------------------------------------------------------
+
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
         self.bus = create_client(self.config)
         self.bus.run_in_thread()
         self.bus.connected_event.wait()
-        self.bus.on(
-            f"{self.service_id}.service.state",
-            lambda m: self.bus.emit(m.response(data={"state": self.state.value})),
-        )
+
+        # Add event handlers
+        self.bus.on(f"{self.service_id}.service.state", self._report_service_state)
+        self.bus.on("configuration.update", self._reload_config)
+
         self.bus.emit(Message(f"{self.service_id}.initialize.started"))
         self.log.info("Connected to Mycroft Core message bus")
+
+    def _report_service_state(self, message):
+        """Response to service state requests"""
+        self.bus.emit(message.response(data={"state": self.state.value})),
+
+    def _reload_config(self, _message):
+        """Force reloading of config"""
+        self.config = Configuration.get(cache=False)
 
     def _start_watchdog(self):
         """Run systemd watchdog in separate thread"""
