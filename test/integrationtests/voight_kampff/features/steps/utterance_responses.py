@@ -129,6 +129,32 @@ def then_contains(context, text: str):
     assert passed, assert_message
 
 
+@when('"{skill}" reply should contain "{text}"')
+def then_contains_skill(context, skill: str, text: str):
+    passed = False
+    assert_message = "Mycroft didn't respond"
+    text = text.lower().strip()
+
+    maybe_message = context.client.get_next_speak()
+    if maybe_message is not None:
+        meta = maybe_message.data.get("meta", {})
+        actual_skill = meta.get("skill_id")
+
+        if skill != actual_skill:
+            assert_message = f"Expected skill '{skill}', got '{actual_skill}'"
+        else:
+            # Check utterance
+            utterance = maybe_message.data.get("utterance", "")
+            utterance = utterance.lower().strip()
+
+            if text in utterance:
+                passed = True
+            else:
+                assert_message = f"Did not find '{text}' in '{utterance}'"
+
+    assert passed, assert_message
+
+
 @then('the user replies with "{text}"')
 @then('the user replies "{text}"')
 @then('the user says "{text}"')

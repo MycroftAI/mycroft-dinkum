@@ -3,8 +3,7 @@ Feature: DuckDuckGo Skill
   Scenario Outline: user asks a question about a person
     Given an english speaking user
      When the user says "<tell me about a person>"
-     Then "skill-ddg" should reply with anything
-     And mycroft reply should contain "<person>"
+     And "query-duck-duck-go.mark2" reply should contain "<person>"
      Then dialog is stopped
 
   Examples: user asks a question about a person
@@ -21,8 +20,7 @@ Feature: DuckDuckGo Skill
   Scenario Outline: user asks a question about a place
     Given an english speaking user
      When the user says "<tell me about a place>"
-     Then "skill-ddg" should reply with anything
-     And mycroft reply should contain "<place>"
+     And "query-duck-duck-go.mark2" reply should contain "<place>"
      Then dialog is stopped
 
   Examples: user asks a question about a place
@@ -34,8 +32,7 @@ Feature: DuckDuckGo Skill
   Scenario Outline: user asks a question about a thing
     Given an english speaking user
      When the user says "<tell me about a thing>"
-     Then "skill-ddg" should reply with anything
-     And mycroft reply should contain "<thing>"
+     And "query-duck-duck-go.mark2" reply should contain "<thing>"
      Then dialog is stopped
 
   Examples: user asks a question about a thing
@@ -50,8 +47,7 @@ Feature: DuckDuckGo Skill
   Scenario Outline: user asks a question about an idea
     Given an english speaking user
      When the user says "<tell me about an idea>"
-     Then "skill-ddg" should reply with anything
-     And mycroft reply should contain "<idea>"
+     And "query-duck-duck-go.mark2" reply should contain "<idea>"
      Then dialog is stopped
 
   Examples: user asks a question about an idea
