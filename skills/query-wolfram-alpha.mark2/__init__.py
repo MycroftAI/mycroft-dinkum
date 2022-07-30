@@ -57,7 +57,7 @@ class WolframAlphaSkill(CommonQuerySkill):
 
     def __init_client(self):
         # Attempt to get an AppID skill settings instead (normally this
-        # doesn't exist, but privacy-conscious might want to do this)
+        # doesn't exist, but privacy-conscious folks might want to do this)
         appID = self.settings.get("appID", None)
         if appID == "":
             appID = None
@@ -70,6 +70,40 @@ class WolframAlphaSkill(CommonQuerySkill):
         # Clear the display and any prior session data
         # Clear the cache directory of old files
         clear_cache(self.cache_dir)
+
+    @intent_handler(AdaptIntent("AskWolfram").require("WolframAlpha"))
+    def handle_ask_wolfram(self, message):
+        """Intent handler to request information specifically from Wolfram Alpha."""
+        dialog = None
+        speak = None
+        gui = None
+        utt = message.data["utterance"]
+
+        if utt is None:
+            self.log.warning("no utterance received")
+            return
+
+        response = self.client.get_spoken_answer(
+            utt,
+            (
+                self.location["coordinate"]["latitude"],
+                self.location["coordinate"]["longitude"],
+            ),
+            self.config_core["system_unit"],
+        )
+        if response:
+            response = process_wolfram_string(
+                response, {"lang": self.lang, "root_dir": self.root_dir}
+            )
+            self.log.debug("Reponse: %s", response)
+            self._cqs_match = Query(query=utt, spoken_answer=response)
+            speak, gui = self._display_answer(
+                self._cqs_match.display_text, self._cqs_match.image
+            )
+        else:
+            dialog = "no.answer"
+
+        return self.end_session(speak=speak, dialog=dialog, gui=gui)
 
     def CQS_match_query_phrase(self, utt):
         self.log.info("WolframAlpha query: " + utt)
