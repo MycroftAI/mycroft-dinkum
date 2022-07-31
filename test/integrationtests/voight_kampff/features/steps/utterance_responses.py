@@ -161,8 +161,9 @@ def then_contains_skill(context, skill: str, text: str):
 def then_user_follow_up(context, text):
     """Send a user response after being prompted by device."""
     message = context.client.wait_for_message("mycroft.mic.listen")
+    assert message is not None, "Did not receive listen message"
     mycroft_session_id = message.data.get("mycroft_session_id")
-    context.client.say_utterance(text, session_id=mycroft_session_id)
+    context.client.say_utterance(text, mycroft_session_id=mycroft_session_id)
 
 
 @then('mycroft should send the message "{message_type}"')

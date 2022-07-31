@@ -170,17 +170,18 @@ class VoiceLoop:
                             },
                         )
                     )
-                    self.bus.emit(
-                        Message(
-                            "recognizer_loop:utterance",
-                            {
-                                "utterances": [text],
-                                "mycroft_session_id": self.mycroft_session_id,
-                            },
-                        )
-                    )
 
-                    if not text:
+                    if text:
+                        self.bus.emit(
+                            Message(
+                                "recognizer_loop:utterance",
+                                {
+                                    "utterances": [text],
+                                    "mycroft_session_id": self.mycroft_session_id,
+                                },
+                            )
+                        )
+                    else:
                         self.bus.emit(
                             Message("recognizer_loop:speech.recognition.unknown")
                         )

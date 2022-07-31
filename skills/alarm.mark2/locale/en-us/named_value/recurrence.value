@@ -6,4 +6,7 @@ thursday,4
 friday,5
 saturday,6
 weekdays,1 2 3 4 5
+weekday,1 2 3 4 5
 weekends,0 6
+weekend,0 6
+day,0 1 2 3 4 5 6

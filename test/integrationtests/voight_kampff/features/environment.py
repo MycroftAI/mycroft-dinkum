@@ -65,6 +65,7 @@ class VoightKampffClient:
 
         self._active_sessions: Set[str] = set()
         self._session_ended = Event()
+        self._mycroft_session_id: Optional[str] = None
 
         # event type -> [messages]
         self.messages: Dict[str, List[Message]] = defaultdict(list)
@@ -88,7 +89,8 @@ class VoightKampffClient:
         self.bus.on("mycroft.session.started", self._handle_session_started)
         self.bus.on("mycroft.session.ended", self._handle_session_ended)
 
-    def say_utterance(self, text: str, mycroft_session_id:Optional[str]=None):
+    def say_utterance(self, text: str, mycroft_session_id: Optional[str] = None):
+        LOG.debug("say: %s (session=%s)", text, mycroft_session_id)
         self.bus.emit(
             Message(
                 "recognizer_loop:utterance",
@@ -180,31 +182,30 @@ class VoightKampffClient:
         self.bus.close()
 
     def _handle_speak(self, message: Message):
-        session_id = message.data.get("session_id")
-        if session_id:
-            self._tts_session_ids.add(session_id)
+        tts_session_id = message.data.get("tts_session_id")
+        if tts_session_id:
+            self._tts_session_ids.add(tts_session_id)
 
         self._speak_queue.put_nowait(message)
 
     def _handle_speaking_finished(self, message: Message):
         # if message.data.get("mycroft_session_id") in self._active_sessions:
-        session_id = message.data.get("session_id")
-        if session_id:
-            self._tts_session_ids.discard(session_id)
+        tts_session_id = message.data.get("tts_session_id")
+        if tts_session_id is not None:
+            self._tts_session_ids.discard(tts_session_id)
 
         if not self._tts_session_ids:
             self._speaking_finished.set()
 
     def _handle_intent_failure(self, message: Message):
-        # if message.data.get("mycroft_session_id") in self._active_sessions:
         # Flush any waiters
         self._speaking_finished.set()
         self._session_ended.set()
         self.reset_state()
 
     def _handle_session_started(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        self._active_sessions.add(mycroft_session_id)
+        self._mycroft_session_id = message.data.get("mycroft_session_id")
+        self._active_sessions.add(self._mycroft_session_id)
 
     def _handle_session_ended(self, message: Message):
         mycroft_session_id = message.data.get("mycroft_session_id")

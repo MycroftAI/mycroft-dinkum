@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 from behave import given, then
@@ -30,11 +31,14 @@ def reset_alarms(context):
 @given("an alarm is expired and beeping")
 def given_expired_alarm(context):
     _start_an_alarm(context, "set an alarm in 3 seconds", ["alarm-scheduled"])
+    message = context.client.wait_for_message(f"{SKILL_ID}.alarms.expired")
+    assert message is not None, "Did not receive alarm.expired message"
 
 
 @then('"alarm.mark2" should stop beeping')
 def then_stop_beeping(context):
-    context.client.wait_for_message(f"{SKILL_ID}.expired.clear")
+    message = context.client.wait_for_message(f"{SKILL_ID}.expired.cleared")
+    assert message is not None, "Did not receive expired.cleared message"
 
 
 def _start_an_alarm(context, utterance: str, response: List[str]):

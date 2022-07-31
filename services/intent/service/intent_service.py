@@ -314,12 +314,12 @@ class IntentService:
         )
 
     def _run_session(self, session: Session):
-        self._disable_idle_timeout()
         for action in session.run(self.bus):
             LOG.debug("Completed action for session %s: %s", session.id, action)
             if isinstance(action, GetResponseAction):
                 self._trigger_listen(session.id)
             elif isinstance(action, ShowPageAction):
+                self._disable_idle_timeout()
                 self._last_gui_session = session
             elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
                 if (self._last_gui_session is None) or (
@@ -331,7 +331,7 @@ class IntentService:
                         timeout = IDLE_QUICK_TIMEOUT
                     self._set_idle_timeout(timeout)
                 else:
-                    self.log.debug(
+                    LOG.debug(
                         "Skipping GUI clear for %s since GUI belongs to another session (%s)",
                         session.id,
                         self._last_gui_session.id,
@@ -399,7 +399,10 @@ class IntentService:
 
             if not self._sessions:
                 self.bus.emit(Message("mycroft.session.no-active-sessions"))
-                self._set_idle_timeout()
+
+                if self._idle_seconds_left is None:
+                    # Ensure idle if not set already
+                    self._set_idle_timeout()
 
     def handle_tts_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -441,7 +444,7 @@ class IntentService:
                 for session in self._sessions.values():
                     if session.expect_response:
                         if session.id != mycroft_session_id:
-                            self.log.warning(
+                            LOG.warning(
                                 "Response expected for session %s, but session %s is active",
                                 session.id,
                                 mycroft_session_id,

@@ -6,7 +6,6 @@ Feature: Alarm - Stop, snooze, and remove
      And an alarm is expired and beeping
      When the user says "<stop>"
      Then "alarm.mark2" should stop beeping
-     Then alarms are stopped
 
   Examples: stop beeping
     | stop |

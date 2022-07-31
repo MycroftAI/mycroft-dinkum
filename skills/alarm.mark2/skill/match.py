@@ -121,8 +121,6 @@ class AlarmMatcher:
         elif self.requested_next:
             self.matches = [self.alarms[0]]
 
-        LOG.debug(self.requested_name)
-
         if self.requested_name is not None:
             self._match_alarm_to_name()
         elif self.requested_repeat_rule is not None:

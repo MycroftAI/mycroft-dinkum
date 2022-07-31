@@ -222,7 +222,7 @@ class AudioUserInterface:
         if tts_session_id is not None:
             LOG.info("Stopping TTS session: %s", tts_session_id)
             self._finish_tts_session(
-                session_id=tts_session_id,
+                tts_session_id=tts_session_id,
                 mycroft_session_id=self._mycroft_session_id,
             )
 
@@ -300,7 +300,7 @@ class AudioUserInterface:
         mycroft_session_id = message.data.get("mycroft_session_id")
         tts_session_id = message.data.get("tts_session_id")
         self._finish_tts_session(
-            session_id=tts_session_id,
+            tts_session_id=tts_session_id,
             mycroft_session_id=mycroft_session_id,
         )
 
@@ -321,7 +321,7 @@ class AudioUserInterface:
             if chunk_index >= (num_chunks - 1):
                 # Ensure TTS session is finished
                 self._finish_tts_session(
-                    session_id=tts_session_id,
+                    tts_session_id=tts_session_id,
                     mycroft_session_id=mycroft_session_id,
                 )
             return
@@ -433,7 +433,7 @@ class AudioUserInterface:
                     self._tts_session_id != request.tts_session_id
                 ):
                     self._finish_tts_session(
-                        session_id=request.tts_session_id,
+                        tts_session_id=request.tts_session_id,
                         mycroft_session_id=request.mycroft_session_id,
                     )
 
@@ -442,15 +442,18 @@ class AudioUserInterface:
 
     def _finish_tts_session(
         self,
-        session_id: str,
+        tts_session_id: str,
         mycroft_session_id: typing.Optional[str] = None,
     ):
+        if self._tts_session_id == tts_session_id:
+            self._tts_session_id = None
+
         # Report speaking finished for speak(wait=True)
         self.bus.emit(
             Message(
                 "mycroft.tts.session.ended",
                 data={
-                    "tts_session_id": session_id,
+                    "tts_session_id": tts_session_id,
                     "mycroft_session_id": mycroft_session_id,
                 },
             )
@@ -463,7 +466,7 @@ class AudioUserInterface:
             )
         )
 
-        LOG.info("TTS session finished: %s", session_id)
+        LOG.info("TTS session finished: %s", tts_session_id)
 
     # -------------------------------------------------------------------------
 

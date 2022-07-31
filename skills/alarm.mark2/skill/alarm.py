@@ -63,7 +63,7 @@ class Alarm:
     description: Optional[str] = None
 
     def __post_init__(self):
-        if self.has_repeat_rule:
+        if self.has_repeat_rule and self.has_datetime:
             self.date_time = determine_next_occurrence(self.repeat_rule, self.date_time)
 
     @property
@@ -110,8 +110,8 @@ class Alarm:
                     if alarm_datetime < now_local():
                         alarm_datetime += timedelta(days=1)
                 else:
+                    # Will ask user for time
                     alarm_datetime = None
-                    remaining_utterance = utterance
 
         return alarm_datetime, remaining_utterance
 

@@ -25,6 +25,7 @@ from mycroft.messagebus.message import Message
 from mycroft.skills import (
     AdaptIntent,
     GuiClear,
+    MessageSend,
     MycroftSkill,
     intent_handler,
     skill_api_method,
@@ -330,6 +331,7 @@ class AlarmSkill(MycroftSkill):
         """
         dialog = None
         gui = None
+        after_message = None
 
         self.log.info("Handling request to cancel alarms")
         utterance = message.data["utterance"]
@@ -385,18 +387,30 @@ class AlarmSkill(MycroftSkill):
                     dialog = ("cancelled-multiple", dict(count=len(matches)))
 
                 gui = self._display_alarms(matches)
+                some_alarms_expired = False
                 for alarm in matches:
                     self.active_alarms.remove_alarm(alarm)
                     if alarm.expired:
                         self._stop_beeping()
+                        some_alarms_expired = True
 
                 self._save_alarms()
                 self._schedule_next_alarm()
                 self._send_alarm_status()
+
+                if some_alarms_expired and (not self.expired_alarms):
+                    self._end_expired_session()
+                    after_message = self._build_expired_cleared()
+
             else:
                 dialog = "alarm-not-found"
 
-        return self.end_session(dialog=dialog, gui=gui)
+        return self.end_session(
+            dialog=dialog,
+            gui=gui,
+            message=after_message,
+            message_send=MessageSend.AT_END,
+        )
 
     @intent_handler(
         AdaptIntent("")
@@ -528,15 +542,7 @@ class AlarmSkill(MycroftSkill):
     def stop(self):
         """Respond to system stop commands."""
         if self.expired_alarms:
-            if self._expired_session_id is not None:
-                self.bus.emit(
-                    self.end_session(
-                        mycroft_session_id=self._expired_session_id,
-                        gui_clear=GuiClear.AT_END,
-                    )
-                )
-                self._expired_session_id = None
-
+            self._end_expired_session()
             self._stop_expired_alarms()
 
         return self.end_session(gui_clear=GuiClear.AT_END)
@@ -544,8 +550,19 @@ class AlarmSkill(MycroftSkill):
     def _display_expired_alarms(self):
         """Displays the alarms that have expired upon their expiration."""
         gui = self._display_alarms(self.expired_alarms)
+
+        # Needed for VK tests
+        alarm_dicts = [alarm.to_dict() for alarm in self.expired_alarms]
+        message = Message(
+            f"{self.skill_id}.alarms.expired", data={"alarms": alarm_dicts}
+        )
+
         self._expired_session_id = self.emit_start_session(
-            gui=gui, continue_session=True, gui_clear=GuiClear.NEVER
+            gui=gui,
+            continue_session=True,
+            gui_clear=GuiClear.NEVER,
+            message=message,
+            message_send=MessageSend.AT_END,
         )
 
     def _display_alarms(self, alarms: List[Alarm]):
@@ -574,6 +591,7 @@ class AlarmSkill(MycroftSkill):
         self.log.info("Stopping expired alarm")
         self._stop_beeping()
         self._clear_expired_alarms()
+        self._emit_expired_cleared()
         self._schedule_next_alarm()
         self._save_alarms()
         self._send_alarm_status()
@@ -587,7 +605,22 @@ class AlarmSkill(MycroftSkill):
     def _clear_expired_alarms(self):
         """The remove expired alarms from the list of active alarms."""
         self.active_alarms.clear_expired()
-        self.bus.emit(Message(f"{self.skill_id}.expired.cleared"))
+
+    def _build_expired_cleared(self):
+        return Message(f"{self.skill_id}.expired.cleared")
+
+    def _emit_expired_cleared(self):
+        self.bus.emit(self._build_expired_cleared())
+
+    def _end_expired_session(self):
+        if self._expired_session_id is not None:
+            self.bus.emit(
+                self.end_session(
+                    mycroft_session_id=self._expired_session_id,
+                    gui_clear=GuiClear.AT_END,
+                )
+            )
+            self._expired_session_id = None
 
     def _schedule_next_alarm(self):
         local_date_time = now_local()

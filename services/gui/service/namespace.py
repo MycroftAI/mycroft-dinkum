@@ -192,8 +192,6 @@ class NamespaceManager:
         self.active_namespaces.clear()
         self.active_namespaces.append(namespace)
 
-        # self._emit_namespace_displayed_event()
-
     def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
         """Retrieves the requested namespace, creating one if it doesn't exist.
 
