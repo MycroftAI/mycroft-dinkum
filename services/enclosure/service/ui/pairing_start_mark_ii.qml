@@ -42,6 +42,7 @@ Mycroft.Delegate {
             root.timeLeft =  Math.max(0.0, root.timeLeft - 1.0);
             if (root.timeLeft <= 0) {
                 triggerGuiEvent("pairing.show-code", {});
+                root.timeLeft = 30.0
             }
 
             root.nextText = "Next (" + root.timeLeft + ")";

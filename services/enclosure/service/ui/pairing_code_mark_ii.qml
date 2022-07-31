@@ -41,6 +41,7 @@ Mycroft.Delegate {
             root.timeLeft = Math.max(0.0, root.timeLeft - 1.0);
             if (root.timeLeft <= 0) {
                 triggerGuiEvent("pairing.check-activation", {});
+                root.timeLeft = 60.0
             }
 
             root.activateText = "Activate (" + root.timeLeft + ")";
