@@ -34,9 +34,8 @@ from requests import HTTPError
 
 from .awconnect import AwconnectClient
 
-INTERNET_RETRIES = 3
-INTERNET_TIMEOUT = 8
-INTERNET_WAIT_SEC = 8
+INTERNET_RETRIES = 5
+INTERNET_WAIT_SEC = 10
 
 SERVER_AUTH_RETRIES = 3
 SERVER_AUTH_WAIT_SEC = 10
@@ -177,7 +176,6 @@ class ConnectCheck(MycroftSkill):
             try:
                 is_connected = requests.get(
                     "http://start.mycroft.ai/portal-check.html",
-                    timeout=INTERNET_TIMEOUT,
                 ).ok
                 if is_connected:
                     break
@@ -428,7 +426,7 @@ class ConnectCheck(MycroftSkill):
             self.bus.emit(Message("mycroft.paired", login))
 
             # Pairing complete, begin tutorial
-            response = self.end_session(
+            response = self.continue_session(
                 gui="pairing_success_mark_ii.qml",
                 gui_clear=GuiClear.NEVER,
                 mycroft_session_id=self._mycroft_session_id,
@@ -519,7 +517,7 @@ class ConnectCheck(MycroftSkill):
         )
 
         # Continue with clock sync, etc.
-        response = self.continue_session(
+        response = self.end_session(
             dialog="pairing.paired",
             gui="pairing_done_mark_ii.qml",
             gui_clear=GuiClear.NEVER,

@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 import requests
 from mycroft.messagebus import Message
-from mycroft.skills import AdaptIntent, intent_handler, GuiClear
+from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 
 from .RadioStations import RadioStations

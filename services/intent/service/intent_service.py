@@ -330,6 +330,7 @@ class IntentService:
 
     def _run_session(self, session: Session):
         """Runs a session's actions until there aren't any more, or the session must wait for something."""
+        self._disable_idle_timeout()
         for action in session.run(self.bus):
             LOG.debug("Completed action for session %s: %s", session.id, action)
             if isinstance(action, GetResponseAction):
@@ -337,7 +338,6 @@ class IntentService:
                 self._trigger_listen(session.id)
             elif isinstance(action, ShowPageAction):
                 # This session now owns the GUI
-                self._disable_idle_timeout()
                 self._last_gui_session = session
             elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
                 if (self._last_gui_session is None) or (
