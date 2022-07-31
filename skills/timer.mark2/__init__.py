@@ -260,6 +260,7 @@ class TimerSkill(MycroftSkill):
                 gui_clear = GuiClear.NEVER
             else:
                 gui_clear = GuiClear.AT_END
+                self._reset()
 
             return self.end_session(dialog=dialog, gui_clear=gui_clear)
         else:
