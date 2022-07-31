@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 import requests
 from mycroft.messagebus import Message
-from mycroft.skills import AdaptIntent, intent_handler
+from mycroft.skills import AdaptIntent, intent_handler, GuiClear
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 
 from .RadioStations import RadioStations
@@ -60,10 +60,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.bus.on(
             "mycroft.audio.service.resume", self.handle_audioservice_status_change
         )
-        self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
-        self.gui.register_handler("cps.gui.pause", self.handle_gui_status_change)
-        self.gui.register_handler("cps.gui.play", self.handle_gui_status_change)
-        # self.gui.register_handler("cps.gui.restart", self.handle_gui_restart)
+        self.bus.on(
+            "mycroft.audio.queue_end",
+            self.handle_media_finished,
+        )
+        self.gui.register_handler(
+            "cps.gui.pause", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+        )
+        self.gui.register_handler(
+            "cps.gui.play", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+        )
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
@@ -79,18 +85,12 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             new_status = "Paused"
 
         # TODO
-        self.gui["status"] = new_status
+        # self.gui["status"] = new_status
+        self.update_gui_values("AudioPlayer_scalable.qml", {"status": new_status})
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
         self.log.warning("RadioMediaFinished! should never get here!")
-        # if self.now_playing:
-        #     self.gui.release()
-        #     self.now_playing = False
-
-    # def _show_gui_page(self, page):
-    #     qml_page = f"{page}_scalable.qml"
-    #     self.gui.show_page(qml_page, override_idle=True)
 
     def handle_gui_status_change(self, message):
         """Handle play and pause status changes from the GUI.
@@ -108,13 +108,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.log.info("Audio paused by GUI.")
             self.CPS_pause()
 
-    # def handle_gui_restart(self, _):
-    #     """Handle restart button press."""
-    #     self.restart_playback(None)
-
     def update_radio_theme(self, status):
-        self.gui["theme"] = dict(fgColor=self.fg_color, bgColor=self.bg_color)
-
         if self.fg_color == "white":
             self.img_pth = self.find_resource("radio4.jpg", "ui/images")
         else:
@@ -133,7 +127,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "streaming": True,
             "status": status,
         }
-        return ("AudioPlayer_mark_ii.qml", gui_data)
+        return ("AudioPlayer_scalable.qml", gui_data)
 
     def setup_for_play(self, utterance):
         self.rs.get_stations(utterance)
@@ -202,13 +196,17 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     #             self.gui.release()
     #             self.update_radio_theme("Playing")
 
-    # @intent_handler("ShowRadio.intent")
-    # def handle_show_radio(self, _):
-    #     with self.activity():
-    #         if self.now_playing is not None:
-    #             self._show_gui_page("AudioPlayer")
-    #         else:
-    #             self.speak_dialog("no.radio.playing")
+    @intent_handler("ShowRadio.intent")
+    def handle_show_radio(self, _):
+        dialog = None
+        gui = None
+
+        if self.now_playing is not None:
+            gui = "AudioPlayer_scalable.qml"
+        else:
+            dialog = "no.radio.playing"
+
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     # @intent_handler("NextStation.intent")
     # def handle_next_station(self, message):
@@ -267,7 +265,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         if message.data:
             self.setup_for_play(message.data.get("utterance", ""))
             speak, gui = self.handle_play_request()
-            return self.end_session(speak=speak, gui=gui, gui_clear="never")
+            return self.end_session(speak=speak, gui=gui, gui_clear=GuiClear.NEVER)
 
         return self.end_session()
 
@@ -309,9 +307,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("StopRadio.intent")
     def handle_stop_radio(self, _):
-        self.now_playing = None
-        self.CPS_send_status()
-        self.CPS_release_output_focus()
+        self.stop()
 
     # @intent_handler("TurnOffRadio.intent")
     # def handle_turnoff_intent(self, message):
@@ -368,15 +364,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """Handle request from Common Play System to start playback."""
         self.handle_play_request()
 
-    # def stop(self) -> bool:
-    #     """Respond to system stop commands."""
-    #     if self.now_playing is None:
-    #         return False
-    #     self.now_playing = None
-    #     self.CPS_send_status()
-    #     self.gui.release()
-    #     self.CPS_release_output_focus()
-    #     return True
+    def stop(self) -> bool:
+        """Respond to system stop commands."""
+        self.now_playing = None
+        self.CPS_send_status()
+        self.CPS_release_output_focus()
 
 
 def create_skill():
