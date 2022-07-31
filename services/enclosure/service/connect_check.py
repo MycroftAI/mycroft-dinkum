@@ -229,7 +229,7 @@ class ConnectCheck(MycroftSkill):
         self.bus.emit(
             Message(
                 "internet-connect.setup.started",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": self._mycroft_session_id},
             )
         )
 
@@ -378,7 +378,7 @@ class ConnectCheck(MycroftSkill):
         self.bus.emit(
             Message(
                 "server-connect.pairing.started",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": self._mycroft_session_id},
             )
         )
 
@@ -514,7 +514,7 @@ class ConnectCheck(MycroftSkill):
         self.bus.emit(
             Message(
                 "server-connect.tutorial.started",
-                data={"mycroft_session_id": mycroft_session_id},
+                data={"mycroft_session_id": self._mycroft_session_id},
             )
         )
 
