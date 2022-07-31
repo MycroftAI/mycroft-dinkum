@@ -162,11 +162,7 @@ def then_user_follow_up(context, text):
     """Send a user response after being prompted by device."""
     message = context.client.wait_for_message("mycroft.mic.listen")
     mycroft_session_id = message.data.get("mycroft_session_id")
-    assert (
-        mycroft_session_id == context.client.mycroft_session_id
-    ), f"Expected session {context.client.mycroft_session_id}, got {mycroft_session_id}"
-
-    context.client.say_utterance(text)
+    context.client.say_utterance(text, session_id=mycroft_session_id)
 
 
 @then('mycroft should send the message "{message_type}"')

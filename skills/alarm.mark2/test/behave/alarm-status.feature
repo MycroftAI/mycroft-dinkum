@@ -5,7 +5,7 @@ Feature: Alarm - Check status
     And no active alarms
     And an alarm is set for 9:00 am tomorrow
     When the user says "<alarm status>"
-    Then "mycroft-alarm" should reply with dialog from "single-active-alarm.dialog"
+    Then "alarm.mark2" should reply with dialog from "single-active-alarm.dialog"
 
   Examples: status of a single alarm
     | alarm status |
@@ -19,12 +19,12 @@ Feature: Alarm - Check status
      And an alarm is set for 9:00 am tomorrow
      And an alarm is set for 6:00 pm tomorrow
      When the user says "<alarm status>"
-     Then "mycroft-alarm" should reply with dialog from "multiple-active-alarms.dialog"
+     Then "alarm.mark2" should reply with dialog from "multiple-active-alarms.dialog"
 
   Examples: status of multiple alarms
     | alarm status |
     | what alarms do I have |
-    | show me my alarms |
+    # | show me my alarms |
     | when's my alarm |
 
   Scenario Outline: user asks for alarm status of a single recurring alarm
@@ -32,7 +32,7 @@ Feature: Alarm - Check status
     And no active alarms
     And an alarm is set for 9:00 am on weekdays
     When the user says "<alarm status>"
-    Then "mycroft-alarm" should reply with dialog from "single-active-alarm.dialog"
+    Then "alarm.mark2" should reply with dialog from "single-active-alarm.dialog"
 
   Examples: status of a single alarm
     | alarm status |
@@ -47,12 +47,12 @@ Feature: Alarm - Check status
      And an alarm is set for 9:00 am on weekdays
      And an alarm is set for 6:00 pm next wednesday
      When the user says "<alarm status>"
-     Then "mycroft-alarm" should reply with dialog from "multiple-active-alarms.dialog"
+     Then "alarm.mark2" should reply with dialog from "multiple-active-alarms.dialog"
 
   Examples: status of multiple alarms
     | alarm status |
     | alarm status |
-    | show me my alarms |
+    # | show me my alarms |
     | when will my alarm go off |
     | when's my alarm |
     | are there any alarms set |
@@ -61,7 +61,7 @@ Feature: Alarm - Check status
     Given an english speaking user
      And no active alarms
      When the user says "<alarm status>"
-     Then "mycroft-alarm" should reply with dialog from "no-active-alarms.dialog"
+     Then "alarm.mark2" should reply with dialog from "no-active-alarms.dialog"
 
   Examples: status when no alarms are set
      | alarm status |

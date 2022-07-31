@@ -330,6 +330,12 @@ class IntentService:
                     else:
                         timeout = IDLE_QUICK_TIMEOUT
                     self._set_idle_timeout(timeout)
+                else:
+                    self.log.debug(
+                        "Skipping GUI clear for %s since GUI belongs to another session (%s)",
+                        session.id,
+                        self._last_gui_session.id,
+                    )
             elif isinstance(action, MessageAction):
                 if action.delay > 0:
                     # Send message later
@@ -360,16 +366,13 @@ class IntentService:
             if session is not None:
                 session.skill_id = message.data.get("skill_id", session.skill_id)
                 session.state = message.data.get("state", session.state)
-                if session.aborted:
-                    session.ended(self.bus)
-                else:
-                    session.will_continue = True
+                session.will_continue = True
 
-                    # Session may already have pending actions
-                    actions = Session.parse_actions(message.data.get("actions", []))
-                    session.actions.extend(actions)
+                # Session may already have pending actions
+                actions = Session.parse_actions(message.data.get("actions", []))
+                session.actions.extend(actions)
 
-                    self._run_session(session)
+                self._run_session(session)
 
     def handle_session_end(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -380,19 +383,23 @@ class IntentService:
             if session is not None:
                 session.will_continue = False
                 session.skill_id = message.data.get("skill_id", session.skill_id)
-
-                if session.aborted:
-                    session.ended(self.bus)
-                else:
-                    session.actions = Session.parse_actions(
-                        message.data.get("actions", [])
-                    )
-                    self._run_session(session)
+                session.actions = Session.parse_actions(message.data.get("actions", []))
+                self._run_session(session)
 
     def handle_session_ended(self, message: Message):
         with self._session_lock:
+            mycroft_session_id = message.data.get("mycroft_session_id")
+            LOG.debug("Cleaning up ended session: %s", mycroft_session_id)
+            self._sessions.pop(mycroft_session_id, None)
+
+            if (self._last_gui_session is not None) and (
+                self._last_gui_session.id == mycroft_session_id
+            ):
+                self._last_gui_session = None
+
             if not self._sessions:
                 self.bus.emit(Message("mycroft.session.no-active-sessions"))
+                self._set_idle_timeout()
 
     def handle_tts_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -402,10 +409,7 @@ class IntentService:
             session = self._sessions.get(mycroft_session_id)
             if (session is not None) and session.waiting_for_tts:
                 session.waiting_for_tts = False
-                if session.aborted:
-                    session.ended(self.bus)
-                else:
-                    self._run_session(session)
+                self._run_session(session)
 
     def handle_media_finished(self, message: Message):
         mycroft_session_id = message.data["mycroft_session_id"]
@@ -415,10 +419,7 @@ class IntentService:
             session = self._sessions.get(mycroft_session_id)
             if (session is not None) and session.waiting_for_audio:
                 session.waiting_for_audio = False
-                if session.aborted:
-                    session.ended(self.bus)
-                else:
-                    self._run_session(session)
+                self._run_session(session)
 
     def _set_idle_timeout(self, idle_seconds: Optional[int] = None):
         if idle_seconds is None:

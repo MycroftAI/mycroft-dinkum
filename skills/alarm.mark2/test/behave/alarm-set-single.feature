@@ -4,7 +4,8 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     Then "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples:
     | set alarm request |
@@ -19,9 +20,10 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "ask-alarm-time"
+     Then "alarm.mark2" should reply with dialog from "ask-alarm-time"
      And the user replies "8:00 am"
-     And "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     And "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples:
     | set alarm request |
@@ -30,27 +32,14 @@ Feature: Alarm - Set a non-recurring alarm
     | create an alarm |
     | wake me up tomorrow |
 
-  @xfail
-  # Jira MS-65 https://mycroft.atlassian.net/browse/MS-65
-  Scenario Outline: Failing user sets an alarm without saying a time
-    Given an english speaking user
-     And no active alarms
-     When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "ask-alarm-time"
-     And the user replies "8:00 am"
-     And "mycroft-alarm" should reply with dialog from "alarm-scheduled"
-
-  Examples:
-    | set alarm request |
-    | set an alarm for tomorrow morning |
-
   Scenario Outline: User sets an alarm without saying a time but then cancels
     Given an english speaking user
      And no active alarms
      When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "ask-alarm-time"
+     Then "alarm.mark2" should reply with dialog from "ask-alarm-time"
      And the user replies "<dismissal request>"
-     And "mycroft-alarm" should reply with dialog from "alarm-not-scheduled"
+     And "alarm.mark2" should reply with dialog from "alarm-not-scheduled"
+     And alarms are stopped
 
   Examples:
     | set alarm request | dismissal request |
@@ -63,7 +52,8 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set a named alarm for a time>"
-     Then "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     Then "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples: user sets an alarm with a name with a time
     | set a named alarm for a time |
@@ -78,7 +68,8 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     Then "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples:
     | set alarm request |
@@ -91,7 +82,8 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set an alarm for a duration>"
-     Then "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     Then "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples:
     | set an alarm for a duration |
@@ -103,9 +95,10 @@ Feature: Alarm - Set a non-recurring alarm
     Given an english speaking user
      And no active alarms
      When the user says "<set alarm request>"
-     Then "mycroft-alarm" should reply with dialog from "ask-alarm-time"
+     Then "alarm.mark2" should reply with dialog from "ask-alarm-time"
      And the user replies "8 am"
-     And "mycroft-alarm" should reply with dialog from "alarm-scheduled"
+     And "alarm.mark2" should reply with dialog from "alarm-scheduled"
+     And alarms are stopped
 
   Examples: set a named alarm without saying a time
     | set alarm request |
@@ -113,3 +106,16 @@ Feature: Alarm - Set a non-recurring alarm
     | set an alarm for stretching |
     | set an alarm named meeting |
 
+  # @xfail
+  # # Jira MS-65 https://mycroft.atlassian.net/browse/MS-65
+  # Scenario Outline: Failing user sets an alarm without saying a time
+  #   Given an english speaking user
+  #    And no active alarms
+  #    When the user says "<set alarm request>"
+  #    Then "alarm.mark2" should reply with dialog from "ask-alarm-time"
+  #    And the user replies "8:00 am"
+  #    And "alarm.mark2" should reply with dialog from "alarm-scheduled"
+
+  # Examples:
+  #   | set alarm request |
+  #   | set an alarm for tomorrow morning |

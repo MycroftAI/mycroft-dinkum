@@ -64,7 +64,6 @@ class VoightKampffClient:
         self._speak_queue: "Queue[Message]" = Queue()
 
         self._active_sessions: Set[str] = set()
-        self.mycroft_session_id: Optional[str] = None
         self._session_ended = Event()
 
         # event type -> [messages]
@@ -89,18 +88,13 @@ class VoightKampffClient:
         self.bus.on("mycroft.session.started", self._handle_session_started)
         self.bus.on("mycroft.session.ended", self._handle_session_ended)
 
-    def start_new_session(self):
-        self._session_ended.clear()
-        self.mycroft_session_id = str(uuid4())
-        LOG.info("Started session: %s", self.mycroft_session_id)
-
-    def say_utterance(self, text: str):
+    def say_utterance(self, text: str, mycroft_session_id:Optional[str]=None):
         self.bus.emit(
             Message(
                 "recognizer_loop:utterance",
                 data={
                     "utterances": [text],
-                    "mycroft_session_id": self.mycroft_session_id,
+                    "mycroft_session_id": mycroft_session_id,
                 },
             )
         )
@@ -209,8 +203,8 @@ class VoightKampffClient:
         self.reset_state()
 
     def _handle_session_started(self, message: Message):
-        self.mycroft_session_id = message.data.get("mycroft_session_id")
-        self._active_sessions.add(self.mycroft_session_id)
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        self._active_sessions.add(mycroft_session_id)
 
     def _handle_session_ended(self, message: Message):
         mycroft_session_id = message.data.get("mycroft_session_id")
@@ -238,7 +232,6 @@ def after_feature(context, feature):
 
 def before_scenario(context, scenario):
     context.client.reset_state()
-    context.client.start_new_session()
 
 
 def after_scenario(context, scenario):

@@ -528,6 +528,15 @@ class AlarmSkill(MycroftSkill):
     def stop(self):
         """Respond to system stop commands."""
         if self.expired_alarms:
+            if self._expired_session_id is not None:
+                self.bus.emit(
+                    self.end_session(
+                        mycroft_session_id=self._expired_session_id,
+                        gui_clear=GuiClear.AT_END,
+                    )
+                )
+                self._expired_session_id = None
+
             self._stop_expired_alarms()
 
         return self.end_session(gui_clear=GuiClear.AT_END)
@@ -578,6 +587,7 @@ class AlarmSkill(MycroftSkill):
     def _clear_expired_alarms(self):
         """The remove expired alarms from the list of active alarms."""
         self.active_alarms.clear_expired()
+        self.bus.emit(Message(f"{self.skill_id}.expired.cleared"))
 
     def _schedule_next_alarm(self):
         local_date_time = now_local()
@@ -663,7 +673,7 @@ class AlarmSkill(MycroftSkill):
     ) -> Optional[Message]:
         if self.voc_match(utterance, "cancel"):
             self.log.debug("Cancelled user response")
-            return
+            return self.end_session(dialog="alarm-not-scheduled")
 
         self.log.debug("User response: %s (state=%s)", utterance, state)
         dialog = None
