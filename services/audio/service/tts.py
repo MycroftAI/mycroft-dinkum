@@ -45,7 +45,6 @@ class SpeakHandler:
             cache_only = message.msg_type == "speak.cache"
             utterance = message.data["utterance"]
             mycroft_session_id = message.data.get("mycroft_session_id")
-            self._mycroft_session_id = mycroft_session_id
 
             LOG.debug(
                 "Speak for session '%s': %s (cache=%s)",
@@ -56,6 +55,7 @@ class SpeakHandler:
 
             with self._speak_lock:
                 # Begin TTS session
+                self._mycroft_session_id = mycroft_session_id
                 tts_session_id = message.data.get("tts_session_id") or str(uuid4())
                 self.bus.emit(
                     Message(

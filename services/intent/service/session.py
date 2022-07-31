@@ -84,6 +84,9 @@ class Session:
     state: Optional[Dict[str, Any]] = None
     """Optional state passed from mycroft.session.continue into raw_utterance"""
 
+    dont_clear_gui: bool = True
+    """True if GUI should not be cleared until a new session takes over"""
+
     @property
     def is_waiting_for_action(self):
         """Session is currently waiting for an external action to complete"""
@@ -330,7 +333,7 @@ class ClearDisplayAction(BaseAction):
 
     def do_action(self, session: Session, bus: MessageBusClient):
         """Handled outside in intent service"""
-        pass
+        session.dont_clear_gui = False
 
 
 @dataclass
@@ -341,7 +344,7 @@ class WaitForIdleAction(BaseAction):
 
     def do_action(self, session: Session, bus: MessageBusClient):
         """Handled outside in intent service"""
-        pass
+        session.dont_clear_gui = False
 
 
 @dataclass

@@ -294,6 +294,7 @@ class AudioUserInterface:
 
         self._mycroft_session_id = mycroft_session_id
         self._tts_session_id = message.data.get("tts_session_id")
+        LOG.debug("Started TTS session %s", self._tts_session_id)
 
     def handle_tts_session_end(self, message):
         """Manual request for end of TTS session"""
@@ -335,7 +336,13 @@ class AudioUserInterface:
         )
         self._speech_queue.put(request)
 
-        LOG.info("Queued TTS chunk %s/%s: %s", chunk_index + 1, num_chunks, uri)
+        LOG.info(
+            "Queued TTS chunk %s/%s: %s (session=%s)",
+            chunk_index + 1,
+            num_chunks,
+            uri,
+            tts_session_id,
+        )
 
     def handle_tts_started(self, _message: Message):
         self._duck_volume()
@@ -429,13 +436,17 @@ class AudioUserInterface:
                         )
                     )
 
-                if request.is_last_chunk or (
-                    self._tts_session_id != request.tts_session_id
-                ):
+                is_different_session = self._tts_session_id != request.tts_session_id
+                if request.is_last_chunk or is_different_session:
                     self._finish_tts_session(
                         tts_session_id=request.tts_session_id,
                         mycroft_session_id=request.mycroft_session_id,
                     )
+
+                    if is_different_session:
+                        LOG.warning(
+                            "TTS session ended prematurely: %s", request.tts_session_id
+                        )
 
         except Exception:
             LOG.exception("error is speech thread")

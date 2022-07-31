@@ -413,20 +413,22 @@ class IntentService:
         with self._session_lock:
             mycroft_session_id = message.data.get("mycroft_session_id")
             LOG.debug("Cleaning up ended session: %s", mycroft_session_id)
-            self._sessions.pop(mycroft_session_id, None)
+            session = self._sessions.pop(mycroft_session_id, None)
 
-            if (self._last_gui_session is not None) and (
-                self._last_gui_session.id == mycroft_session_id
-            ):
-                # The ended session owned the GUI, so now nobody owns it
-                self._last_gui_session = None
+            if session is not None:
+                if (
+                    (self._last_gui_session is not None)
+                    and (self._last_gui_session.id == session.id)
+                    and (not session.dont_clear_gui)
+                ):
+                    # The ended session owned the GUI, so now nobody owns it
+                    self._last_gui_session = None
+
+                    if self._idle_seconds_left is not None:
+                        self._set_idle_timeout()
 
             if not self._sessions:
                 self.bus.emit(Message("mycroft.session.no-active-sessions"))
-
-                if self._idle_seconds_left is None:
-                    # Ensure idle if not set already
-                    self._set_idle_timeout()
 
     def handle_tts_finished(self, message: Message):
         """Called when a TTS session has ended"""

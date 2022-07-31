@@ -273,8 +273,9 @@ class VolumeSkill(MycroftSkill):
         else:
             vol = self.vol_before_mute
 
+        level = self.__volume_to_level(vol)
         if message.data.get("speak_message", True):
-            dialog = ("reset.volume", {"volume": vol})
+            dialog = ("reset.volume", {"volume": level})
 
         message = Message("mycroft.volume.unmute")
         return self.end_session(
