@@ -122,9 +122,9 @@ Rectangle {
             font.family: "Noto Sans"
             font.pixelSize: {
                 if (timerCount === 1) {
-                    return 180
+                    return 160
                 } else if (timerCount === 2) {
-                    return 100
+                    return 75
                 } else {
                     return 60
                 }

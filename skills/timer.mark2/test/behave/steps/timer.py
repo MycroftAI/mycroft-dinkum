@@ -1,12 +1,9 @@
-from test.integrationtests.voight_kampff import (
-    format_dialog_match_error,
-    wait_for_dialog_match,
-)
 from typing import List
 
 from behave import given, then
+from mycroft.messagebus.message import Message
 
-SKILL_ID = "mycroft-timer.mycroftai"
+SKILL_ID = "timer.mark2"
 CANCEL_RESPONSES = (
     "no-active-timer",
     "cancel-all",
@@ -69,6 +66,7 @@ def _start_a_timer(context, utterance: str, response: List[str]):
 
 
 @given("no active timers")
+@then("timers are stopped")
 def reset_timers(context):
     """Cancel all active timers to test how skill behaves when no timers are set."""
     _cancel_all_timers(context)
@@ -77,14 +75,9 @@ def reset_timers(context):
 @given("an expired timer")
 def let_timer_expire(context):
     """Start a short timer and let it expire to test expiration logic."""
-    # _cancel_all_timers(context)
-    # emit_utterance(context.bus, "set a 3 second timer")
-    # expected_response = ["started-timer"]
-    # match_found, speak_messages = wait_for_dialog_match(context.bus, expected_response)
-    # assert match_found, format_dialog_match_error(expected_response, speak_messages)
-    # expected_response = ["timer-expired"]
-    # match_found, speak_messages = wait_for_dialog_match(context.bus, expected_response)
-    # assert match_found, format_dialog_match_error(expected_response, speak_messages)
+    _cancel_all_timers(context)
+    _start_a_timer(context, "set a 3 second timer", ["started-timer"])
+    context.client.match_dialogs_or_fail(["timer-expired"], skill_id=SKILL_ID)
 
 
 def _cancel_all_timers(context):
@@ -98,13 +91,4 @@ def _cancel_all_timers(context):
 
 @then("the expired timer should stop beeping")
 def then_stop_beeping(context):
-    # TODO: Better check!
-    # import psutil
-
-    # for i in range(10):
-    #     if "paplay" not in [p.name() for p in psutil.process_iter()]:
-    #         break
-    #     time.sleep(1)
-    # else:
-    #     assert False, "Timer is still ringing"
-    pass
+    context.client.wait_for_message(f"{SKILL_ID}.expired.clear")

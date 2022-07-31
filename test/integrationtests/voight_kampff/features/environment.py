@@ -94,13 +94,12 @@ class VoightKampffClient:
         self.mycroft_session_id = str(uuid4())
         LOG.info("Started session: %s", self.mycroft_session_id)
 
-    def say_utterance(self, text: str, response_skill_id: str = ""):
+    def say_utterance(self, text: str):
         self.bus.emit(
             Message(
                 "recognizer_loop:utterance",
                 data={
                     "utterances": [text],
-                    "response_skill_id": response_skill_id,
                     "mycroft_session_id": self.mycroft_session_id,
                 },
             )
@@ -124,15 +123,6 @@ class VoightKampffClient:
             pass
 
         return maybe_message
-
-    def listen(self):
-        self.bus.emit(
-            Message(
-                "mycroft.mic.listen",
-                data={"mycroft_session_id": self.mycroft_session_id},
-            )
-        )
-        sleep(0.25)
 
     def match_dialogs_or_fail(
         self, dialogs: Union[str, List[str]], skill_id: Optional[str] = None
@@ -196,8 +186,6 @@ class VoightKampffClient:
         self.bus.close()
 
     def _handle_speak(self, message: Message):
-        LOG.info(message.data)
-        # if message.data.get("mycroft_session_id") in self._active_sessions:
         session_id = message.data.get("session_id")
         if session_id:
             self._tts_session_ids.add(session_id)
@@ -251,7 +239,6 @@ def after_feature(context, feature):
 def before_scenario(context, scenario):
     context.client.reset_state()
     context.client.start_new_session()
-    context.client.listen()
 
 
 def after_scenario(context, scenario):

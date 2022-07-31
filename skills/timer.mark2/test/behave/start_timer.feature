@@ -1,10 +1,11 @@
-Feature: mycroft-timer
+Feature: timer.mark2
 
   Scenario Outline: set a timer for a specified duration
     Given an english speaking user
     And no active timers
     When the user says "<set timer request>"
-    Then "mycroft-timer.mycroftai" should reply with dialog from "started-timer"
+    Then "timer.mark2" should reply with dialog from "started-timer"
+    And timers are stopped
 
     Examples: set a timer for for a specified duration
       | set timer request |
@@ -21,7 +22,8 @@ Feature: mycroft-timer
     Given an english speaking user
     And an active 90 minute timer
     When the user says "<set timer request>"
-    Then "mycroft-timer.mycroftai" should reply with dialog from "started-timer-named"
+    Then "timer.mark2" should reply with dialog from "started-timer-named"
+    And timers are stopped
 
     Examples: set a second timer for a specified duration
       | set timer request |
@@ -34,7 +36,8 @@ Feature: mycroft-timer
     Given an English speaking user
     And no active timers
     When the user says "<set timer request>"
-    Then "mycroft-timer.mycroftai" should reply with dialog from "started-timer-named"
+    Then "timer.mark2" should reply with dialog from "started-timer-named"
+    And timers are stopped
 
     Examples: set a named timer for a specified duration
       | set timer request |
@@ -47,11 +50,68 @@ Feature: mycroft-timer
     Given an English speaking user
     And an active 10 minute timer
     When the user says "<set timer request>"
-    Then "mycroft-timer.mycroftai" should reply with dialog from "started-timer-named"
+    Then "timer.mark2" should reply with dialog from "started-timer-named"
+    And timers are stopped
 
     Examples: set a second timer with the same duration as an existing timer
       | set timer request |
       | set a timer for 10 minutes for pasta |
 
+ Scenario Outline: set a timer without specifying duration
+    Given an english speaking user
+    And no active timers
+    When the user says "<set timer request>"
+    Then "timer.mark2" should reply with dialog from "ask-how-long"
+    And the user replies with "5 minutes"
+    And "timer.mark2" should reply with dialog from "started-timer"
+    And timers are stopped
 
- 
+    Examples: set a timer without specifying duration
+      | set timer request |
+      | set a timer |
+      | start a timer |
+
+  Scenario Outline: set a timer without specifying duration but then dismiss
+    Given an english speaking user
+    And no active timers
+    When the user says "set a timer"
+    Then "timer.mark2" should reply with dialog from "ask-how-long"
+    And the user replies with "<cancel set timer request>"
+    And timers are stopped
+
+    Examples: set a timer without specifying duration but then dismiss
+      | cancel set timer request |
+      | nevermind |
+      | forget it |
+      | dismiss |
+
+
+  Scenario Outline: set a timer without specifying duration but then say gibberish
+    Given an english speaking user
+    And no active timers
+    When the user says "set a timer"
+    Then "timer.mark2" should reply with dialog from "ask-how-long"
+    And the user replies with "<gibberish>"
+    And timers are stopped
+
+    Examples: set a timer without specifying duration but then say gibberish
+      | gibberish |
+      | blah |
+      | goo |
+
+
+  Scenario Outline: set a timer specifying name but not duration
+    Given an english speaking user
+    And no active timers
+    When the user says "<set timer request>"
+    Then "timer.mark2" should reply with dialog from "ask-how-long"
+    And the user replies with "5 minutes"
+    And "timer.mark2" should reply with dialog from "started-timer-named"
+    And timers are stopped
+
+    Examples: set a timer specifying name but not duration
+      | set timer request |
+      | start a timer named pasta |
+      | set a timer for pasta |
+      | set a timer named pasta |
+      | start a timer for pasta |

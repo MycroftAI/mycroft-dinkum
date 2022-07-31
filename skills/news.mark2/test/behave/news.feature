@@ -1,4 +1,4 @@
-Feature: mycroft-news
+Feature: news.mark2
 
   Background:
     Given an english speaking user
@@ -6,7 +6,7 @@ Feature: mycroft-news
   Scenario Outline: what's the news
     Given nothing is playing
     When the user says "<what's the news>"
-    Then "mycroft-news" should reply with dialog from "news.dialog"
+    Then "news.mark2" should reply with dialog from "news.dialog"
 
    Examples: What's the news - standard intent
      | what's the news |
@@ -44,36 +44,36 @@ Feature: mycroft-news
   Scenario Outline: stop news playback
     Given news is playing
     When the user says "<stop the news>"
-    Then "mycroft-news" should stop playing
+    Then "news.mark2" should stop playing
 
    Examples: stop news playback
      | stop the news |
      | stop |
      | stop playing |
 
-  @xfail
-  # Jira MS-108 https://mycroft.atlassian.net/browse/MS-108
-  Scenario Outline: Failing stop news playback
-    Given news is playing
-    When the user says "<stop the news>"
-    Then "mycroft-news" should stop playing
+  # @xfail
+  # # Jira MS-108 https://mycroft.atlassian.net/browse/MS-108
+  # Scenario Outline: Failing stop news playback
+  #   Given news is playing
+  #   When the user says "<stop the news>"
+  #   Then "news.mark2" should stop playing
 
-   Examples: stop news playback
-     | stop the news |
-     | quit |
-     | end |
-     | turn it off |
-     | turn off news |
-     | turn off music |
-     | shut it off |
-     | shut up |
-     | be quiet |
-     | end playback |
-     | silence |
+  #  Examples: stop news playback
+  #    | stop the news |
+  #    | quit |
+  #    | end |
+  #    | turn it off |
+  #    | turn off news |
+  #    | turn off music |
+  #    | shut it off |
+  #    | shut up |
+  #    | be quiet |
+  #    | end playback |
+  #    | silence |
 
   Scenario Outline: pause news playback
     When the user says "<pause the news>"
-    Then "mycroft-news" should pause playing
+    Then "news.mark2" should pause playing
 
    Examples: pause news playback
      | pause the news |
@@ -103,18 +103,18 @@ Feature: mycroft-news
      | Play financial news | Financial Times |
      | Play news from the Financial Times | Financial Times |
 
-  @xfail
-  Scenario Outline: give me the news from channel
-    When the user says "<give me news from a specific channel>"
-    Then mycroft reply should contain "<specified channel>"
+  # @xfail
+  # Scenario Outline: give me the news from channel
+  #   When the user says "<give me news from a specific channel>"
+  #   Then mycroft reply should contain "<specified channel>"
 
-   Examples:
-     | give me news from a specific channel | specified channel |
-     | give me the news from bbc | BBC News |
-     | give me the news from ekot | Ekot |
-     | tell me the latest NPR news | NPR |
-     | what are the latest headlines from Fox | Fox |
-     | what are the headlines from WDR | WDR |
+  #  Examples:
+  #    | give me news from a specific channel | specified channel |
+  #    | give me the news from bbc | BBC News |
+  #    | give me the news from ekot | Ekot |
+  #    | tell me the latest NPR news | NPR |
+  #    | what are the latest headlines from Fox | Fox |
+  #    | what are the headlines from WDR | WDR |
 
   Scenario Outline: play music with names similar to news channels
     When the user says "<play some music>"

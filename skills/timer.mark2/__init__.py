@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import GuiClear, MycroftSkill, intent_handler
+from mycroft.skills import GuiClear, MycroftSkill, intent_handler, skill_api_method
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import join_list, nice_duration, pronounce_number
 from mycroft.util.parse import extract_duration
@@ -148,13 +148,14 @@ class TimerSkill(MycroftSkill):
                         # Only speak one timer at time
                         break
 
-                self.bus.emit(
-                    self.continue_session(
-                        mycroft_session_id=self._expired_session_id,
-                        dialog=dialog,
-                        gui_clear=GuiClear.NEVER,
+                if dialog is not None:
+                    self.bus.emit(
+                        self.continue_session(
+                            mycroft_session_id=self._expired_session_id,
+                            dialog=dialog,
+                            gui_clear=GuiClear.NEVER,
+                        )
                     )
-                )
             else:
                 self._expired_session_id = None
 
@@ -199,6 +200,7 @@ class TimerSkill(MycroftSkill):
             return self.end_session(dialog=dialog)
 
         if duration is None:
+            self.log.debug("Missing timer duration. Need to ask user.")
             self._partial_timer = {"name": name}
             return self.continue_session(
                 dialog="ask-how-long",
@@ -229,6 +231,7 @@ class TimerSkill(MycroftSkill):
             name = self._partial_timer.pop("name", None)
             duration, _rest = self._determine_timer_duration(utterance)
             if duration is not None:
+                self.log.debug("Got duration %s from %s", duration, utterance)
                 timer = self._start_new_timer(duration, name)
                 return self.end_session(
                     dialog=self._speak_new_timer(timer),
@@ -259,6 +262,8 @@ class TimerSkill(MycroftSkill):
                 gui_clear = GuiClear.AT_END
 
             return self.end_session(dialog=dialog, gui_clear=gui_clear)
+        else:
+            self.log.warning("Unrecognized state: %s", state_name)
 
     def _start_new_timer(self, duration, name):
         timer = self._build_timer(duration, name)
@@ -306,7 +311,9 @@ class TimerSkill(MycroftSkill):
         dialog = self._communicate_timer_status(utterance)
         return self.end_session(dialog=dialog)
 
-    @intent_handler(AdaptIntent().require("cancel").require("timer").optionally("all"))
+    @intent_handler(
+        AdaptIntent().require("timer_cancel").require("timer").optionally("all")
+    )
     def handle_cancel_timer(self, message: Message):
         """Handles cancelling active timers.
 
@@ -336,6 +343,7 @@ class TimerSkill(MycroftSkill):
                     dialog = "cancelled-single-timer"
                 else:
                     # Need a timer name
+                    self.log.debug("Need timer name from user to cancel")
                     dialog = self._ask_which_timer(
                         self.active_timers, "ask-which-timer-cancel"
                     )
@@ -351,12 +359,14 @@ class TimerSkill(MycroftSkill):
                 if matches:
                     if len(matches) > 1:
                         # Multiple matches, need to ask user for clarification
-                        self._state = State.CANCELLING_TIMER
+                        self.log.debug("Need timer name from user to cancel")
                         dialog = self._ask_which_timer(
                             self.active_timers, "ask-which-timer-cancel"
                         )
                         return self.continue_session(
-                            dialog=dialog, expect_response=True
+                            dialog=dialog,
+                            expect_response=True,
+                            state={"state": State.CANCELLING_TIMER.value},
                         )
 
                     # Single match
@@ -771,6 +781,14 @@ class TimerSkill(MycroftSkill):
         """
         dialog = None
         if self.expired_timers:
+            if self._expired_session_id:
+                self.bus.emit(
+                    self.end_session(
+                        mycroft_session_id=self._expired_session_id,
+                        gui_clear=GuiClear.AT_END,
+                    )
+                )
+
             self._clear_expired_timers()
             if not self.active_timers:
                 self._reset()
@@ -797,12 +815,14 @@ class TimerSkill(MycroftSkill):
         for timer in self.expired_timers:
             self.active_timers.remove(timer)
         self._save_timers()
+        self.bus.emit(Message(f"{self.skill_id}.expired.cleared"))
 
     def _reset(self):
         """There are no active timers so reset all the stateful things."""
         self._stop_display_update()
         self._stop_expiration_check()
         self.timer_index = 0
+        self._expired_session_id = None
 
     def _start_display_update(self):
         """Start an event repeating every second to update the timer display."""
@@ -878,6 +898,11 @@ class TimerSkill(MycroftSkill):
                     ]
             except Exception:
                 self.log.exception("Failed to load active timers: %s", self.save_path)
+
+    @skill_api_method
+    def get_timers(self):
+        timer_dicts = [timer.to_dict() for timer in self.active_timers]
+        return {"timers": timer_dicts}
 
 
 def create_skill():

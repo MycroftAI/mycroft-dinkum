@@ -438,7 +438,15 @@ class IntentService:
         if mycroft_session_id is not None:
             with self._session_lock:
                 for session in self._sessions.values():
-                    if session.expect_response and session.id == mycroft_session_id:
+                    if session.expect_response:
+                        if session.id != mycroft_session_id:
+                            self.log.warning(
+                                "Response expected for session %s, but session %s is active",
+                                session.id,
+                                mycroft_session_id,
+                            )
+                            continue
+
                         session.expect_response = False
                         mycroft_session_id = session.id
                         self.bus.emit(
