@@ -7,7 +7,7 @@ A re-imagining of Mycroft Core 1.
 
 The Mark II will release in September 2022, and needs a version of Mycroft that is both stable and maintainable.
 
-Bugfixes and new features in the existing verions of Mycroft have been difficult due to the highly inter-connected nature of the code base.
+Bugfixes and new features in the existing verions of Mycroft have been difficult due to the highly inter-connected nature of the code base. Dinkum splits Core into services, and removes anything that does not support the default skills.
 
 
 ## Architecture of Dinkum
@@ -102,7 +102,6 @@ sudo scripts/generate-systemd-units.py \
         --skill skills/homescreen.mark2 \
         --skill skills/ip.mark2 \
         --skill skills/news.mark2 \
-        --skill skills/play.mark2 \
         --skill skills/query-duck-duck-go.mark2 \
         --skill skills/query-wiki.mark2 \
         --skill skills/query-wolfram-alpha.mark2 \
@@ -125,9 +124,51 @@ You can also view individual service or skill logs:
 * `sudo journalctl -f -u dinkum-audio.service`
 * `sudo journalctl -f -u dinkum-skill-homescreen.mark2.service`
 
+Leave off the `-f` to see the complete history of a service's log.
+
 See `dinkum*` in `/etc/systemd/system` for available units. `dinkum.target` is the root unit.
+
 
 ---
 
 
 ## Skills
+
+Each skill is loaded and run individually by the skills service. Skills have a `skill_id`, which is always the name of their code directory (e.g., `alarm.mark2` for `skills/alarm.mark2`).
+
+The following core skills are available:
+
+* alarm.mark2
+    * Can set alarms for specific times, or recurring, with an optional name
+* date.mark2
+    * Speaks the current date, or past/future dates
+* fallback-query.mark2
+    * Forwards questions to `query-*` skills
+* fallback-unknown.mark2
+    * Catches utterances that fail to match any other skill
+    * Say "show me what I said" to see past utterances
+* homescreen.mark2
+    * The default (idle) screen
+    * Shows the current time, date, weather, etc.
+* ip.mark2
+    * Reports the Mark II's IP address(es)
+* news.mark2
+    * Plays news broadcasts from various stations
+* query-duck-duck-go.mark2
+    * Forwards questions to DuckDuckGo
+* query-wiki.mark2
+    * Forwards questions to Wikipedia
+* query-wolfram-alpha.mark2
+    * Forwards questions to Wolfram Alpha
+* settings.mark2
+    * Shows settings GUI pages
+* stop.mark2
+    * Triggers `mycroft.stop` when user says "stop" (handled in intent service)
+* time.mark2
+    * Speaks the local time, or for other locations
+* timer.mark2
+    * Can set multiple timers, optionally with a name
+* volume.mark2
+    * Allows the user to change the volume or mute/unmute
+* weather.mark2
+    * Speaks the local weather forecast, or for other locations

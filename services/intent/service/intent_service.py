@@ -231,9 +231,14 @@ class IntentService:
         return [parser.__dict__ for parser in self.adapt_service.engine.intent_parsers]
 
     def handle_wake(self, message: Message):
+        """
+        Called when Mycroft is woken up.
+        Aborts all other sessions, since this takes priority.
+        """
         self._disable_idle_timeout()
         mycroft_session_id = message.data.get("mycroft_session_id")
         with self._session_lock:
+            # Abort all other sessions
             sessions_to_abort = []
             for session in self._sessions.values():
                 if session.id != mycroft_session_id:
@@ -243,6 +248,7 @@ class IntentService:
                 self.abort_session(session.id)
 
     def handle_stop(self, message: Message):
+        """Called in response to mycroft.stop"""
         skill_id = message.data.get("skill_id")
         if skill_id is None:
             # Always stop TTS
@@ -267,6 +273,8 @@ class IntentService:
                     mycroft_session_id,
                     skill_id=skill_id,
                 )
+
+                # Will call skill's stop() method
                 self.bus.emit(
                     Message(
                         "mycroft.skill.stop",
@@ -282,6 +290,7 @@ class IntentService:
                 self.bus.emit(Message("mycroft.gui.idle"))
 
     def start_session(self, mycroft_session_id: str, **session_kwargs):
+        """Start a new session"""
         if mycroft_session_id is None:
             mycroft_session_id = str(uuid4())
 
@@ -291,10 +300,12 @@ class IntentService:
         session.started(self.bus)
 
     def abort_session(self, mycroft_session_id: str):
+        """Abort an existing session"""
         LOG.warning("Aborted session: %s", mycroft_session_id)
         self.end_session(mycroft_session_id, aborted=True)
 
     def end_session(self, mycroft_session_id: str, aborted: bool = False):
+        """End an existing session"""
         LOG.debug("Ending session: %s", mycroft_session_id)
         session = self._sessions.pop(mycroft_session_id, None)
         if session is not None:
@@ -303,6 +314,10 @@ class IntentService:
             session.ended(self.bus)
 
     def _trigger_listen(self, mycroft_session_id: str):
+        """
+        Requests that Mycroft record a new voice command without being woken up.
+        The session ID ensures that the response will make it to the right skill.
+        """
         LOG.debug("Triggering listen for session %s", mycroft_session_id)
         self.bus.emit(
             Message(
@@ -314,17 +329,21 @@ class IntentService:
         )
 
     def _run_session(self, session: Session):
+        """Runs a session's actions until there aren't any more, or the session must wait for something."""
         for action in session.run(self.bus):
             LOG.debug("Completed action for session %s: %s", session.id, action)
             if isinstance(action, GetResponseAction):
+                # Next utterance belongs to this session (raw_utterance)
                 self._trigger_listen(session.id)
             elif isinstance(action, ShowPageAction):
+                # This session now owns the GUI
                 self._disable_idle_timeout()
                 self._last_gui_session = session
             elif isinstance(action, (ClearDisplayAction, WaitForIdleAction)):
                 if (self._last_gui_session is None) or (
                     self._last_gui_session.skill_id == session.skill_id
                 ):
+                    # Only the session that owns the GUI can clear it
                     if isinstance(action, WaitForIdleAction):
                         timeout = IDLE_TIMEOUT
                     else:
@@ -343,6 +362,7 @@ class IntentService:
                         self._delayed_messages.append(action)
 
     def handle_session_start(self, message: Message):
+        """Handle request for session start"""
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Starting session: %s", mycroft_session_id)
         session = Session(
@@ -358,6 +378,7 @@ class IntentService:
             self._run_session(session)
 
     def handle_session_continue(self, message: Message):
+        """Handle requests for session to be continued"""
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Continuing session: %s", mycroft_session_id)
 
@@ -375,6 +396,7 @@ class IntentService:
                 self._run_session(session)
 
     def handle_session_end(self, message: Message):
+        """Handle request to end session"""
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Requested session end: %s", mycroft_session_id)
 
@@ -387,6 +409,7 @@ class IntentService:
                 self._run_session(session)
 
     def handle_session_ended(self, message: Message):
+        """Called when a session has ended"""
         with self._session_lock:
             mycroft_session_id = message.data.get("mycroft_session_id")
             LOG.debug("Cleaning up ended session: %s", mycroft_session_id)
@@ -395,6 +418,7 @@ class IntentService:
             if (self._last_gui_session is not None) and (
                 self._last_gui_session.id == mycroft_session_id
             ):
+                # The ended session owned the GUI, so now nobody owns it
                 self._last_gui_session = None
 
             if not self._sessions:
@@ -405,26 +429,31 @@ class IntentService:
                     self._set_idle_timeout()
 
     def handle_tts_finished(self, message: Message):
+        """Called when a TTS session has ended"""
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("TTS finished: %s", mycroft_session_id)
 
         with self._session_lock:
+            # Wake up appropriate session and run the rest of its actions
             session = self._sessions.get(mycroft_session_id)
             if (session is not None) and session.waiting_for_tts:
                 session.waiting_for_tts = False
                 self._run_session(session)
 
     def handle_media_finished(self, message: Message):
+        """Called when audio has finished playing"""
         mycroft_session_id = message.data["mycroft_session_id"]
         LOG.debug("Audio finished: %s", mycroft_session_id)
 
         with self._session_lock:
+            # Wake up appropriate session and run the rest of its actions
             session = self._sessions.get(mycroft_session_id)
             if (session is not None) and session.waiting_for_audio:
                 session.waiting_for_audio = False
                 self._run_session(session)
 
     def _set_idle_timeout(self, idle_seconds: Optional[int] = None):
+        """Sets a timeout before the GUI is cleared (returned to idle)"""
         if idle_seconds is None:
             idle_seconds = IDLE_TIMEOUT
 
@@ -482,13 +511,17 @@ class IntentService:
         interval = 0.1
         try:
             while True:
+                # Check idle timeout
                 if self._idle_seconds_left is not None:
                     self._idle_seconds_left -= interval
                     if self._idle_seconds_left <= 0:
                         self._idle_seconds_left = None
                         self._last_gui_session = None
+
+                        # Caught in enclosure service
                         self.bus.emit(Message("mycroft.gui.idle"))
 
+                # Send any delayed messages if they're ready to go
                 with self._delayed_messages_lock:
                     remove_actions = []
                     for action in self._delayed_messages:
