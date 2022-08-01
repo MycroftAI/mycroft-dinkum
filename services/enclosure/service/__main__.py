@@ -41,6 +41,9 @@ class EnclosureService(DinkumService):
         self.bus.on("mycroft.session.ended", self.handle_session_ended)
         self.bus.on("mycroft.gui.idle", self.handle_idle)
         self.bus.on("mycroft.switch.state", self.handle_switch_state)
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown", self.handle_stt_unknown
+        )
 
         # Return to idle screen if GUI reconnects
         self.bus.on("gui.initialize.ended", self.handle_gui_reconnect)
@@ -127,6 +130,11 @@ class EnclosureService(DinkumService):
 
     def handle_gui_reconnect(self, _message):
         # Show idle skill GUI
+        self.bus.emit(Message("mycroft.gui.idle"))
+
+    def handle_stt_unknown(self, _message):
+        self.led_session_id = None
+        self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
         self.bus.emit(Message("mycroft.gui.idle"))
 
 

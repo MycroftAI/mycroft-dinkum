@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import numpy as np
 from mycroft.hotword import HotWordEngine
-from mycroft.stt import MycroftSTT, StreamingSTT
+from mycroft.stt import AssemblyAISTT, MycroftSTT, StreamingSTT
 from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import Message, MessageBusClient
@@ -322,7 +322,8 @@ def load_stt_module(config: dict[str, Any], bus: MessageBusClient) -> StreamingS
     module_name = stt_config["module"]
     if module_name == "mycroft":
         LOG.debug("Using Mycroft STT")
-        return MycroftSTT(bus, config)
+        # return MycroftSTT(bus, config)
+        return AssemblyAISTT(bus, config)
 
     LOG.debug("Loading speech to text module: %s", module_name)
     module = load_plugin("mycroft.plugin.stt", module_name)
