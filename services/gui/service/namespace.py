@@ -41,7 +41,7 @@ over the GUI message bus.
 """
 from dataclasses import dataclass, field
 from threading import Lock, Timer
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message, MessageBusClient
@@ -78,6 +78,7 @@ class Namespace:
     name: str
     pages: List[str] = field(default_factory=list)
     data: Dict[str, Any] = field(default_factory=dict)
+    skill_id: Optional[str] = None
 
 
 class NamespaceManager:
@@ -138,6 +139,7 @@ class NamespaceManager:
         try:
             namespace = self._ensure_namespace_exists(message.data["namespace"])
             namespace.pages = message.data["page"]
+            namespace.skill_id = message.data.get("skill_id")
 
             data = message.data.get("data")
             if data is None:
@@ -152,6 +154,7 @@ class NamespaceManager:
                 # Only send session data
                 self._update_namespace_data(namespace)
 
+            self._emit_namespace_displayed_event(namespace)
             LOG.debug(
                 "Showing page %s on namespace %s with data %s",
                 namespace.pages,
@@ -160,6 +163,10 @@ class NamespaceManager:
             )
         except Exception:
             LOG.exception("Unexpected error showing GUI page")
+
+    def _emit_namespace_displayed_event(self, namespace: Namespace):
+        message_data = dict(namespace=namespace.name, skill_id=namespace.skill_id)
+        self.core_bus.emit(Message("gui.namespace.displayed", data=message_data))
 
     def handle_set_value(self, message: Message):
         """Sets session data values"""

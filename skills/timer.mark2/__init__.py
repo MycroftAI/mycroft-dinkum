@@ -105,7 +105,7 @@ class TimerSkill(MycroftSkill):
         self.add_event(
             "mycroft.session.actions-completed", self.handle_session_actions_completed
         )
-        self.add_event("mycroft.session.ended", self.handle_session_ended)
+        self.add_event("gui.namespace.displayed", self.handle_gui_namespace_displayed)
 
     def _load_resources(self):
         """Gets a set of static words in the language specified in the configuration."""
@@ -159,16 +159,26 @@ class TimerSkill(MycroftSkill):
             else:
                 self._expired_session_id = None
 
-    def handle_session_ended(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id == self._expired_session_id:
-            self._expired_session_id = None
+    def handle_gui_namespace_displayed(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if (self._expired_session_id is not None) and (skill_id != self.skill_id):
+            self._end_expired_session()
 
             # Stop expired timers when user navigates away from GUI session
             if self.expired_timers:
                 self._clear_expired_timers()
                 if not self.active_timers:
                     self._reset()
+
+    def _end_expired_session(self):
+        if self._expired_session_id is not None:
+            self.bus.emit(
+                self.end_session(
+                    mycroft_session_id=self._expired_session_id,
+                    gui_clear=GuiClear.AT_END,
+                )
+            )
+            self._expired_session_id = None
 
     # -------------------------------------------------------------------------
 
@@ -782,13 +792,8 @@ class TimerSkill(MycroftSkill):
         """
         dialog = None
         if self.expired_timers:
-            if self._expired_session_id:
-                self.bus.emit(
-                    self.end_session(
-                        mycroft_session_id=self._expired_session_id,
-                        gui_clear=GuiClear.AT_END,
-                    )
-                )
+            if self._expired_session_id is not None:
+                self._end_expired_session()
 
             self._clear_expired_timers()
             if not self.active_timers:
@@ -816,6 +821,7 @@ class TimerSkill(MycroftSkill):
         for timer in self.expired_timers:
             self.active_timers.remove(timer)
         self._save_timers()
+        self._expired_session_id = None
         self.bus.emit(Message(f"{self.skill_id}.expired.cleared"))
 
     def _reset(self):

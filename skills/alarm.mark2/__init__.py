@@ -163,7 +163,7 @@ class AlarmSkill(MycroftSkill):
         self.add_event("private.mycroftai.has_alarm", self.handle_has_alarm)
         self.add_event("skill.alarm.query-active", self.handle_active_alarm_query)
         self.add_event("skill.alarm.query-expired", self.handle_expired_alarm_query)
-        self.add_event("mycroft.session.ended", self.handle_session_ended)
+        self.add_event("gui.namespace.displayed", self.handle_gui_namespace_displayed)
 
     def handle_mycroft_ready(self):
         """Does the things that need to happen when the device is ready for use."""
@@ -237,9 +237,9 @@ class AlarmSkill(MycroftSkill):
         event = message.response(data=event_data)
         self.bus.emit(event)
 
-    def handle_session_ended(self, message: Message):
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id == self._expired_session_id:
+    def handle_gui_namespace_displayed(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if (self._expired_session_id is not None) and (skill_id != self.skill_id):
             self._expired_session_id = None
             self.log.debug("Expired alarm session ended")
 

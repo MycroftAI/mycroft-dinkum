@@ -63,9 +63,6 @@ class IntentService:
         self.config = config
         self.bus = bus
 
-        self.skill_names = {}
-        self.skill_categories = {}
-
         self._response_skill_id: Optional[str] = None
         self._sessions: Dict[str, Session] = {}
         self._session_lock = RLock()
@@ -135,7 +132,6 @@ class IntentService:
             mycroft_session_id,
         )
         try:
-
             if self._handle_get_response(message):
                 return
 
