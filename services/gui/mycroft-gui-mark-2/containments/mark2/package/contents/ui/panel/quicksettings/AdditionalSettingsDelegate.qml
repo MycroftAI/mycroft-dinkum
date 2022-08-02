@@ -22,7 +22,7 @@ import Mycroft 1.0 as Mycroft
 import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
-    iconSource: "settings-configure"
+    iconSource: Qt.resolvedUrl("./settings-configure.svg")
     text: i18n("About")
     onClicked: {
         Mycroft.MycroftController.sendRequest("mycroft.device.settings", {})

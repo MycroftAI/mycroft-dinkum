@@ -22,7 +22,7 @@ import Mycroft 1.0 as Mycroft
 import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
-    iconSource: "system-shutdown"
+    iconSource: Qt.resolvedUrl("./system-shutdown.svg")
     text: i18n("Turn Off")
     onClicked: {
         Mark2SystemAccess.requestShutdown();

@@ -22,7 +22,7 @@ import org.kde.plasma.private.volume 0.1 as PA
 
 SliderBase {
     id: root
-    iconSource: "audio-volume-high"
+    iconSource: Qt.resolvedUrl("./audio-volume-high.svg")
 
     slider.from: 0
     slider.to: 1

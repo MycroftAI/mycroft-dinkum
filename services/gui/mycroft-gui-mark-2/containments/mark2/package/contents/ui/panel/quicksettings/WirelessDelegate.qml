@@ -24,7 +24,7 @@ import Mycroft 1.0 as Mycroft
 import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
-    iconSource: connectionIconProvider.connectionIcon
+    iconSource: Qt.resolvedUrl("./network-wireless.svg")
     text: i18n("Wireless Settings")
     onClicked: Mark2SystemAccess.networkConfigurationVisible = true
 

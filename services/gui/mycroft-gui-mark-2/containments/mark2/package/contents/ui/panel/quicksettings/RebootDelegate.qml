@@ -22,7 +22,7 @@ import Mycroft 1.0 as Mycroft
 import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
-    iconSource: "system-reboot"
+    iconSource: Qt.resolvedUrl("./system-reboot.svg")
     text: i18n("Restart")
     onClicked: {
         Mark2SystemAccess.requestReboot();
