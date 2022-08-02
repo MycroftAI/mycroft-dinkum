@@ -1,0 +1,3 @@
+Der aktuelle Status von {dev_name} ist {value}, die aktuelle Temperatur ist {current_temp} und die Zieltemperatur {targeted_temp}.
+{dev_name} Status ist {value}, die aktuelle Temperatur ist {current_temp} und die Zieltemperatur {targeted_temp}.
+{dev_name} ist {value}, Temperatur ist {current_temp} und auf {targeted_temp} eingestellt.

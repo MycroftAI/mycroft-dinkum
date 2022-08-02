@@ -1,0 +1,322 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Overall test run
+
+on:
+  push:
+    branches-ignore:
+      - gh-pages
+  pull_request_target:
+    types: [labeled]
+    branches-ignore:
+      - gh-pages
+
+jobs:
+  safeguard:
+    runs-on: ubuntu-latest
+    # Run workflow only when triggered by push (to original repo) or RP from fork when labeled with "secure"
+    # Label will be removed in the beginning  of execution
+    if: contains(github.event.pull_request.labels.*.name, 'secure') || ${{ github.event_name == 'push' }}
+
+    steps:
+      # Remove label "secure" from PR - Prevent running workflow on another commit to PR
+      # After review of new commit, another run can be triggered by adding "secure" label again
+      - name: Github Actions | Remove secure label on PR
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: 'secure'
+        if: ${{ github.event_name == 'pull_request_target' }}
+
+  build:
+    # Run only when safeguard job passed
+    needs: safeguard
+    runs-on: ubuntu-latest
+    env:
+        HASS_SERVER: http://127.0.0.1:8123
+        HASS_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIyMDY0YjI0YzgyYzY0Y2Q1ODU0ZmRlN2M5ODAyMjVhOCIsImlhdCI6MTYzMzg1NTkxNCwiZXhwIjoxOTQ5MjE1OTE0fQ.wMJ60s8bGe7ygk_xvtnxRixBIYthrCWZyfBKn4e9wdU
+        TERM: xterm
+        MAX_LINE_LENGTH: 127
+        MYCROFT_VENV: /opt/mycroft-core/.venv/bin/activate
+        HA_VERSION: 2021.9
+        HA_VIRTUAL_VERSION: v0.7.2
+
+    steps:
+      # Use standard checkout if workflow triggered by push
+      - name: Github Actions | Running on commit workflow - push
+        uses: actions/checkout@v2
+        if: ${{ github.event_name == 'push' }}
+
+      # Checkout to PR if workflow triggered by pull_request_target
+      - name: Github Actions | Running on commit workflow - pull_request
+        uses: actions/checkout@v2
+        with:
+          ref: ${{github.event.pull_request.head.ref}}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+        if: ${{ github.event_name == 'pull_request_target' }}
+
+      - name: Github Actions | Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      #######################################################################################
+      # Section with prerequisite installations
+
+      - name: Github Actions - Get path to python
+        run: echo "$(whereis python)" >> $GITHUB_PATH
+
+      - name: Github Actions - Get repository name
+        run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Home Assistant - Install pip dependencies
+        run: |
+          pip install allure-behave
+
+      - name: Mycroft - Copy skill to Mycroft
+        run: |
+          mkdir -p /opt/mycroft/skills/homeassistant.mycroftai
+          cp -R ${{ github.workspace }}/* /opt/mycroft/skills/homeassistant.mycroftai
+          ls -al /opt/mycroft/skills/homeassistant.mycroftai
+          cp ${{ github.workspace }}/test/ci/Mycroft/settings.json /opt/mycroft/skills/homeassistant.mycroftai/
+
+      - name: Mycroft - install Mycroft
+        run: |
+          sudo apt update
+          git clone https://github.com/MycroftAI/mycroft-core.git /opt/mycroft-core
+          ls /opt
+          chmod +x /opt/mycroft-core/dev_setup.sh
+          /opt/mycroft-core/dev_setup.sh --allow-root -ci -sm
+          source ${{ env.MYCROFT_VENV }}
+          /opt/mycroft-core/bin/mycroft-pip install -r ${{ github.workspace }}/requirements.txt
+          /opt/mycroft-core/bin/mycroft-config set tts.module dummy
+          /opt/mycroft-core/bin/mycroft-start all
+
+      - name: Mycroft - Remove pairing skill
+        run: /opt/mycroft-core/bin/mycroft-msm remove mycroft-pairing
+        continue-on-error: true
+
+      - name: Github Actions - Install workflow dependencies
+        run: |
+          source ${{ env.MYCROFT_VENV }}
+          pip install allure-behave
+          pip install allure-pytest
+          pip install pylint
+
+      - name: Home Assistant - get hass virtual component
+        run: git clone --depth 1 --branch ${{ env.HA_VIRTUAL_VERSION }} https://github.com/twrecked/hass-virtual.git /tmp/hass-virtual
+
+      - name: Home Assistant - pull and start docker image
+        run: |
+          docker pull homeassistant/home-assistant:${{ env.HA_VERSION }}
+          docker run -d -p 127.0.0.1:8123:8123 --name="home-assistant" -v ${{ github.workspace }}/test/ci/HA/:/config -v /tmp/hass-virtual/custom_components:/config/custom_components -v /etc/localtime:/etc/localtime:ro homeassistant/home-assistant:${{ env.HA_VERSION }}
+
+      - name: Home Assistant - Install cli
+        run: pip install homeassistant-cli
+
+      - name: Home Assistant - Set cli
+        run: source <(hass-cli completion bash)
+
+      - name: Home Assistant - Show base info
+        run: hass-cli info
+
+      - name: Home Assistant - Show states
+        run: hass-cli state list
+
+      #######################################################################################
+      # Section with unittests - bust run before VK tests
+
+      - name: Unittest - Run with output to Allure report
+        id: unittest
+        run: |
+          source /opt/mycroft-core/.venv/bin/activate
+          py.test --alluredir=${{ github.workspace }}/allure_results
+        env:
+          HASS_TOKEN: ${{ env.HASS_TOKEN }}
+        continue-on-error: true
+
+      #######################################################################################
+      # Section with VK tests
+
+      - name: Mycroft - Clear VKtest
+        run: /opt/mycroft-core/bin/mycroft-skill-testrunner vktest clear
+
+      - name: Mycroft - Run VKtest
+        run: /opt/mycroft-core/bin/mycroft-skill-testrunner vktest -t homeassistant.mycroftai -f allure_behave.formatter:AllureFormatter -o ${{ github.workspace }}/allure_results
+
+      #######################################################################################
+      # Section with Mycroft logs
+
+      - name: Mycroft - Create directory for logs
+        run: mkdir -p ${{ github.workspace }}/allure-history/${{ github.run_number }}
+        if: always()
+
+      - name: Mycroft - Copy logs
+        run: if [[ -d /var/log/mycroft ]]; then cp -r /var/log/mycroft ${{ github.workspace }}/allure-history/${{ github.run_number }}/; fi
+        shell: bash
+
+      #######################################################################################
+      # Section with Allure report
+
+      - name: Github Pages - Pull GH history
+        uses: actions/checkout@v2
+        if: always()
+        continue-on-error: true
+        with:
+          path: ${{ github.workspace }}/gh-pages
+          ref: gh-pages
+
+      - name: Allure - Generate report
+        uses: simple-elf/allure-report-action@master
+        id: allure-report
+        if: always()
+        with:
+          allure_results: ${{ github.workspace }}/allure_results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
+
+      - name: Github Pages - publish results
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ github.workspace }}/allure-history
+          PUBLISH_BRANCH: gh-pages
+
+      #######################################################################################
+      # Section with publish status links
+
+      - name: State - Publish Unit/VK test
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'Unit/VK Test report generated'
+          state: ${{ steps.allure-report.outcome }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://${{ github.repository_owner	}}.github.io/${{ env.REPOSITORY_NAME }}/${{ github.run_number }}/
+
+      - name: State - Publish Mycroft logs
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'Mycroft logs'
+          state: success
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://github.com/${{ github.repository }}/tree/gh-pages/${{ github.run_number }}/mycroft/
+
+      #######################################################################################
+      # Section with Linters - keep short names
+
+      - name: pylint
+        if: always()
+        id: pylint
+        run: |
+          source $MYCROFT_VENV
+          pylint --max-line-length=${{ env.MAX_LINE_LENGTH }} .
+
+      - name: pycodestyle
+        if: always()
+        uses: ricardochaves/python-lint@v1.4.0
+        id: pycodestyle
+        with:
+          use-pylint: false
+          use-pycodestyle: true
+          use-flake8: false
+          use-black: false
+          use-mypy: false
+          use-isort: false
+          extra-pycodestyle-options: "--max-line-length=${{ env.MAX_LINE_LENGTH }}"
+
+      - name: flake8
+        if: always()
+        uses: ricardochaves/python-lint@v1.4.0
+        id: flake8
+        with:
+          use-pylint: false
+          use-pycodestyle: false
+          use-flake8: true
+          use-black: false
+          use-mypy: false
+          use-isort: false
+          extra-flake8-options: "--max-line-length=${{ env.MAX_LINE_LENGTH }}"
+
+      - name: isort
+        if: always()
+        uses: ricardochaves/python-lint@v1.4.0
+        id: isort
+        with:
+          use-pylint: false
+          use-pycodestyle: false
+          use-flake8: false
+          use-black: false
+          use-mypy: false
+          use-isort: true
+          extra-isort-options: ""
+
+      #######################################################################################
+      # Section with Publish state of Linters
+
+      - name: State - Get step id for accessing step status logs
+        id: linters_status
+        if: always()
+        run: |
+          JOBS=$(curl -H "Accept: application/vnd.github.v3+json" ${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs | jq -r '.jobs')
+          for row in $(echo "${JOBS}" | jq -r '.[] | @base64'); do
+              _jq() {
+                echo "${row}" | base64 --decode | jq -r ${1}
+              }
+              if [ $(echo "$( _jq '.name')") = "${GITHUB_JOB}" ]; then
+                echo "LOG_ID=$(_jq '.id')" >> $GITHUB_ENV
+                for step in $(echo "$(_jq '.steps')" | jq -r '.[] | @base64'); do
+                  _jqs() {
+                  echo "${step}" | base64 --decode | jq -r ${1}
+                }
+                echo "::set-output name=$(_jqs '.name')::$(_jqs '.number')"
+                echo "$(_jqs '.name'):$(_jqs '.number')"
+                done
+              fi
+          done
+
+      - name: State - pylint
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'pylint'
+          state: ${{ steps.pylint.outcome }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://github.com/${{ github.repository }}/runs/${{ env.LOG_ID }}#step:${{ steps.linters_status.outputs.pylint }}:1
+
+      - name: State - pycodestyle
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'pycodestyle'
+          state: ${{ steps.pycodestyle.outcome }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://github.com/${{ github.repository }}/runs/${{ env.LOG_ID }}#step:${{ steps.linters_status.outputs.pycodestyle }}:1
+
+      - name: State - flake8
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'flake8'
+          state: ${{ steps.flake8.outcome }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://github.com/${{ github.repository }}/runs/${{ env.LOG_ID }}#step:${{ steps.linters_status.outputs.flake8 }}:1
+
+      - name: State - isort
+        if: always()
+        uses: Sibz/github-status-action@v1
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'isort'
+          state: ${{ steps.isort.outcome }}
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://github.com/${{ github.repository }}/runs/${{ env.LOG_ID }}#step:${{ steps.linters_status.outputs.isort }}:1

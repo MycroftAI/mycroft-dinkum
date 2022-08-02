@@ -1,0 +1,27 @@
+# see: https://www.home-assistant.io/integrations/binary_sensor/#device-class
+default,aus
+battery,normal
+battery_charging,lädt nicht
+cold,normal
+connectivity,nicht verbunden
+door,geschlossen
+garage_door,geschlossen
+gas,kein Gas
+heat,normal
+light,dunkel
+lock,verschlossen
+moisture,trocken
+motion,keine Bewegung
+moving,nicht in Bewegung
+occupancy,nicht beschäftigt
+opening,geschlossen
+plug,nicht angeschlossen
+power,no power
+presence,unterwegs
+problem,kein Problem
+safety,sicher
+smoke,kein Rauch
+sound,leise
+update,kein Update verfügbar
+vibration,keine Vibration erkannt
+window,geschlossen

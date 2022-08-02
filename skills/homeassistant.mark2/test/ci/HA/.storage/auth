@@ -1,0 +1,77 @@
+{
+    "version": 1,
+    "key": "auth",
+    "data": {
+        "users": [
+            {
+                "id": "31dd8765c14a4e258dd5b7e3322dae02",
+                "group_ids": [
+                    "system-admin"
+                ],
+                "is_owner": true,
+                "is_active": true,
+                "name": "mycroft",
+                "system_generated": false
+            }
+        ],
+        "groups": [
+            {
+                "id": "system-admin",
+                "name": "Administrators"
+            },
+            {
+                "id": "system-users",
+                "name": "Users"
+            },
+            {
+                "id": "system-read-only",
+                "name": "Read Only"
+            }
+        ],
+        "credentials": [
+            {
+                "id": "c10a788208cd4dc48222b4bde89beb5d",
+                "user_id": "31dd8765c14a4e258dd5b7e3322dae02",
+                "auth_provider_type": "homeassistant",
+                "auth_provider_id": null,
+                "data": {
+                    "username": "mycroft"
+                }
+            }
+        ],
+        "refresh_tokens": [
+            {
+                "id": "83ac3b35227f4fcd918e37fd51642aab",
+                "user_id": "31dd8765c14a4e258dd5b7e3322dae02",
+                "client_id": "http://10.0.1.1:8123/",
+                "client_name": null,
+                "client_icon": null,
+                "token_type": "normal",
+                "created_at": "2021-10-10T08:36:41.294108+00:00",
+                "access_token_expiration": 1800.0,
+                "token": "883d1c34ab28f87b38245ac0add16d9f8b8ded67d7440f1aaf137651770a3ca084eb974f758d68d582895a207818ebaa4834cc23594849a6b2af4e35476f063a",
+                "jwt_key": "45071150faa2c6c35d689802b786a6532d81a7a06b38a2f182323d83388d9fe1466bd7f1c290f427a2ed13df8946a8c894f4bb320938f3220ab8f667458876ec",
+                "last_used_at": "2021-10-10T08:36:41.294197+00:00",
+                "last_used_ip": "10.0.1.5",
+                "credential_id": "c10a788208cd4dc48222b4bde89beb5d",
+                "version": "2021.7.1"
+            },
+            {
+                "id": "2064b24c82c64cd5854fde7c980225a8",
+                "user_id": "31dd8765c14a4e258dd5b7e3322dae02",
+                "client_id": null,
+                "client_name": "GitHub Actions",
+                "client_icon": null,
+                "token_type": "long_lived_access_token",
+                "created_at": "2021-10-10T08:51:54.897726+00:00",
+                "access_token_expiration": 315360000.0,
+                "token": "1cab7bf472793686c83a99cdb1e4f2d7b2ca26b085e6554ee5a6bff3cf9bccc7d2c9bfcb693e30c5ea4b46453363bd850fca3d3f95c2efae8feffd1df1f0367b",
+                "jwt_key": "b2c4a5f7cb6c91d92148d36412e98277d0b79e32129c1453a51ef959b7b33e32745884b63363c4ef4e2656319574da85e048e481b94cc0cdbfe6fcd5abb6567c",
+                "last_used_at": "2021-10-10T08:51:54.897805+00:00",
+                "last_used_ip": null,
+                "credential_id": null,
+                "version": "2021.7.1"
+            }
+        ]
+    }
+}

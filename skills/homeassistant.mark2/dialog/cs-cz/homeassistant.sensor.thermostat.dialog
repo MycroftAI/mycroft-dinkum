@@ -1,0 +1,3 @@
+Momentálně je režim {dev_name} {value}, současná teplota je {current_temp} a nastavená {targeted_temp}.
+Režim {dev_name} je {value}, současná teplota je {current_temp} a nastavená {targeted_temp}.
+{dev_name} je {value}, aktuální teplota je {current_temp} a nastavená {targeted_temp}.

@@ -1,0 +1,27 @@
+# see: https://www.home-assistant.io/integrations/binary_sensor/#device-class
+default,vypnuto
+battery,nabito
+battery_charging,nenabíjí
+cold,normální
+connectivity,odpojeno
+door,zavřeno
+garage_door,zavřeny
+gas,bez plynu
+heat,normálí
+light,tma
+lock,zamčeno
+moisture,sucho
+motion,bez pohybu
+moving,zastaveno
+occupancy,volno
+opening,zavřeno
+plug,zařízení je odpojeno
+power,nenapájeno
+presence,pryč
+problem,bez problému (OK)
+safety,bezpečné
+smoke,bez kouře
+sound,bez zvuku
+update,aktuální
+vibration,bez vibrací
+window,zavřeno

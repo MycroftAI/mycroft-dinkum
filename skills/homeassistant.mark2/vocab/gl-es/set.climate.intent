@@ -1,0 +1,3 @@
+define os graos de {entity} ata {temp}
+configura a temperatura do {entity} ata {temp} graos
+cambia a temperatura do {entity} ata {temp} graos

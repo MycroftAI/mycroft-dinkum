@@ -1,0 +1,6 @@
+fuzzywuzzy==0.14.0
+python-Levenshtein==0.12.0
+requests
+quantulum3
+responses<=0.10.15
+ipaddress

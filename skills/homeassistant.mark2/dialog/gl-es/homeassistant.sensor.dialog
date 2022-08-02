@@ -1,0 +1,4 @@
+Actualmente {dev_name} é {value} {unit}.
+{dev_name} ten o estado: {value} {unit}.
+{dev_name} é {value} {unit} neste momento.
+Actualmente {dev_name} é {value} {unit}.

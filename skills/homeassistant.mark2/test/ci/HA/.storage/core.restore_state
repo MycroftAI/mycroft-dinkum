@@ -1,0 +1,158 @@
+{
+    "version": 1,
+    "key": "core.restore_state",
+    "data": [
+        {
+            "state": {
+                "entity_id": "person.mycroft",
+                "state": "unknown",
+                "attributes": {
+                    "editable": false,
+                    "id": "mycroft",
+                    "source": "person.mycroft",
+                    "user_id": "31dd8765c14a4e258dd5b7e3322dae02",
+                    "friendly_name": "mycroft"
+                },
+                "last_changed": "2021-10-10T08:51:23.844011+00:00",
+                "last_updated": "2021-10-10T08:51:23.844011+00:00",
+                "context": {
+                    "id": "a756aae9fb117dae9f903b1d8ee75d12",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "input_boolean.mycroft_vk_bool",
+                "state": "off",
+                "attributes": {
+                    "editable": false,
+                    "friendly_name": "Mycroft bool"
+                },
+                "last_changed": "2021-10-10T08:51:24.394553+00:00",
+                "last_updated": "2021-10-10T08:51:24.394553+00:00",
+                "context": {
+                    "id": "2f6f71a5a09cb1d23eef1f25f7a65047",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "input_number.mycroft_vk_num",
+                "state": "20.0",
+                "attributes": {
+                    "initial": 20.0,
+                    "editable": false,
+                    "min": 0.0,
+                    "max": 255.0,
+                    "step": 1.0,
+                    "mode": "slider"
+                },
+                "last_changed": "2021-10-10T08:51:24.395770+00:00",
+                "last_updated": "2021-10-10T08:51:24.395770+00:00",
+                "context": {
+                    "id": "c8b8af341ac433b1d441eae34fef66d9",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "automation.mycroft_tracker_automation",
+                "state": "on",
+                "attributes": {
+                    "last_triggered": null,
+                    "mode": "single",
+                    "current": 0,
+                    "id": "123456789",
+                    "friendly_name": "Mycroft Tracker Automation"
+                },
+                "last_changed": "2021-10-10T08:51:24.407621+00:00",
+                "last_updated": "2021-10-10T08:51:24.407621+00:00",
+                "context": {
+                    "id": "55fbef68bf88a251a5570974b312c730",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "switch.mycroft_vk_switch",
+                "state": "off",
+                "attributes": {
+                    "friendly_name": "Mycroft sw"
+                },
+                "last_changed": "2021-10-10T08:51:24.449705+00:00",
+                "last_updated": "2021-10-10T08:51:24.449705+00:00",
+                "context": {
+                    "id": "387965ba94853a2fbb1d050ee173e76a",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "climate.mycroft_climate",
+                "state": "off",
+                "attributes": {
+                    "hvac_modes": [
+                        "heat",
+                        "off"
+                    ],
+                    "min_temp": 15.0,
+                    "max_temp": 21.0,
+                    "target_temp_step": 0.1,
+                    "preset_modes": [
+                        "none",
+                        "away"
+                    ],
+                    "current_temperature": null,
+                    "temperature": 17.0,
+                    "hvac_action": "off",
+                    "preset_mode": "none",
+                    "friendly_name": "Mycroft climate",
+                    "supported_features": 17
+                },
+                "last_changed": "2021-10-10T08:51:24.449932+00:00",
+                "last_updated": "2021-10-10T08:51:24.449932+00:00",
+                "context": {
+                    "id": "e2c8a0ffffe0046ce5ef00e75e2aac8c",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:51:24.629313+00:00"
+        },
+        {
+            "state": {
+                "entity_id": "person.t",
+                "state": "unknown",
+                "attributes": {
+                    "editable": false,
+                    "id": "t",
+                    "user_id": "6493e3af728b453a888d5ce5f35ae389",
+                    "friendly_name": "t"
+                },
+                "last_changed": "2021-10-10T08:45:34.168947+00:00",
+                "last_updated": "2021-10-10T08:45:34.894437+00:00",
+                "context": {
+                    "id": "a4e0eb49f762530851612796e20d763d",
+                    "parent_id": null,
+                    "user_id": null
+                }
+            },
+            "last_seen": "2021-10-10T08:46:04.797424+00:00"
+        }
+    ]
+}

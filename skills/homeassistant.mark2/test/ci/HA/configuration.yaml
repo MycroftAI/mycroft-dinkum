@@ -1,0 +1,121 @@
+homeassistant:
+  name: Home
+  latitude: 48.864716
+  longitude: 2.349014
+  elevation: 430
+  unit_system: metric
+  time_zone: America/Los_Angeles
+  internal_url: "http://127.0.0.1:8123"
+
+default_config:
+
+virtual:
+
+sensor:
+  # 01_sensor.feature
+  - platform: template
+    sensors:
+      mycroft_vk_sensor:
+        friendly_name: "Mycroft sensor"
+        unit_of_measurement: '°C'
+        value_template: 122.00
+
+switch:
+  # 02_turn_on_switch.feature
+  - platform: virtual
+    name: "!blue switch"
+    initial_value: 'off'
+  # 03_toggle_off_switch.feature
+  - platform: virtual
+    name: "!green switch"
+    initial_value: 'on'
+  # 03_toggle_off_switch.feature
+  - platform: virtual
+    name: "!yellow switch"
+    initial_value: 'on'
+  # 04_toggle_on_switch.feature
+  - platform: virtual
+    name: "!pink switch"
+    initial_value: 'off'
+  # 05_turn_off_switch.feature
+  - platform: virtual
+    name: "!red switch"
+    initial_value: 'on'
+
+  # help function for # 13_set_climate.feature
+  - platform: template
+    switches:
+      mycroft_vk_switch:
+        friendly_name: "Mycroft sw"
+        value_template: "{{ is_state('input_boolean.mycroft_vk_bool', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          data:
+            entity_id: input_boolean.mycroft_vk_bool
+        turn_off:
+          service: input_boolean.turn_off
+          data:
+            entity_id: input_boolean.mycroft_vk_bool
+
+light:
+  # 06_turn_on_light.feature
+  - platform: virtual
+    name: "!Mycroft light"
+    initial_value: 'off'
+  # 08_increase_brightness.feature
+  - platform: virtual
+    name: "!Table light"
+    initial_value: 'on'
+    initial_brightness: 20
+  # 07_set_brightness.feature
+  # 09_decrease_brightness.feature
+  - platform: virtual
+    name: "!bathroom light"
+    initial_value: 'on'
+    initial_brightness: 80
+  # 10_turn_off_light.feature
+  - platform: virtual
+    name: "!stairs light"
+    initial_value: 'on'
+  # Unittest
+  - platform: virtual
+    name: "!unittest light"
+    initial_value: 'on'
+    initial_brightness: 80
+
+device_tracker:
+  # 12_tracker.feature
+  - platform: virtual
+    devices:
+      - "mark"
+
+climate:
+  # 13_set_climate.feature
+  - platform: generic_thermostat
+    name: "Mycroft climate"
+    heater: switch.mycroft_vk_switch
+    target_sensor: sensor.mycroft_vk_temp
+    min_temp: 15
+    max_temp: 21
+    ac_mode: false
+    target_temp: 17
+    cold_tolerance: 0.3
+    hot_tolerance: 0
+    min_cycle_duration:
+      seconds: 5
+    keep_alive:
+      minutes: 3
+    initial_hvac_mode: "off"
+    away_temp: 16
+    precision: 0.1
+
+# 14_add_item_shopping_list.feature
+shopping_list:
+
+camera:
+  # 15_show_camera_image.feature
+  - platform: generic
+    name: "Mycroft camera"
+    entity_picture: /image.jpg
+
+automation: !include automations.yaml

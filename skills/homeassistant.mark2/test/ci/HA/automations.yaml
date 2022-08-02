@@ -1,0 +1,13 @@
+- id: '123456789'
+  alias: Mycroft Tracker Automation
+  trigger:
+  action:
+  - data: {}
+    entity_id: input_boolean.mycroft_vk_bool
+    service: input_boolean.turn_on
+  - data_template:
+      dev_id: mycroft_vk_tracker
+      location_name: "{% if is_state('binary_sensor.mycroft_vk_tracker_sensor', 'on')\
+        \ -%}\n  home\n{%- else -%}\n  not_home\n{%- endif %}\n"
+    service: device_tracker.see
+  mode: single

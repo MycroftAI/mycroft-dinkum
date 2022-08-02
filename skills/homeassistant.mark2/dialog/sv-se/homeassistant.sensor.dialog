@@ -1,0 +1,4 @@
+För närvarande är {dev_name} {value} {unit}.
+{dev_name} har tillståndet: {value} {unit}.
+{dev_name} är {value} {unit} för närvarande.
+{dev_name} är {value} {unit}.

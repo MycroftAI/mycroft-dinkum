@@ -1,0 +1,3 @@
+Currently {dev_name} mode is {value}, current temperature is {current_temp} and targeted {targeted_temp}.
+{dev_name} mode is {value}, current temperature is {current_temp} and targeted {targeted_temp}.
+{dev_name} is {value}, temperature is {current_temp} and set to {targeted_temp}.

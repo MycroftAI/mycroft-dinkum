@@ -1,0 +1,4 @@
+I øjeblikket er {dev_name} {value} {unit}.
+{dev_name} har tilstandem: {value} {unit}.
+{dev_name} er {value} {unit} i øjeblikket
+{dev_name} er {værdi} {enhed}.

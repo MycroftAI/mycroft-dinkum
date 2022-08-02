@@ -1,0 +1,27 @@
+# see: https://www.home-assistant.io/integrations/binary_sensor/#device-class
+default,zapnuto
+battery,nízký
+battery_charging,nabíjí
+cold,studený
+connectivity,připojen
+door,otevřen
+garage_door,otevřeny
+gas,detekován plyn
+heat,horký
+light,detekováno světlo
+lock,odemčeno
+moisture,detekována vlhkost
+motion,detekován pohyb
+moving,pohybuje se
+occupancy,obsazeno
+opening,otevírá se
+plug,zařízení je připojeno
+power,napájeno
+presence,doma
+problem,problém
+safety,nebezpečné
+smoke,detekován kouř
+sound,detekován zvuk
+update,dostupná aktualizace
+vibration,detekovány vibrace
+window,otevřeno

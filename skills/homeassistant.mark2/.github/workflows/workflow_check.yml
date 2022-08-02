@@ -1,0 +1,13 @@
+# Workflow checker -  check for changes inside .github folder, if found apply label workflow.
+
+name: "Workflow checker"
+on:
+- pull_request_target
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: tony763/labeler@v3.0.3    # For now use this as original action does not support hidden files
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"

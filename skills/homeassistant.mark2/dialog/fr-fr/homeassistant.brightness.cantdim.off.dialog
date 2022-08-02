@@ -1,0 +1,3 @@
+Je ne peux pas tamiser {dev_name}. C'est éteint.
+Je ne peux pas tamiser {dev_name}. Il faut l'allumer d'abord.
+{dev_name} ne peux pas être (tamisé|baissé). Seuls les équipements activés peuvent l'être. 

@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "key": "auth_provider.homeassistant",
+    "data": {
+        "users": [
+            {
+                "username": "mycroft",
+                "password": "JDJiJDEyJDR2MUdrT0pRWVZHeVNGaFRVY0UvYXVnbDVLbkVCeVY3ZkVibXVTendZRkN2L3FyTWtjTkFT"
+            }
+        ]
+    }
+}

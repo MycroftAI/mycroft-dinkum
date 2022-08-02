@@ -1,0 +1,3 @@
+Nie mogę przyciemnić {dev_name}. Urządzenie jest wyłączone.
+Nie mogę przyciemnić {dev_name}. Najpierw musisz włączyć to urządzenie.
+{dev_name} nie może być przyciemnione. Tylko włączone urządzenia mogą być ściemniane.

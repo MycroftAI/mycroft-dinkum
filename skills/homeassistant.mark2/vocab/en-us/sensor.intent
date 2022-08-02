@@ -1,0 +1,3 @@
+(What is|Give me|Tell me) (the|) (temperature|hue|brightness|value|state|status|read out) of {Entity} (please|).
+is (the|) {entity} (on|off|high|low|cold|warm|hot|connected|disconnected|open|closed|bright|dark|in motion|occupied|plugged in|secure|unsecure|charging|available)
+has {entity} detected (a|) (moisture|energy|problem|vibration|gas|sound)

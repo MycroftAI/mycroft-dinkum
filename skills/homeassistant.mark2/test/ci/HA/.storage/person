@@ -1,0 +1,14 @@
+{
+    "version": 2,
+    "key": "person",
+    "data": {
+        "items": [
+            {
+                "name": "mycroft",
+                "user_id": "31dd8765c14a4e258dd5b7e3322dae02",
+                "device_trackers": [],
+                "id": "mycroft"
+            }
+        ]
+    }
+}

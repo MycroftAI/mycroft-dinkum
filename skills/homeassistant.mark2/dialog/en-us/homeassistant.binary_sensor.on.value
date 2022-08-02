@@ -1,0 +1,27 @@
+# see: https://www.home-assistant.io/integrations/binary_sensor/#device-class
+default,on
+battery,low
+battery_charging,charging
+cold,cold
+connectivity,connected
+door,open
+garage_door,open
+gas,gas detected
+heat,hot
+light,light detected
+lock,unlocked
+moisture,moisture detected
+motion,motion detected
+moving,moving
+occupancy,occupied
+opening,open
+plug,device is plugged in
+power,power detected
+presence,home
+problem,problem detected
+safety,unsafe
+smoke,smoke detected
+sound,sound detected
+update,update available
+vibration,vibration detected
+window,open

@@ -1,0 +1,3 @@
+set (the|) {entity} to {temp} degrees
+set (the|) {entity} temperature to {temp} degrees
+change (the|) {entity} temperature to {temp} degrees

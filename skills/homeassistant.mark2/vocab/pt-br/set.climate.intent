@@ -1,0 +1,3 @@
+defina os graus de {entity} para {temp}
+configure a temperatura do {entity} para {temp} graus
+mude a temperatura do {entity} para {temp} graus

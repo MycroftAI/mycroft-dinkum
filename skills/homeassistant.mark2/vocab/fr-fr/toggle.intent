@@ -1,0 +1,6 @@
+inverse {Entity}
+commute {Entity}
+peux-tu inverser {Entity} s'il te plaît?
+peux-tu commuter {Entity} s'il te plaît?
+j'aimerais inverser {Entity}
+j'aimerais commuter {Entity}

@@ -1,0 +1,4 @@
+{dev_name} is momenteel {value} {unit}
+{dev_name} heeft de waarde van: {value} {unit}.
+{dev_name} is op dit moment {value} {unit}.
+{dev_name} is momenteel {value} {unit}

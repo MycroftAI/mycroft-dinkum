@@ -1,0 +1,3 @@
+Non posso regolare {dev_name}. è (spento|spenta).
+Non posso attenuare {dev_name}. Prima accendi per favore.
+{dev_name} non può essere attenuato. Solo i dispositivi accesi possono esserlo.

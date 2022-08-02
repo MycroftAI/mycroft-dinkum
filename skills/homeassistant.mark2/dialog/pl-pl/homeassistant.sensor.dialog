@@ -1,0 +1,4 @@
+Obecnie {dev_name} ma {value} {unit}.
+{dev_name} ma stan: {value} {unit}.
+{dev_name} ma {value} {unit} w tej chwili.
+{dev_name} ma {value} {unit}.
