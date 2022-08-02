@@ -401,7 +401,11 @@ class IntentService:
             if session is not None:
                 session.will_continue = False
                 session.skill_id = message.data.get("skill_id", session.skill_id)
-                session.actions = Session.parse_actions(message.data.get("actions", []))
+
+                # Session may already have pending actions
+                actions = Session.parse_actions(message.data.get("actions", []))
+                session.actions.extend(actions)
+
                 self._run_session(session)
 
     def handle_session_ended(self, message: Message):

@@ -69,6 +69,8 @@ class ConnectCheck(MycroftSkill):
         self.pairing_state = str(uuid4())
         self.nato_alphabet = None
 
+        self._checking_activation: bool = False
+
         self._awconnect_client: Optional[AwconnectClient] = None
 
     def initialize(self):
@@ -412,6 +414,10 @@ class ConnectCheck(MycroftSkill):
 
     def _pairing_check_activation(self, message: Message):
         """Check if activation with mycroft.ai was successful"""
+        if self._checking_activation:
+            return
+
+        self._checking_activation = True
         self.log.debug("Checking for device activation")
         try:
             self.log.info("Pairing successful")
@@ -436,7 +442,10 @@ class ConnectCheck(MycroftSkill):
             )
             self.bus.emit(response)
         except Exception:
+            self.log.exception("Error while activating")
             self._pairing_show_code(message)
+        finally:
+            self._checking_activation = False
 
     def _get_pairing_data(self):
         """Obtain a pairing code and access token from the Selene API

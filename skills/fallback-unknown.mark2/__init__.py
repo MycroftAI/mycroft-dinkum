@@ -21,7 +21,7 @@ MAX_DISPLAY_UTTERANCES = 4
 
 class UnknownSkill(FallbackSkill):
     def __init__(self, skill_id: str):
-        super(UnknownSkill, self).__init__(skill_id=skill_id)
+        super().__init__(skill_id=skill_id)
         self.last_utterances = deque(maxlen=MAX_DISPLAY_UTTERANCES + 1)
         self.question_vocab = dict()
 

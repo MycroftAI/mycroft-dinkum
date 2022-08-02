@@ -137,8 +137,7 @@ class HomeAssistantSkill(MycroftSkill):
         """
         self._setup()
         if self.ha_client is None:
-            self.speak_dialog("homeassistant.error.setup")
-            return False
+            return None
         # TODO if entity is 'all', 'any' or 'every' turn on
         # every single entity not the whole group
         ha_entity = self._handle_client_exception(
@@ -156,13 +155,8 @@ class HomeAssistantSkill(MycroftSkill):
 
         if ha_entity["state"] == "unavailable":
             """Check if state is unavailable, if yes, inform user about it."""
-
-            self.speak_dialog(
-                "homeassistant.error.device.unavailable",
-                data={"dev_name": ha_entity["dev_name"]},
-            )
-            """Return result to underlining function."""
             return False
+
         return True
 
     def _handle_client_exception(self, callback, *args, **kwargs):
@@ -172,37 +166,10 @@ class HomeAssistantSkill(MycroftSkill):
             Function output or False"""
         try:
             return callback(*args, **kwargs)
-        except Timeout:
-            self.speak_dialog("homeassistant.error.offline")
-        except (InvalidURL, URLRequired, MaxRetryError) as error:
-            if error.request is None or error.request.url is None:
-                # There is no url configured
-                self.speak_dialog("homeassistant.error.needurl")
-            else:
-                self.speak_dialog(
-                    "homeassistant.error.invalidurl", data={"url": error.request.url}
-                )
-        except SSLError:
-            self.speak_dialog("homeassistant.error.ssl")
-        except HTTPError as error:
-            # check if due to wrong password
-            if error.response.status_code == 401:
-                self.speak_dialog("homeassistant.error.wrong_password")
-            else:
-                self.speak_dialog(
-                    "homeassistant.error.http",
-                    data={
-                        "code": error.response.status_code,
-                        "reason": error.response.reason,
-                    },
-                )
-        except (ConnectionError, RequestException) as exception:
-            # TODO find a nice member of any exception to output
-            self.speak_dialog(
-                "homeassistant.error", data={"url": exception.request.url}
-            )
+        except Exception as e:
+            self.log.exception("Error in callback")
 
-        return False
+        return None
 
     # Intent handlers
     # @intent_handler("show.camera.image.intent")

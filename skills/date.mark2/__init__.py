@@ -30,7 +30,7 @@ class DateSkill(MycroftSkill):
     """Mycroft skill to respond to user requests for dates."""
 
     def __init__(self, skill_id: str):
-        super().__init__(skill_id=skill_id, "DateSkill")
+        super().__init__(skill_id=skill_id, name="DateSkill")
         self.displayed_time = None
 
     def initialize(self):
