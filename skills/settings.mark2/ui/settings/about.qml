@@ -201,7 +201,8 @@ Item {
             
             Kirigami.Icon {
                 id: backIcon
-                source: "go-previous"
+                isMask: true
+                source: Qt.resolvedUrl("./go-previous.svg")
                 Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                 Layout.preferredWidth: Kirigami.Units.iconSizes.medium
             }
