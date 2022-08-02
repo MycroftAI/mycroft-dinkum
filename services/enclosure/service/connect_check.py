@@ -41,6 +41,7 @@ SERVER_AUTH_RETRIES = 3
 SERVER_AUTH_WAIT_SEC = 10
 
 MAX_PAIRING_CODE_RETRIES = 30
+PAIRING_WAIT_SEC = 10
 
 FAILURE_RESTART_SEC = 10
 
@@ -384,6 +385,10 @@ class ConnectCheck(MycroftSkill):
 
         self.log.info("Initiating device pairing sequence...")
         self._get_pairing_data()
+        if self.pairing_code is None:
+            # Too many errors while obtaining pairing code
+            self._fail_and_restart()
+
         response = self.continue_session(
             gui="pairing_start_mark_ii.qml",
             dialog="pairing.intro",
@@ -455,19 +460,25 @@ class ConnectCheck(MycroftSkill):
         five minutes.  If the API call does not succeed after five minutes
         abort the pairing process.
         """
-        self.log.info("Retrieving pairing code from device API...")
-        try:
-            pairing_data = self.api.get_code(self.pairing_state)
-            self.pairing_code = pairing_data["code"]
-            self.pairing_token = pairing_data["token"]
-            self.pairing_code_expiration = time.monotonic() + pairing_data["expiration"]
-        except Exception:
-            self.log.exception("API call to retrieve pairing data failed")
-
-            # TODO
-        else:
-            self.log.info("Pairing code obtained: " + self.pairing_code)
-            self.pairing_code_retry_cnt = 0  # Reset counter on success
+        self.pairing_code = None
+        for i in range(MAX_PAIRING_CODE_RETRIES):
+            self.log.info(
+                "Retrieving pairing code from device API (%s/%s)",
+                i + 1,
+                MAX_PAIRING_CODE_RETRIES,
+            )
+            try:
+                pairing_data = self.api.get_code(self.pairing_state)
+                self.pairing_code = pairing_data["code"]
+                self.pairing_token = pairing_data["token"]
+                self.pairing_code_expiration = (
+                    time.monotonic() + pairing_data["expiration"]
+                )
+            except Exception:
+                self.log.exception("API call to retrieve pairing data failed")
+                time.sleep(PAIRING_WAIT_SEC)
+            else:
+                self.log.info("Pairing code obtained: " + self.pairing_code)
 
     def _display_pairing_code(self):
         """Show the pairing code on the display, if one is available"""
