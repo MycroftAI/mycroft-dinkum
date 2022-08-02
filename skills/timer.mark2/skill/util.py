@@ -21,6 +21,10 @@ from mycroft.util.format import pronounce_number
 from mycroft.util.log import LOG
 from mycroft.util.parse import extract_duration, extract_number
 
+# Substitutions for timer names.
+# A value of None means to not interpret the key as a timer name.
+TIMER_NAME_REPLACEMENTS = {"to": "2", "for": "four", "an": None, "new": None}
+
 
 def extract_timer_duration(utterance: str) -> Tuple[Optional[timedelta], Optional[str]]:
     """Extract duration in seconds.
@@ -159,11 +163,8 @@ def extract_timer_name(
 
     name_extractor = RegexExtractor("Name", static_resources.name_regex)
     timer_name = name_extractor.extract(utterance)
+    timer_name = TIMER_NAME_REPLACEMENTS.get(timer_name, timer_name)
     if timer_name is not None:
-        if timer_name == "to":
-            timer_name = "2"
-        elif timer_name == "for":
-            timer_name = "4"
         LOG.info(f'Extracted timer name "{timer_name}" from utterance')
     else:
         LOG.info("No timer name extracted from utterance")
