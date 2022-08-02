@@ -38,8 +38,8 @@ MIA - RestartRadio.intent
 class RadioFreeMycroftSkill(CommonPlaySkill):
     """simple streaming radio skill"""
 
-    def __init__(self):
-        super().__init__(name="RfmSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="RfmSkill")
         self.rs = RadioStations()
         self.now_playing = None
         self.current_station = None
@@ -371,5 +371,5 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.CPS_release_output_focus()
 
 
-def create_skill():
-    return RadioFreeMycroftSkill()
+def create_skill(skill_id: str):
+    return RadioFreeMycroftSkill(skill_id=skill_id)

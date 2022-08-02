@@ -46,8 +46,8 @@ def split_sentences(text):
 
 
 class DuckduckgoSkill(CommonQuerySkill):
-    def __init__(self):
-        super(DuckduckgoSkill, self).__init__()
+    def __init__(self, skill_id: str):
+        super(DuckduckgoSkill, self).__init__(skill_id=skill_id)
         self._match = self._cqs_match = Answer()
         self.is_verb = " is "
         self.in_word = "in "
@@ -297,5 +297,5 @@ class DuckduckgoSkill(CommonQuerySkill):
         )
 
 
-def create_skill():
-    return DuckduckgoSkill()
+def create_skill(skill_id: str):
+    return DuckduckgoSkill(skill_id=skill_id)

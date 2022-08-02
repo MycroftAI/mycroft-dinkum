@@ -59,7 +59,7 @@ class Authentication(str, Enum):
 
 class ConnectCheck(MycroftSkill):
     def __init__(self, bus: MessageBusClient):
-        super().__init__(name="ConnectCheck", bus=bus)
+        super().__init__(skill_id="connect-check.mark2", name="ConnectCheck", bus=bus)
         self.skill_id = "connect-check.mark2"
         self.api = DeviceApi()
 

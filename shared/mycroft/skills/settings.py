@@ -56,9 +56,16 @@ SkillSettings Usage Example:
         s.save_settings()  # This happens automagically in a MycroftSkill
 """
 import json
+import os
 import re
+from http import HTTPStatus
 from pathlib import Path
+from threading import Timer
 
+import requests
+import yaml
+from mycroft.api import DeviceApi
+from mycroft.identity import IdentityManager
 from mycroft.util.log import LOG
 from mycroft.util.string_utils import camel_case_split
 
@@ -107,3 +114,141 @@ def get_display_name(skill_name: str):
     """Splits camelcase and removes leading/trailing "skill"."""
     skill_name = re.sub(r"(^[Ss]kill|[Ss]kill$)", "", skill_name)
     return camel_case_split(skill_name)
+
+
+class SettingsMetaUploader:
+    """Synchronize the contents of the settingsmeta.json file with the backend.
+
+    The settingsmeta.json (or settingsmeta.yaml) file is defined by the skill
+    author.  It defines the user-configurable settings for a skill and contains
+    instructions for how to display the skill's settings in the Selene web
+    application (https://account.mycroft.ai).
+    """
+
+    _settings_meta_path = None
+
+    def __init__(self, skill_directory: str, skill_name: str):
+        self.skill_directory = Path(skill_directory)
+        self.skill_name = skill_name
+        self.json_path = self.skill_directory.joinpath("settingsmeta.json")
+        self.yaml_path = self.skill_directory.joinpath("settingsmeta.yaml")
+        self.settings_meta = {}
+        self.api = None
+        self.upload_timer = None
+        self.sync_enabled = True
+        self._stopped = None
+
+        # Property placeholders
+        self._skill_gid = None
+
+    @property
+    def skill_gid(self):
+        api = self.api or DeviceApi()
+        skill_gid = f"@|{self.skill_name}"
+
+        if api.identity.uuid:
+            self._skill_gid = skill_gid.replace("@|", "@{}|".format(api.identity.uuid))
+
+        return self._skill_gid
+
+    @property
+    def settings_meta_path(self):
+        """Fully qualified path to the settingsmeta file."""
+        if self._settings_meta_path is None:
+            if self.yaml_path.is_file():
+                self._settings_meta_path = self.yaml_path
+            else:
+                self._settings_meta_path = self.json_path
+
+        return self._settings_meta_path
+
+    def upload(self):
+        """Upload the contents of the settingsmeta file to Mycroft servers.
+
+        The settingsmeta file does not change often, if at all.  Only perform
+        the upload if a change in the file is detected.
+        """
+        if not self.sync_enabled:
+            return
+        synced = False
+        identity = IdentityManager().get()
+        if identity.uuid:
+            self.api = DeviceApi()
+            settings_meta_file_exists = (
+                self.json_path.is_file() or self.yaml_path.is_file()
+            )
+            if settings_meta_file_exists:
+                self._load_settings_meta_file()
+
+            self._update_settings_meta()
+            LOG.debug("Uploading settings meta for " + self.skill_gid)
+            synced = self._issue_api_call()
+        else:
+            LOG.debug("settingsmeta.json not uploaded - no identity")
+
+        if not synced and not self._stopped:
+            self.upload_timer = Timer(ONE_MINUTE, self.upload)
+            self.upload_timer.daemon = True
+            self.upload_timer.start()
+
+    def stop(self):
+        """Stop upload attempts if Timer is running."""
+        if self.upload_timer:
+            self.upload_timer.cancel()
+        # Set stopped flag if upload is running when stop is called.
+        self._stopped = True
+
+    def _load_settings_meta_file(self):
+        """Read the contents of the settingsmeta file into memory."""
+        _, ext = os.path.splitext(str(self.settings_meta_path))
+        is_json_file = self.settings_meta_path.suffix == ".json"
+        try:
+            with open(str(self.settings_meta_path)) as meta_file:
+                if is_json_file:
+                    self.settings_meta = json.load(meta_file)
+                else:
+                    self.settings_meta = yaml.safe_load(meta_file)
+        except requests.HTTPError as http_error:
+            if http_error.response.status_code == HTTPStatus.UNAUTHORIZED:
+                LOG.warning("Settings not uploaded - device not paired")
+            else:
+                LOG.exception("Settings not uploaded")
+        except Exception:
+            log_msg = "Failed to load settingsmeta file: "
+            LOG.exception(log_msg + str(self.settings_meta_path))
+
+    def _update_settings_meta(self):
+        """Make sure the skill gid and name are included in settings meta.
+
+        Even if a skill does not have a settingsmeta file, we will upload
+        settings meta JSON containing a skill gid and name
+        """
+        # Insert skill_gid and display_name
+        self.settings_meta.update(
+            skill_gid=self.skill_gid,
+            display_name=(
+                self.settings_meta.get("name") or get_display_name(self.skill_name)
+            ),
+        )
+        for deprecated in ("color", "identifier", "name"):
+            if deprecated in self.settings_meta:
+                log_msg = (
+                    'DEPRECATION WARNING: The "{}" attribute in the '
+                    "settingsmeta file is no longer supported."
+                )
+                LOG.warning(log_msg.format(deprecated))
+                del self.settings_meta[deprecated]
+
+    def _issue_api_call(self):
+        """Use the API to send the settings meta to the server."""
+        try:
+            self.api.upload_skill_metadata(self.settings_meta)
+        except Exception:
+            LOG.exception(
+                "Failed to upload skill settings meta " "for {}".format(self.skill_gid)
+            )
+            success = False
+        else:
+            success = True
+
+        return success

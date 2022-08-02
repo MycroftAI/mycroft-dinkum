@@ -35,8 +35,8 @@ Query.__new__.__defaults__ = (None,) * len(Query._fields)
 
 
 class WolframAlphaSkill(CommonQuerySkill):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id)
         self._last_query = self._cqs_match = Query()
         self.question_parser = EnglishQuestionParser()
         self.autotranslate = False
@@ -251,5 +251,5 @@ class WolframAlphaSkill(CommonQuerySkill):
         return self.dialog_renderer.render(template, data)
 
 
-def create_skill():
-    return WolframAlphaSkill()
+def create_skill(skill_id: str):
+    return WolframAlphaSkill(skill_id=skill_id)

@@ -25,8 +25,8 @@ STATUS_KEYS = ["track", "artist", "album", "image"]
 
 
 class PlaybackControlSkill(MycroftSkill):
-    def __init__(self):
-        super(PlaybackControlSkill, self).__init__("Playback Control Skill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="Playback Control Skill")
         self.phrase: Optional[str] = None
         self.reply_message: Optional[Message] = None
         self._stream_session_id: Optional[str] = None
@@ -185,5 +185,5 @@ class PlaybackControlSkill(MycroftSkill):
             self.log.exception("Error processing playback results")
 
 
-def create_skill():
-    return PlaybackControlSkill()
+def create_skill(skill_id: str):
+    return PlaybackControlSkill(skill_id=skill_id)

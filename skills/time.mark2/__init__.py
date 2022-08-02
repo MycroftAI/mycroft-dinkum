@@ -49,8 +49,8 @@ TEN_SECONDS = 10
 class TimeSkill(MycroftSkill):
     """Mycroft skill for reporting the current and future time."""
 
-    def __init__(self):
-        super().__init__("TimeSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="TimeSkill")
         self.displayed_time = None
         self.location_regex_path = Path(self.find_resource("location.rx"))
 
@@ -190,6 +190,6 @@ class TimeSkill(MycroftSkill):
         pass
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Boilerplate code used to load the skill."""
-    return TimeSkill()
+    return TimeSkill(skill_id=skill_id)

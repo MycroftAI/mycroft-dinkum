@@ -1,4 +1,4 @@
 adapt-parser@https://github.com/MycroftAI/adapt/tarball/feature/exclude_and_exactly
 lingua-franca==0.4.2
 sdnotify~=0.3.0
-
+PyYAML>=6.0,<7

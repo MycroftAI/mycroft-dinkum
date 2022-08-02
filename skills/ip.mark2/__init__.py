@@ -74,8 +74,8 @@ def which(program):
 
 
 class IPSkill(MycroftSkill):
-    def __init__(self):
-        super(IPSkill, self).__init__(name="IPSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="IPSkill")
 
     def initialize(self):
         # Only register the SSID intent if iwlist is installed on the system
@@ -193,5 +193,5 @@ class IPSkill(MycroftSkill):
         return dialog, gui
 
 
-def create_skill():
-    return IPSkill()
+def create_skill(skill_id: str):
+    return IPSkill(skill_id=skill_id)

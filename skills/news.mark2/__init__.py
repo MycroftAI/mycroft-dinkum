@@ -39,8 +39,8 @@ CONF_GENERIC_MATCH = 0.6
 
 
 class NewsSkill(CommonPlaySkill):
-    def __init__(self):
-        super().__init__(name="NewsSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="NewsSkill")
         self.now_playing: Optional[BaseStation] = None
         self._stream_session_id: Optional[str] = None
 
@@ -290,5 +290,5 @@ class NewsSkill(CommonPlaySkill):
             return self.end_session(gui_clear=GuiClear.AT_END)
 
 
-def create_skill():
-    return NewsSkill()
+def create_skill(skill_id: str):
+    return NewsSkill(skill_id=skill_id)

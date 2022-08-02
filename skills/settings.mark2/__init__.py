@@ -38,8 +38,8 @@ class Mark2(MycroftSkill):
     reside in the Skill.
     """
 
-    def __init__(self):
-        super().__init__("Mark2")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="Mark2")
 
         # self.settings["auto_brightness"] = False
         # self.settings["use_listening_beep"] = True
@@ -494,9 +494,6 @@ class Mark2(MycroftSkill):
             gui_clear=GuiClear.NEVER,
         )
 
-    # def handle_started(self, _message):
-    #     self.gui.release()
 
-
-def create_skill():
-    return Mark2()
+def create_skill(skill_id: str):
+    return Mark2(skill_id=skill_id)

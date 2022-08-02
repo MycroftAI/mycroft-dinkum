@@ -55,8 +55,8 @@ class VolumeSkill(MycroftSkill):
                     ] = self.VOLUME_WORDS[volume_words_key]
             self.VOLUME_WORDS = new_volume_words
 
-    def __init__(self):
-        super(VolumeSkill, self).__init__("VolumeSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="VolumeSkill")
         self.settings["min_volume"] = self.settings.get("min_volume", 0)
         self.settings["max_volume"] = self.settings.get("max_volume", 100)
         self.settings["default_level"] = self.settings.get(
@@ -396,5 +396,5 @@ class VolumeSkill(MycroftSkill):
         return level
 
 
-def create_skill():
-    return VolumeSkill()
+def create_skill(skill_id: str):
+    return VolumeSkill(skill_id=skill_id)

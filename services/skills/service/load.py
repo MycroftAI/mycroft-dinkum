@@ -26,14 +26,13 @@ SKILL_MAIN_MODULE = "__init__.py"
 def create_skill_instance(skill_module, skill_id: str, bus: MessageBusClient):
     """Use v2 skills framework to create the skill."""
     try:
-        instance = skill_module.create_skill()
+        instance = skill_module.create_skill(skill_id)
     except Exception as e:
         log_msg = "Skill __init__ failed with {}"
         LOG.exception(log_msg.format(repr(e)))
         instance = None
 
     if instance:
-        instance.skill_id = skill_id
         instance.bind(bus)
         try:
             instance.load_data_files()

@@ -60,8 +60,8 @@ TWELVE_HOUR = "half"
 class WeatherSkill(MycroftSkill):
     """Main skill code for the weather skill."""
 
-    def __init__(self):
-        super().__init__("WeatherSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="WeatherSkill")
         self.weather_api = OpenWeatherMapApi()
         self.gui_image_directory = Path(self.root_dir).joinpath("ui")
         self.weather_config = None
@@ -1240,6 +1240,6 @@ class WeatherSkill(MycroftSkill):
         return latitude, longitude
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Boilerplate to invoke the weather skill."""
-    return WeatherSkill()
+    return WeatherSkill(skill_id=skill_id)

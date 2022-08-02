@@ -38,8 +38,8 @@ class HomescreenSkill(MycroftSkill):
         wallpaper: An instance of the class for managing wallpapers.
     """
 
-    def __init__(self):
-        super().__init__(name="HomescreenSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="HomescreenSkill")
         self.display_time = None
         self.display_date = None
         self.wallpaper = Wallpaper(self.root_dir, self.file_system.path)
@@ -246,6 +246,6 @@ class HomescreenSkill(MycroftSkill):
         self.update_gui_values("mark_ii_idle.qml", self._idle_gui_data)
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Boilerplate code to instantiate the skill."""
-    return HomescreenSkill()
+    return HomescreenSkill(skill_id=skill_id)

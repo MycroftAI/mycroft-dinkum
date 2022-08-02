@@ -22,8 +22,8 @@ from mycroft.skills.fallback_skill import FallbackSkill
 
 
 class QuestionsAnswersSkill(FallbackSkill):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id)
         self.lock = threading.Lock()
         self.is_searching = False
         self.searching_event = threading.Event()
@@ -146,5 +146,5 @@ class QuestionsAnswersSkill(FallbackSkill):
             self.log.exception("Error processing query results")
 
 
-def create_skill():
-    return QuestionsAnswersSkill()
+def create_skill(skill_id: str):
+    return QuestionsAnswersSkill(skill_id=skill_id)

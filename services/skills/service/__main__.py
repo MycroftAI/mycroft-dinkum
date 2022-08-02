@@ -13,10 +13,12 @@
 # limitations under the License.
 #
 import argparse
+from typing import Optional
 
 from lingua_franca import load_languages
 from mycroft.service import DinkumService
 from mycroft.skills import MycroftSkill
+from mycroft.skills.settings import SettingsMetaUploader
 from mycroft_bus_client import Message
 
 from .load import create_skill_instance, load_skill_source
@@ -31,6 +33,7 @@ class SkillsService(DinkumService):
         super().__init__(service_id=args.skill_id)
         self.args = args
         self._skill_instance: Optional[MycroftSkill] = None
+        self._meta_uploader: Optional[SettingsMetaUploader] = None
 
     def start(self):
         self._load_language()
@@ -42,13 +45,21 @@ class SkillsService(DinkumService):
     def after_start(self):
         super().after_start()
 
-        # Block skill from running until ready.
+        # Block skill from running state until ready.
         self._wait_for_ready()
 
+        # Upload skill metadata
+        # self._upload_settings_meta()
+
     def stop(self):
-        if self._skill_instance is not None:
-            self._skill_instance.default_shutdown()
-            self._skill_instance = None
+        try:
+            if self._skill_instance is not None:
+                self._skill_instance.default_shutdown()
+                self._skill_instance = None
+        finally:
+            if self._meta_uploader is not None:
+                self._meta_uploader.stop()
+                self._meta_uploader = None
 
     def _load_language(self):
         """Load language for Lingua Franca"""
@@ -70,6 +81,15 @@ class SkillsService(DinkumService):
         assert (
             self._skill_instance is not None
         ), f"Failed to create skill {self.args.skill_id}"
+
+    def _upload_settings_meta(self):
+        try:
+            self._meta_uploader = SettingsMetaUploader(
+                self.args.skill_directory, self._skill_instance.name
+            )
+            self._meta_uploader.upload()
+        except Exception:
+            self.log.exception("Error while uploading settings meta")
 
 
 def main():

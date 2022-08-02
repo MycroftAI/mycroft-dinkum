@@ -88,8 +88,8 @@ class AlarmSkill(MycroftSkill):
         static_resources: words and phrases used by the skill in the configured language
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id)
         self.beep_start_time = None
         self.flash_state = 0
         self.static_resources = None
@@ -856,6 +856,6 @@ class AlarmSkill(MycroftSkill):
         return len(self.active_alarms)
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Create the Alarm Skill for Mycroft."""
-    return AlarmSkill()
+    return AlarmSkill(skill_id=skill_id)

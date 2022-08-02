@@ -35,7 +35,7 @@ Article.__new__.__defaults__ = (None,) * len(Article._fields)
 
 
 class WikipediaSkill(CommonQuerySkill):
-    def __init__(self):
+    def __init__(self, skill_id: str):
         """Constructor for WikipediaSkill.
 
         Attributes:
@@ -45,7 +45,7 @@ class WikipediaSkill(CommonQuerySkill):
             translated_question_verbs (list[str]): used in cleaning queries
             translated_articles (list[str]): used in cleaning queries
         """
-        super(WikipediaSkill, self).__init__(name="WikipediaSkill")
+        super(WikipediaSkill, self).__init__(skill_id=skill_id, name="WikipediaSkill")
         self.platform = self.config_core["enclosure"].get("platform", "unknown")
         self.max_image_width = 416 if self.platform == "mycroft_mark_ii" else 1920
         self.translated_question_words = self.translate_list("question_words")
@@ -298,5 +298,5 @@ class WikipediaSkill(CommonQuerySkill):
         }
 
 
-def create_skill():
-    return WikipediaSkill()
+def create_skill(skill_id: str):
+    return WikipediaSkill(skill_id=skill_id)

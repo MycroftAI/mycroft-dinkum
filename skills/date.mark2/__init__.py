@@ -29,8 +29,8 @@ from .skill.util import extract_datetime_from_utterance
 class DateSkill(MycroftSkill):
     """Mycroft skill to respond to user requests for dates."""
 
-    def __init__(self):
-        super().__init__("DateSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, "DateSkill")
         self.displayed_time = None
 
     def initialize(self):
@@ -163,6 +163,6 @@ class DateSkill(MycroftSkill):
         return dialog, gui
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Boilerplate code used to load this skill into core."""
-    return DateSkill()
+    return DateSkill(skill_id=skill_id)

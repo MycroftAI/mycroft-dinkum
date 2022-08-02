@@ -70,9 +70,9 @@ class State(str, Enum):
 
 
 class TimerSkill(MycroftSkill):
-    def __init__(self):
+    def __init__(self, skill_id: str):
         """Constructor"""
-        super().__init__(self.__class__.__name__)
+        super().__init__(skill_id=skill_id, name=self.__class__.__name__)
         self.active_timers = list()
         self.sound_file_path = (
             Path(__file__).parent.joinpath("sounds", "two-beep.wav").absolute()
@@ -891,7 +891,7 @@ class TimerSkill(MycroftSkill):
                     save_info = json.load(data_file)
                     version = save_info.get("version")
                     if version != SERIALIZE_VERSION:
-                        LOG.warning(
+                        self.log.warning(
                             "Expected verson %s, got %s for %s",
                             SERIALIZE_VERSION,
                             version,
@@ -912,6 +912,6 @@ class TimerSkill(MycroftSkill):
         return {"timers": timer_dicts}
 
 
-def create_skill():
+def create_skill(skill_id: str):
     """Instantiate the timer skill."""
-    return TimerSkill()
+    return TimerSkill(skill_id=skill_id)

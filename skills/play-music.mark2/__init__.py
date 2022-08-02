@@ -46,8 +46,8 @@ class DemoMusicSkill(CommonPlaySkill):
     By default, MPD music is looked for in ~/Music
     """
 
-    def __init__(self):
-        super().__init__(name="DemoMusicSkill")
+    def __init__(self, skill_id: str):
+        super().__init__(skill_id=skill_id, name="DemoMusicSkill")
 
     def initialize(self):
         self._temp_dir = tempfile.TemporaryDirectory(prefix="mycroft-music-demo")
@@ -371,5 +371,5 @@ class DemoMusicSkill(CommonPlaySkill):
             LOG.exception("Failed to get album art")
 
 
-def create_skill():
-    return DemoMusicSkill()
+def create_skill(skill_id: str):
+    return DemoMusicSkill(skill_id=skill_id)

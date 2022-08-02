@@ -237,7 +237,7 @@ class PadatiousService:
         is_registered = self._register_object(
             message,
             "intent",
-            partial(self.container.load_intent, must_train=False),
+            partial(self.container.load_intent),
         )
         if is_registered:
             LOG.debug("Registered Padatious intent: %s", message.data["name"])
@@ -251,9 +251,7 @@ class PadatiousService:
             message (Message): message triggering action
         """
         self.registered_entities.append(message.data)
-        self._register_object(
-            message, "entity", partial(self.container.load_entity, must_train=False)
-        )
+        self._register_object(message, "entity", partial(self.container.load_entity))
 
     def calc_intent(self, utt):
         """Cached version of container calc_intent.

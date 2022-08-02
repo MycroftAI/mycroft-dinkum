@@ -138,10 +138,10 @@ class MycroftSkill:
 
     _resources = None
 
-    def __init__(self, name=None, bus=None, use_settings=True):
+    def __init__(self, skill_id: str, name=None, bus=None, use_settings=True):
         self.name = name or self.__class__.__name__
-        self.skill_id = ""  # will be set from the path, so guaranteed unique
         self.settings_meta = None  # set when skill is loaded in SkillLoader
+        self.skill_id = skill_id
         self.skill_service_initializing = False
 
         # For get_response
@@ -177,16 +177,16 @@ class MycroftSkill:
 
         #: Filesystem access to skill specific folder.
         #: See mycroft.filesystem for details.
-        self.file_system = FileSystemAccess(join("skills", self.name))
+        self.file_system = FileSystemAccess(join("skills", self.skill_id))
 
-        self.log = logging.getLogger(self.name)  #: Skill logger instance
+        self.log = logging.getLogger(self.skill_id)  #: Skill logger instance
         self.reload_skill = True  #: allow reloading (default True)
 
         self.events = EventContainer(bus)
         self.voc_match_cache = {}
 
         # Delegator classes
-        self.event_scheduler = EventSchedulerInterface(self.name)
+        self.event_scheduler = EventSchedulerInterface(self.skill_id)
         self.intent_service = IntentServiceInterface()
 
         # Skill Public API
@@ -254,35 +254,11 @@ class MycroftSkill:
 
     def _init_settings(self):
         """Setup skill settings."""
-
-        # To not break existing setups,
-        # save to skill directory if the file exists already
-        self.settings_write_path = Path(self.root_dir)
-
-        # Otherwise save to XDG_CONFIG_DIR
-        if not self.settings_write_path.joinpath("settings.json").exists():
-            self.settings_write_path = Path(
-                BaseDirectory.save_config_path(
-                    "mycroft", "skills", basename(self.root_dir)
-                )
-            )
-
-        # To not break existing setups,
-        # read from skill directory if the settings file exists there
-        settings_read_path = Path(self.root_dir)
-
-        # Then, check XDG_CONFIG_DIR
-        if not settings_read_path.joinpath("settings.json").exists():
-            for dir in BaseDirectory.load_config_paths(
-                "mycroft", "skills", basename(self.root_dir)
-            ):
-                path = Path(dir)
-                # If there is a settings file here, use it
-                if path.joinpath("settings.json").exists():
-                    settings_read_path = path
-                    break
-
-        self.settings = get_local_settings(settings_read_path, self.name)
+        self.settings_write_path = Path(
+            BaseDirectory.save_config_path("mycroft", "skills", self.skill_id)
+        )
+        settings_read_path = self.settings_write_path
+        self.settings = get_local_settings(settings_read_path, self.skill_id)
         self._initial_settings = deepcopy(self.settings)
 
     @property
@@ -425,14 +401,6 @@ class MycroftSkill:
         """Add all events allowing the standard interaction with the Mycroft
         system.
         """
-
-        # def stop_is_implemented():
-        #     return self.__class__.stop is not MycroftSkill.stop
-
-        # # Only register stop if it's been implemented
-        # if stop_is_implemented():
-        #     self.add_event("mycroft.stop", self.__handle_stop)
-
         self.add_event("mycroft.skill.stop", self.__handle_skill_stop)
         self.add_event("mycroft.skills.initialized", self.handle_skills_initialized)
         self.add_event("mycroft.skill.enable_intent", self.handle_enable_intent)
@@ -457,12 +425,12 @@ class MycroftSkill:
         """
         if self.settings_meta is None or self.settings_meta.skill_gid is None:
             LOG.error(
-                "The skill_gid was not set when " "{} was loaded!".format(self.name)
+                "The skill_gid was not set when " "{} was loaded!".format(self.skill_id)
             )
         else:
             remote_settings = message.data.get(self.settings_meta.skill_gid)
             if remote_settings is not None:
-                LOG.info("Updating settings for skill " + self.name)
+                LOG.info("Updating settings for skill " + self.skill_id)
                 self.settings.update(**remote_settings)
                 save_settings(self.settings_write_path, self.settings)
                 if self.settings_change_callback is not None:
@@ -992,95 +960,6 @@ class MycroftSkill:
         re.compile(regex)  # validate regex
         self.intent_service.register_adapt_regex(regex)
 
-    # def speak(
-    #     self,
-    #     utterance,
-    #     expect_response=False,
-    #     wait=True,
-    #     meta=None,
-    #     cache_key=None,
-    #     cache_keep=False,
-    #     response_skill_id=None,
-    # ):
-    #     """Speak a sentence.
-
-    #     Args:
-    #         utterance (str):        sentence mycroft should speak
-    #         expect_response (bool): set to True if Mycroft should listen
-    #                                 for a response immediately after
-    #                                 speaking the utterance.
-    #         wait (bool):            set to True to block while the text
-    #                                 is being spoken.
-    #         meta:                   Information of what built the sentence.
-    #         cache_key (str):        key from cache_speech or cache_dialog
-    #         cache_keep (bool):      True if cache_key can be reused
-    #     """
-    #     # Flush any previous wait_while_speaking()
-    #     self._tts_speak_finished.set()
-    #     self._tts_speak_finished.clear()
-    #     self._tts_session_id = str(uuid4())
-
-    #     # registers the skill as being active
-    #     meta = meta or {}
-    #     meta["skill"] = self.name
-    #     meta["skill_id"] = self.skill_id
-    #     self.enclosure.register(self.name)
-    #     data = {
-    #         "session_id": self._tts_session_id,
-    #         "utterance": utterance,
-    #         "expect_response": expect_response,
-    #         "response_skill_id": response_skill_id,
-    #         "meta": meta,
-    #         "skill_id": self.skill_id,
-    #         "cache_key": cache_key,
-    #         "cache_keep": cache_keep,
-    #         "activity_id": self._activity_id,
-    #         "mycroft_session_id": self._mycroft_session_id,
-    #     }
-    #     m = Message("speak", data)
-    #     self.bus.emit(m)
-
-    #     if wait:
-    #         self.wait_while_speaking()
-
-    # def speak_dialog(
-    #     self,
-    #     key,
-    #     data=None,
-    #     expect_response=False,
-    #     wait=True,
-    #     cache_key=None,
-    #     cache_keep=False,
-    #     response_skill_id=None,
-    # ):
-    #     """Speak a random sentence from a dialog file.
-
-    #     Args:
-    #         key (str): dialog file key (e.g. "hello" to speak from the file
-    #                                     "locale/en-us/hello.dialog")
-    #         data (dict): information used to populate sentence
-    #         expect_response (bool): set to True if Mycroft should listen
-    #                                 for a response immediately after
-    #                                 speaking the utterance.
-    #         wait (bool):            set to True to block while the text
-    #                                 is being spoken.
-    #         cache_key (str):        key from cache_speech or cache_dialog
-    #         cache_keep (bool):      True if cache_key can be reused
-    #     """
-    #     assert (
-    #         self.dialog_renderer
-    #     ), "dialog_render is None, does the locale/dialog folder exist?"
-    #     data = data or {}
-    #     self.speak(
-    #         self.dialog_renderer.render(key, data),
-    #         expect_response,
-    #         wait,
-    #         meta={"dialog": key, "data": data},
-    #         cache_key=cache_key,
-    #         cache_keep=cache_keep,
-    #         response_skill_id=response_skill_id,
-    #     )
-
     def acknowledge(self):
         """Acknowledge a successful request.
 
@@ -1191,8 +1070,8 @@ class MycroftSkill:
         if self.settings != self._initial_settings and Path(self.root_dir).exists():
             save_settings(self.settings_write_path, self.settings)
 
-        if self.settings_meta:
-            self.settings_meta.stop()
+        # if self.settings_meta:
+        #     self.settings_meta.stop()
 
         # Clear skill from gui
         self.gui.shutdown()
@@ -1205,7 +1084,7 @@ class MycroftSkill:
         try:
             self.stop()
         except Exception:
-            LOG.error("Failed to stop skill: {}".format(self.name), exc_info=True)
+            LOG.error("Failed to stop skill: {}".format(self.skill_id), exc_info=True)
 
     def schedule_event(self, handler, when, data=None, name=None, context=None):
         """Schedule a single-shot event.

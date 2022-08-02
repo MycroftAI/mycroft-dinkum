@@ -57,6 +57,9 @@ class EnclosureService(DinkumService):
         pass
 
     def handle_startup_finished(self, _message: Message):
+        # Skills should have been loaded by now
+        self.bus.emit(Message("mycroft.skills.initialized"))
+
         # Request switch states so mute is correctly shown
         self.bus.emit(Message("mycroft.switch.report-states"))
 
