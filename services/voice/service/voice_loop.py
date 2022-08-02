@@ -25,7 +25,7 @@ from .vad_command import VadCommand
 LOG = logging.getLogger("voice")
 
 # Seconds to wait for an audio chunk before erroring out
-AUDIO_TIMEOUT = 0.5
+AUDIO_TIMEOUT = 2
 
 # Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 4096
