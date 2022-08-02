@@ -72,7 +72,7 @@ Mycroft.Delegate {
             anchors.top: syncingClock3.top
             anchors.topMargin: gridUnit * 6
             anchors.left: connectingToInternet1.left
-            text: "Downloading settings"
+            text: "Download settings"
             height: gridUnit * 5
             success: step > 3
         }

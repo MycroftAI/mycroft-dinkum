@@ -51,8 +51,8 @@ class FallbackSkill(MycroftSkill):
     utterance will not be see by any other Fallback handlers.
     """
 
-    def __init__(self, name=None, bus=None, use_settings=True):
-        super().__init__(name, bus, use_settings)
+    def __init__(self, skill_id: str, name=None, bus=None, use_settings=True):
+        super().__init__(skill_id, name, bus, use_settings)
 
         self._handlers: Dict[str, FallbackHandler] = {}
 

@@ -59,8 +59,8 @@ class CommonPlaySkill(MycroftSkill, ABC):
     is needed.
     """
 
-    def __init__(self, name=None, bus=None):
-        super().__init__(name, bus)
+    def __init__(self, skill_id: str, name=None, bus=None):
+        super().__init__(skill_id, name, bus)
         self.play_service_string = None
         self._audio_session_id: Optional[str] = None
 

@@ -64,8 +64,8 @@ class CommonQuerySkill(MycroftSkill, ABC):
     answers from several skills presenting the best one available.
     """
 
-    def __init__(self, name=None, bus=None):
-        super().__init__(name, bus)
+    def __init__(self, skill_id: str, name=None, bus=None):
+        super().__init__(skill_id, name, bus)
         noise_words_filepath = "text/%s/noise_words.list" % (self.lang,)
         noise_words_filename = resolve_resource_file(noise_words_filepath)
         self.translated_noise_words = []
