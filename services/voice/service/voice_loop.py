@@ -28,7 +28,7 @@ LOG = logging.getLogger("voice")
 AUDIO_TIMEOUT = 0.5
 
 # Bytes to read from microphone at a time
-AUDIO_CHUNK_SIZE = 2048
+AUDIO_CHUNK_SIZE = 4096
 
 # Onnx model path for Silero VAD
 VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
