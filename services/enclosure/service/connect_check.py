@@ -28,11 +28,13 @@ from mycroft.configuration.remote import (
 )
 from mycroft.identity import IdentityManager
 from mycroft.skills import GuiClear, MessageSend, MycroftSkill
+from mycroft.skills.settings import SkillSettingsDownloader
 from mycroft.util.network_utils import check_system_clock_sync_status
 from mycroft_bus_client import Message, MessageBusClient
 from requests import HTTPError
 
 from .awconnect import AwconnectClient
+from .skills_manifest import get_skills_manifest
 
 INTERNET_RETRIES = 5
 INTERNET_WAIT_SEC = 10
@@ -59,10 +61,13 @@ class Authentication(str, Enum):
 
 
 class ConnectCheck(MycroftSkill):
-    def __init__(self, bus: MessageBusClient):
+    def __init__(
+        self, bus: MessageBusClient, skill_settings_downloader: SkillSettingsDownloader
+    ):
         super().__init__(skill_id="connect-check.mark2", name="ConnectCheck", bus=bus)
         self.skill_id = "connect-check.mark2"
         self.api = DeviceApi()
+        self._skill_settings_downloader = skill_settings_downloader
 
         self.pairing_token = None
         self.pairing_code = None
@@ -592,12 +597,23 @@ class ConnectCheck(MycroftSkill):
         self.log.debug("Downloading remote settings")
         try:
             api = DeviceApi()
+
+            # Remote mycroft.conf settings
             remote_config = download_remote_settings(api)
             settings_path = get_remote_settings_path()
 
             # Save to ~/.config/mycroft/mycroft.remote.conf
             with open(settings_path, "w", encoding="utf-8") as settings_file:
                 json.dump(remote_config, settings_file)
+
+            # skills.json with installed skills
+            self.log.debug("Uploading skills manifest")
+            skills_manifest = get_skills_manifest()
+            api.upload_skills_data(skills_manifest)
+
+            # Individual skill settings
+            self.log.debug("Downloading remote skill settings")
+            self._skill_settings_downloader.download()
         except Exception:
             self.log.exception("Error downloading remote settings")
 

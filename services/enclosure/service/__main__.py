@@ -14,9 +14,12 @@
 #
 import json
 import time
+from pathlib import Path
 from typing import Optional
 
+import xdg.BaseDirectory
 from mycroft.service import DinkumService
+from mycroft.skills.settings import SkillSettingsDownloader
 from mycroft_bus_client import Message
 
 from .connect_check import ConnectCheck
@@ -48,7 +51,15 @@ class EnclosureService(DinkumService):
         # Connected to internet + paired
         self.bus.on("server-connect.startup-finished", self.handle_startup_finished)
 
-        self._connect_check = ConnectCheck(self.bus)
+        remote_settings_path = (
+            Path(xdg.BaseDirectory.xdg_config_home)
+            / "mycroft"
+            / "mycroft.remote.skill_settings.json"
+        )
+        self._skill_settings_downloader = SkillSettingsDownloader(
+            self.bus, remote_settings_path
+        )
+        self._connect_check = ConnectCheck(self.bus, self._skill_settings_downloader)
         self._connect_check.load_data_files()
         self._connect_check.initialize()
         self._connect_check.start()

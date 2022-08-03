@@ -1,0 +1,6 @@
+{
+    "skills": [
+        { "name": "Alarm Skill", "skill_gid": "alarm.mark2" },
+        { "name": "Homescreen Skill", "skill_gid": "homescreen.mark2" }
+    ]
+}

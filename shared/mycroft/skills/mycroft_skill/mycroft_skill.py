@@ -423,18 +423,13 @@ class MycroftSkill:
         that had their settings changed.  Only update this skill's settings
         if its remote settings were among those changed
         """
-        if self.settings_meta is None or self.settings_meta.skill_gid is None:
-            LOG.error(
-                "The skill_gid was not set when " "{} was loaded!".format(self.skill_id)
-            )
-        else:
-            remote_settings = message.data.get(self.settings_meta.skill_gid)
-            if remote_settings is not None:
-                LOG.info("Updating settings for skill " + self.skill_id)
-                self.settings.update(**remote_settings)
-                save_settings(self.settings_write_path, self.settings)
-                if self.settings_change_callback is not None:
-                    self.settings_change_callback()
+        remote_settings = message.data.get(self.skill_id)
+        if remote_settings is not None:
+            LOG.info("Updating settings for skill " + self.skill_id)
+            self.settings.update(**remote_settings)
+            save_settings(self.settings_write_path, self.settings)
+            if self.settings_change_callback is not None:
+                self.settings_change_callback()
 
     def detach(self):
         for (name, _) in self.intent_service:

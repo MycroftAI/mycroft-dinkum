@@ -14,7 +14,6 @@
 """Determine what the spoken response to a users timer request should be."""
 from mycroft.util.format import nice_duration
 
-
 SINGLE_UNNAMED_TIMER_NAME = "Timer"
 
 

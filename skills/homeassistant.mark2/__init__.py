@@ -5,9 +5,9 @@ from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
-
 from mycroft.util.format import nice_number
 from quantulum3 import parser
+
 from .ha_client import HomeAssistantClient, check_url
 
 __author__ = "robconnolly, btotharye, nielstron"

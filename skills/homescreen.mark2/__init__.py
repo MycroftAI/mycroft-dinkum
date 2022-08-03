@@ -43,6 +43,7 @@ class HomescreenSkill(MycroftSkill):
         self.display_time = None
         self.display_date = None
         self.wallpaper = Wallpaper(self.root_dir, self.file_system.path)
+        self.settings_change_callback = self._handle_settings_change
 
     def initialize(self):
         """Performs tasks after instantiation but before loading is complete."""
@@ -78,6 +79,38 @@ class HomescreenSkill(MycroftSkill):
             self._idle_gui_data["wallpaperPath"] = None
         else:
             self._idle_gui_data["wallpaperPath"] = str(self.wallpaper.selected)
+
+    def _handle_settings_change(self):
+        """Reacts to changes in the user settings for this skill."""
+        new_wallpaper_settings = self._check_for_wallpaper_setting_change()
+        if new_wallpaper_settings:
+            try:
+                self.wallpaper.file_name_setting = self.settings.get("wallpaper_file")
+                self.wallpaper.url_setting = self.settings.get("wallpaper_url")
+                self.wallpaper.change()
+            except WallpaperError:
+                self.log.exception("An error occurred setting the wallpaper.")
+                self._idle_gui_data["wallpaperPath"] = None
+            else:
+                self._idle_gui_data["wallpaperPath"] = str(self.wallpaper.selected)
+                self._update_gui()
+                self.bus.emit(
+                    Message(
+                        "homescreen.wallpaper.changed",
+                        data={"name": self.wallpaper.file_name_setting},
+                    )
+                )
+
+    def _check_for_wallpaper_setting_change(self):
+        """Determine if the new settings are related to the wallpaper."""
+        file_name_setting = self.settings.get("wallpaper_file")
+        url_setting = self.settings.get("wallpaper_url")
+        change_wallpaper = (
+            file_name_setting != self.wallpaper.file_name_setting
+            or url_setting != self.wallpaper.url_setting
+        )
+
+        return change_wallpaper
 
     def _schedule_clock_update(self):
         """Checks for a clock update every ten seconds; start on a minute boundary."""

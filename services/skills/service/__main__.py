@@ -49,7 +49,7 @@ class SkillsService(DinkumService):
         self._wait_for_ready()
 
         # Upload skill metadata
-        # self._upload_settings_meta()
+        self._upload_settings_meta()
 
     def stop(self):
         self._unload_skill()
@@ -88,7 +88,7 @@ class SkillsService(DinkumService):
     def _upload_settings_meta(self):
         try:
             self._meta_uploader = SettingsMetaUploader(
-                self.args.skill_directory, self._skill_instance.name
+                self.args.skill_directory, self.args.skill_id
             )
             self._meta_uploader.upload()
         except Exception:

@@ -68,6 +68,7 @@ from mycroft.api import DeviceApi
 from mycroft.identity import IdentityManager
 from mycroft.util.log import LOG
 from mycroft.util.string_utils import camel_case_split
+from mycroft_bus_client import Message, MessageBusClient
 
 ONE_MINUTE = 60
 
@@ -116,6 +117,9 @@ def get_display_name(skill_name: str):
     return camel_case_split(skill_name)
 
 
+# -----------------------------------------------------------------------------
+
+
 class SettingsMetaUploader:
     """Synchronize the contents of the settingsmeta.json file with the backend.
 
@@ -135,7 +139,6 @@ class SettingsMetaUploader:
         self.settings_meta = {}
         self.api = None
         self.upload_timer = None
-        self.sync_enabled = True
         self._stopped = None
 
         # Property placeholders
@@ -143,13 +146,7 @@ class SettingsMetaUploader:
 
     @property
     def skill_gid(self):
-        api = self.api or DeviceApi()
-        skill_gid = f"@|{self.skill_name}"
-
-        if api.identity.uuid:
-            self._skill_gid = skill_gid.replace("@|", "@{}|".format(api.identity.uuid))
-
-        return self._skill_gid
+        return self.skill_name
 
     @property
     def settings_meta_path(self):
@@ -168,8 +165,6 @@ class SettingsMetaUploader:
         The settingsmeta file does not change often, if at all.  Only perform
         the upload if a change in the file is detected.
         """
-        if not self.sync_enabled:
-            return
         synced = False
         identity = IdentityManager().get()
         if identity.uuid:
@@ -187,6 +182,7 @@ class SettingsMetaUploader:
             LOG.debug("settingsmeta.json not uploaded - no identity")
 
         if not synced and not self._stopped:
+            LOG.debug("Scheduling manifest upload in %s second(s)", ONE_MINUTE)
             self.upload_timer = Timer(ONE_MINUTE, self.upload)
             self.upload_timer.daemon = True
             self.upload_timer.start()
@@ -252,3 +248,109 @@ class SettingsMetaUploader:
             success = True
 
         return success
+
+
+# -----------------------------------------------------------------------------
+
+
+class SkillSettingsDownloader:
+    """Manages download of skill settings.
+
+    Performs settings download on a repeating Timer. If a change is seen
+    the data is sent to the relevant skill.
+    """
+
+    def __init__(self, bus: MessageBusClient, remote_cache_path: Path):
+        self.bus = bus
+        self.continue_downloading = True
+
+        self.remote_cache_path = Path(remote_cache_path)
+        self.last_download_result = {}
+
+        if self.remote_cache_path.exists():
+            LOG.debug("Loading remote skill settings from %s", self.remote_cache_path)
+            with open(
+                self.remote_cache_path, "r", encoding="utf-8"
+            ) as remote_cache_file:
+                self.last_download_result = json.load(remote_cache_file)
+
+        self.api = DeviceApi()
+        self.download_timer = None
+
+    def stop_downloading(self):
+        """Stop synchronizing backend and core."""
+        self.continue_downloading = False
+        if self.download_timer:
+            self.download_timer.cancel()
+
+    # TODO: implement as websocket
+    def download(self, message=None):
+        """Download the settings stored on the backend and check for changes
+
+        When used as a messagebus handler a message is passed but not used.
+        """
+        remote_settings = self._get_remote_settings()
+        if remote_settings:
+            settings_changed = self.last_download_result != remote_settings
+            if settings_changed:
+                LOG.debug("Skill settings changed since last download")
+                self._emit_settings_change_events(remote_settings)
+                self.last_download_result = remote_settings
+            else:
+                LOG.debug("No skill settings changes since last download")
+        # If this method is called outside of the timer loop, ensure the
+        # existing timer is canceled before starting a new one.
+        if self.download_timer:
+            self.download_timer.cancel()
+
+        if self.continue_downloading:
+            LOG.debug("Scheduling settings download in %s second(s)", ONE_MINUTE)
+            self.download_timer = Timer(ONE_MINUTE, self.download)
+            self.download_timer.daemon = True
+            self.download_timer.start()
+
+    def _get_remote_settings(self):
+        """Get the settings for this skill from the server
+
+        Returns:
+            skill_settings (dict or None): returns a dict on success, else None
+        """
+        remote_settings = None
+        try:
+            remote_settings = self.api.get_skill_settings()
+
+            # Save settings to cache
+            self.remote_cache_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(
+                self.remote_cache_path, "w", encoding="utf-8"
+            ) as remote_cache_file:
+                json.dump(remote_settings, remote_cache_file)
+
+            LOG.debug("Wrote remote skill settings to %s", self.remote_cache_path)
+        except requests.HTTPError as http_error:
+            if http_error.response.status_code == HTTPStatus.UNAUTHORIZED:
+                LOG.warning("Settings not downloaded - device not paired")
+            else:
+                LOG.exception("Settings not downloaded")
+        except Exception:
+            LOG.exception("Failed to download remote settings from server.")
+
+        return remote_settings
+
+    def _emit_settings_change_events(self, remote_settings):
+        """Emit changed settings events for each affected skill."""
+        changed_data = {}
+        for skill_gid, skill_settings in remote_settings.items():
+            settings_changed = False
+            try:
+                previous_settings = self.last_download_result.get(skill_gid)
+            except Exception:
+                LOG.exception("error occurred handling setting change events")
+            else:
+                if previous_settings != skill_settings:
+                    changed_data[skill_gid] = skill_settings
+
+        if changed_data:
+            # Only send one message
+            message = Message("mycroft.skills.settings.changed", data=changed_data)
+            self.bus.emit(message)
