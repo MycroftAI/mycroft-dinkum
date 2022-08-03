@@ -93,7 +93,6 @@ class AlarmSkill(MycroftSkill):
         self.beep_start_time = None
         self.flash_state = 0
         self.static_resources = None
-        # self.active_alarms = []
         self.active_alarms = Alarms()
         self.save_path = Path(self.file_system.path, "saved_alarms.json")
         self.sound_duration = dict(

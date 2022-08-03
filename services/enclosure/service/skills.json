@@ -1,6 +1,22 @@
 {
     "skills": [
         { "name": "Alarm Skill", "skill_gid": "alarm.mark2" },
-        { "name": "Homescreen Skill", "skill_gid": "homescreen.mark2" }
+        { "name": "Date Skill", "skill_gid": "date.mark2" },
+        { "name": "Fallback Query", "skill_gid": "fallback-query.mark2" },
+        { "name": "Fallback Unknown", "skill_gid": "fallback-unknown.mark2" },
+        { "name": "Home Assistant Skill", "skill_gid": "homeassistant.mark2" },
+        { "name": "Homescreen Skill", "skill_gid": "homescreen.mark2" },
+        { "name": "IP Skill", "skill_gid": "ip.mark2" },
+        { "name": "News Skill", "skill_gid": "news.mark2" },
+        { "name": "Playback Control Skill", "skill_gid": "play.mark2" },
+        { "name": "Mycroft Radio Skill", "skill_gid": "play-radio.mark2" },
+        { "name": "DuckDuckGo Skill", "skill_gid": "query-duck-duck-go.mark2" },
+        { "name": "Wikipedia Skill", "skill_gid": "query-wiki.mark2" },
+        { "name": "Wolfram Alpha Skill", "skill_gid": "query-wolfram-alpha.mark2" },
+        { "name": "Mark II Settings Skill", "skill_gid": "settings.mark2" },
+        { "name": "Time Skill", "skill_gid": "time.mark2" },
+        { "name": "Timer Skill", "skill_gid": "timer.mark2" },
+        { "name": "Volume Skill", "skill_gid": "volume.mark2" },
+        { "name": "Weather Skill", "skill_gid": "weather.mark2" }
     ]
 }

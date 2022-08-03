@@ -177,6 +177,7 @@ class HomescreenSkill(MycroftSkill):
     def handle_alarm_status(self, event: Message):
         """Use the alarm data from the event to control visibility of the alarm icon."""
         self._idle_gui_data["showAlarmIcon"] = event.data["active_alarms"]
+        self._update_gui()
 
     @intent_handler(AdaptIntent().require("show").require("home"))
     def show_homescreen(self, _):
