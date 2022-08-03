@@ -436,7 +436,9 @@ class AudioUserInterface:
                         )
                     )
 
-                is_different_session = self._mycroft_session_id != request.mycroft_session_id
+                is_different_session = (
+                    self._mycroft_session_id != request.mycroft_session_id
+                )
                 if request.is_last_chunk or is_different_session:
                     self._finish_tts_session(
                         tts_session_id=request.tts_session_id,

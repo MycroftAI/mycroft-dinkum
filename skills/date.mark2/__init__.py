@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Mycroft skill to respond to user requests for dates."""
-import typing
-from datetime import date, datetime, timedelta
-from urllib import request
+from datetime import date
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler

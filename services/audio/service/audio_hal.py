@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 import typing
 from pathlib import Path
+from threading import RLock
 from typing import Optional
 
 import numpy as np
@@ -86,6 +87,8 @@ class AudioHAL:
         self._bg_volume: float = 1.0
         self._bg_position: int = 0
 
+        self._mixer_lock = RLock()
+
         # Callback must be defined inline in order to capture "self"
         @ctypes.CFUNCTYPE(None, ctypes.c_int)
         def fg_channel_finished(channel):
@@ -106,7 +109,8 @@ class AudioHAL:
                 # Free audio chunk if it wasn't cached
                 chunk = self._fg_free.pop(channel, None)
                 if chunk is not None:
-                    mixer.Mix_FreeChunk(chunk)
+                    with self._mixer_lock:
+                        mixer.Mix_FreeChunk(chunk)
             except Exception:
                 LOG.exception("Error finishing channel: %s", channel)
 
@@ -257,7 +261,8 @@ class AudioHAL:
         if chunk is None:
             # Need to load new chunk
             LOG.debug("Loading audio file: %s", file_path)
-            chunk = mixer.Mix_LoadWAV(file_path_str.encode())
+            with self._mixer_lock:
+                chunk = mixer.Mix_LoadWAV(file_path_str.encode())
 
             if not chunk:
                 raise SDLException(self._get_mixer_error())
@@ -276,33 +281,38 @@ class AudioHAL:
         # Chunk will be freed after playing it not caching
         self._fg_free[channel] = chunk if not cache else None
 
-        if volume is not None:
-            # Set channel volume
-            mixer.Mix_Volume(channel, self._clamp_volume(volume))
-        else:
-            # Max volume
-            mixer.Mix_Volume(channel, self._clamp_volume(1.0))
+        with self._mixer_lock:
+            if volume is not None:
+                # Set channel volume
+                mixer.Mix_Volume(channel, self._clamp_volume(volume))
+            else:
+                # Max volume
+                mixer.Mix_Volume(channel, self._clamp_volume(1.0))
 
-        ret = mixer.Mix_PlayChannel(channel, chunk, 0)  # 0 = no looping
-        self._check_sdl(ret)
+            ret = mixer.Mix_PlayChannel(channel, chunk, 0)  # 0 = no looping
+            self._check_sdl(ret)
 
         return duration_sec
 
     def pause_foreground(self, channel: int = -1):
         """Pause media on a foreground channel (-1 for all)"""
-        mixer.Mix_Pause(channel)
+        with self._mixer_lock:
+            mixer.Mix_Pause(channel)
 
     def resume_foreground(self, channel: int = -1):
         """Resume media on a foreground channel (-1 for all)"""
-        mixer.Mix_Resume(channel)
+        with self._mixer_lock:
+            mixer.Mix_Resume(channel)
 
     def stop_foreground(self, channel: int = -1):
         """Stop media on a foreground channel (-1 for all)"""
-        mixer.Mix_HaltChannel(channel)
+        with self._mixer_lock:
+            mixer.Mix_HaltChannel(channel)
 
     def set_foreground_volume(self, volume: float, channel: int = -1):
         """Set volume [0-1] of a foreground channel (-1 for all)"""
-        mixer.Mix_Volume(channel, self._clamp_volume(volume))
+        with self._mixer_lock:
+            mixer.Mix_Volume(channel, self._clamp_volume(volume))
 
     def _clamp_volume(self, volume: float) -> int:
         """Convert volume in [0, 1] to SDL volume in [0, 128)"""
@@ -351,7 +361,9 @@ class AudioHAL:
         self._bg_media_id = media_id
         self._bg_position = 0
         self._bg_paused = False
-        mixer.Mix_HookMusic(self._bg_music_hook, None)
+
+        with self._mixer_lock:
+            mixer.Mix_HookMusic(self._bg_music_hook, None)
 
         LOG.info("Playing background music")
 
@@ -359,7 +371,8 @@ class AudioHAL:
         """Stop the background channel"""
         # Disable music hook.
         # HookMusicFunc() creates a NULL pointer
-        mixer.Mix_HookMusic(HookMusicFunc(), None)
+        with self._mixer_lock:
+            mixer.Mix_HookMusic(HookMusicFunc(), None)
 
         self._stop_bg_process()
         self._bg_position = 0

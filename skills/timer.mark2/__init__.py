@@ -13,7 +13,6 @@
 # limitations under the License.
 """A skill to set one or more timers for things like a kitchen timer."""
 import json
-import time
 from collections import namedtuple
 from datetime import timedelta
 from enum import Enum
@@ -24,12 +23,10 @@ from mycroft.messagebus.message import Message
 from mycroft.skills import GuiClear, MycroftSkill, intent_handler, skill_api_method
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import join_list, nice_duration, pronounce_number
-from mycroft.util.parse import extract_duration
-from mycroft.util.time import now_local, now_utc
+from mycroft.util.time import now_utc
 
 from .skill import (
     CountdownTimer,
-    FaceplateRenderer,
     TimerDialog,
     TimerMatcher,
     extract_timer_duration,

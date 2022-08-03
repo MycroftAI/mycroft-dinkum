@@ -1,7 +1,6 @@
 from typing import List
 
 from behave import given, then
-from mycroft.messagebus.message import Message
 
 SKILL_ID = "timer.mark2"
 CANCEL_RESPONSES = (

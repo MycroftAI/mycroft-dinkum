@@ -14,7 +14,7 @@
 """Utility functions for the timer skill."""
 import re
 from datetime import timedelta
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 from mycroft.skills.skill_data import RegexExtractor
 from mycroft.util.format import pronounce_number

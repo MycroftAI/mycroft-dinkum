@@ -515,7 +515,7 @@ class IntentService:
     def _disable_idle_timeout(self):
         """Stop GUI screen from going to idle after a timeout"""
         self._idle_seconds_left = None
-        self.log.debug("Disabled idle timeout")
+        LOG.debug("Disabled idle timeout")
 
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""

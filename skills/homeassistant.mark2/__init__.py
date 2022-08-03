@@ -1,28 +1,13 @@
 """
 Home Assistant skill
 """  # pylint: disable=C0103
-from os.path import join as pth_join
 from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 
-# from mycroft.skills.core import FallbackSkill
-from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.format import nice_number
 from quantulum3 import parser
-from requests.exceptions import (
-    HTTPError,
-    InvalidURL,
-    RequestException,
-    SSLError,
-    Timeout,
-    URLRequired,
-)
-
-# pylint: disable=E0401
-from requests.packages.urllib3.exceptions import MaxRetryError
-
 from .ha_client import HomeAssistantClient, check_url
 
 __author__ = "robconnolly, btotharye, nielstron"
@@ -168,7 +153,7 @@ class HomeAssistantSkill(MycroftSkill):
             Function output or False"""
         try:
             return callback(*args, **kwargs)
-        except Exception as e:
+        except Exception:
             self.log.exception("Error in callback")
 
         return None

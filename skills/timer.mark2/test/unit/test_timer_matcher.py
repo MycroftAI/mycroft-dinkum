@@ -16,7 +16,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import lingua_franca
-from skill import CountdownTimer, TimerMatcher, extract_timer_name
+from skill import CountdownTimer, TimerMatcher
 
 _DIR = Path(__file__).parent
 
