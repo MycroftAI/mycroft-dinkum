@@ -6,6 +6,7 @@ from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
+
 # from mycroft.skills.core import FallbackSkill
 from mycroft.util.file_utils import get_cache_directory
 from mycroft.util.format import nice_number
@@ -18,6 +19,7 @@ from requests.exceptions import (
     Timeout,
     URLRequired,
 )
+
 # pylint: disable=E0401
 from requests.packages.urllib3.exceptions import MaxRetryError
 
@@ -73,38 +75,38 @@ class HomeAssistantSkill(MycroftSkill):
             }
 
             self.ha_client = HomeAssistantClient(config)
-            if self.ha_client.connected():
-                # Check if conversation component is loaded at HA-server
-                # and activate fallback accordingly (ha-server/api/components)
-                # TODO: enable other tools like dialogflow
-                # conversation_activated = self.ha_client.find_component("conversation")
-                # if conversation_activated:
-                #     self.enable_fallback = self.settings.get("enable_fallback")
+            # if self.ha_client.connected():
+            #     # Check if conversation component is loaded at HA-server
+            #     # and activate fallback accordingly (ha-server/api/components)
+            #     # TODO: enable other tools like dialogflow
+            #     conversation_activated = self.ha_client.find_component("conversation")
+            #     if conversation_activated:
+            #         self.enable_fallback = self.settings.get("enable_fallback")
 
-                # Register tracker entities
-                self._register_tracker_entities()
+            #     # Register tracker entities
+            #     self._register_tracker_entities()
 
     def _force_setup(self) -> None:
         self.log.debug("Creating a new HomeAssistant-Client")
         self._setup(True)
 
-    def _register_tracker_entities(self) -> None:
-        """List tracker entities.
+    # def _register_tracker_entities(self) -> None:
+    #     """List tracker entities.
 
-        Add them to entity file and registry it so
-        Padatious react only to known entities.
-        Should fix conflict with Where is skill.
-        """
-        types = ["device_tracker"]
-        entities = self.ha_client.list_entities(types)
+    #     Add them to entity file and registry it so
+    #     Padatious react only to known entities.
+    #     Should fix conflict with Where is skill.
+    #     """
+    #     types = ["device_tracker"]
+    #     entities = self.ha_client.list_entities(types)
 
-        if entities:
-            cache_dir = get_cache_directory(type(self).__name__)
-            self.tracker_file = pth_join(cache_dir, "tracker.entity")
+    #     if entities:
+    #         cache_dir = get_cache_directory(type(self).__name__)
+    #         self.tracker_file = pth_join(cache_dir, "tracker.entity")
 
-            with open(self.tracker_file, "w", encoding="utf8") as voc_file:
-                voc_file.write("\n".join(entities))
-            self.register_entity_file(self.tracker_file)
+    #         with open(self.tracker_file, "w", encoding="utf8") as voc_file:
+    #             voc_file.write("\n".join(entities))
+    #         self.register_entity_file(self.tracker_file)
 
     def initialize(self) -> None:
         """Initialize skill, set language and priority."""
@@ -278,12 +280,12 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Entity"] = message.data.get("entity")
         return self._handle_automation(message)
 
-    @intent_handler("tracker.intent")
-    def handle_tracker_intent(self, message: Message) -> Optional[Message]:
-        """Handle tracker intent."""
-        self.log.debug("Turn on intent on entity: %s", message.data.get("tracker"))
-        message.data["Entity"] = message.data.get("tracker")
-        return self._handle_tracker(message)
+    # @intent_handler("tracker.intent")
+    # def handle_tracker_intent(self, message: Message) -> Optional[Message]:
+    #     """Handle tracker intent."""
+    #     self.log.debug("Turn on intent on entity: %s", message.data.get("tracker"))
+    #     message.data["Entity"] = message.data.get("tracker")
+    #     return self._handle_tracker(message)
 
     @intent_handler("set.climate.intent")
     def handle_set_thermostat_intent(self, message: Message) -> Optional[Message]:
@@ -737,30 +739,30 @@ class HomeAssistantSkill(MycroftSkill):
     # Proximity might be an issue
     # - overlapping command for directions modules
     # - (e.g. "How far is x from y?")
-    def _handle_tracker(self, message: Message) -> Optional[Message]:
-        """Handler for finding trackers position."""
-        dialog = None
-        entity = message.data["Entity"]
-        self.log.debug("Entity: %s", entity)
+    # def _handle_tracker(self, message: Message) -> Optional[Message]:
+    #     """Handler for finding trackers position."""
+    #     dialog = None
+    #     entity = message.data["Entity"]
+    #     self.log.debug("Entity: %s", entity)
 
-        ha_entity = self._find_entity(entity, ["device_tracker"])
-        # Exit if entity not found or is unavailabe
-        if not ha_entity or not self._check_availability(ha_entity):
-            dialog = ("homeassistant.error.device.unknown", {"dev_name": entity})
-            return self.end_session(dialog=dialog)
+    #     ha_entity = self._find_entity(entity, ["device_tracker"])
+    #     # Exit if entity not found or is unavailabe
+    #     if not ha_entity or not self._check_availability(ha_entity):
+    #         dialog = ("homeassistant.error.device.unknown", {"dev_name": entity})
+    #         return self.end_session(dialog=dialog)
 
-        # IDEA: set context for 'locate it again' or similar
-        # self.set_context('Entity', ha_entity['dev_name'])
+    #     # IDEA: set context for 'locate it again' or similar
+    #     # self.set_context('Entity', ha_entity['dev_name'])
 
-        entity = ha_entity["id"]
-        dev_name = ha_entity["dev_name"]
-        dev_location = ha_entity["state"]
-        dialog = (
-            "homeassistant.tracker.found",
-            {"dev_name": dev_name, "location": dev_location},
-        )
+    #     entity = ha_entity["id"]
+    #     dev_name = ha_entity["dev_name"]
+    #     dev_location = ha_entity["state"]
+    #     dialog = (
+    #         "homeassistant.tracker.found",
+    #         {"dev_name": dev_name, "location": dev_location},
+    #     )
 
-        return self.end_session(dialog=dialog)
+    #     return self.end_session(dialog=dialog)
 
     def _handle_set_thermostat(self, message: Message) -> Optional[Message]:
         """Handler for setting thermostats."""
