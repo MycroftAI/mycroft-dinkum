@@ -45,6 +45,7 @@ Mycroft.Delegate {
             text: "Connect to Internet"
             height: gridUnit * 5
             success: step > 1
+            showSpinner: step == 1
         }
 
         StartupSequenceStep {
@@ -55,6 +56,7 @@ Mycroft.Delegate {
             text: "Pair with mycroft.ai"
             height: gridUnit * 5
             success: step > 2
+            showSpinner: step == 2
         }
 
         StartupSequenceStep {
@@ -65,6 +67,7 @@ Mycroft.Delegate {
             text: "Synchronize clock"
             height: gridUnit * 5
             success: step > 3
+            showSpinner: step == 3
         }
 
         StartupSequenceStep {
@@ -74,7 +77,8 @@ Mycroft.Delegate {
             anchors.left: connectingToInternet1.left
             text: "Download settings"
             height: gridUnit * 5
-            success: step > 3
+            success: step > 4
+            showSpinner: step == 4
         }
 
     }

@@ -32,10 +32,13 @@ import QtQuick.Layouts 1.1
 import QtQuick.Controls 2.3
 import QtGraphicalEffects 1.0
 
+import Mycroft 1.0 as Mycroft
+
 Item {
     property alias text: label.text
     property color textColor: "#FFFFFF"
     property bool success: false
+    property bool showSpinner: false
 
     Image {
         id: image
@@ -46,14 +49,13 @@ Item {
         source: "images/success.svg"
     }
 
-    ProgressBar {
-        id: progress
+    Mycroft.BusyIndicator {
+        id: busy
         anchors.left: parent.left
         anchors.verticalCenter: image.verticalCenter
         width: gridUnit * 5
-        height: gridUnit
-        indeterminate: true
-        visible: !success
+        running: showSpinner
+        visible: running
     }
 
     Label {
