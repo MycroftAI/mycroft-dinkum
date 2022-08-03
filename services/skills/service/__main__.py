@@ -52,14 +52,7 @@ class SkillsService(DinkumService):
         # self._upload_settings_meta()
 
     def stop(self):
-        try:
-            if self._skill_instance is not None:
-                self._skill_instance.default_shutdown()
-                self._skill_instance = None
-        finally:
-            if self._meta_uploader is not None:
-                self._meta_uploader.stop()
-                self._meta_uploader = None
+        self._unload_skill()
 
     def _load_language(self):
         """Load language for Lingua Franca"""
@@ -81,6 +74,16 @@ class SkillsService(DinkumService):
         assert (
             self._skill_instance is not None
         ), f"Failed to create skill {self.args.skill_id}"
+
+    def _unload_skill(self):
+        try:
+            if self._skill_instance is not None:
+                self._skill_instance.default_shutdown()
+                self._skill_instance = None
+        finally:
+            if self._meta_uploader is not None:
+                self._meta_uploader.stop()
+                self._meta_uploader = None
 
     def _upload_settings_meta(self):
         try:

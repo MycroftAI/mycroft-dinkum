@@ -88,9 +88,17 @@ class Session:
     """True if GUI should not be cleared until a new session takes over"""
 
     @property
-    def is_waiting_for_action(self):
+    def is_waiting_for_action(self) -> bool:
         """Session is currently waiting for an external action to complete"""
         return self.waiting_for_tts or self.waiting_for_audio or self.expect_response
+
+    @property
+    def has_gui_actions(self) -> bool:
+        """Session has at least one GUI action"""
+        return any(
+            isinstance(action, (ShowPageAction, ClearDisplayAction, WaitForIdleAction))
+            for action in self.actions
+        )
 
     def started(self, bus: MessageBusClient):
         """Report session has started"""

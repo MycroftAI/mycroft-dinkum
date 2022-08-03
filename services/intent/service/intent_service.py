@@ -303,7 +303,7 @@ class IntentService:
     def end_session(self, mycroft_session_id: str, aborted: bool = False):
         """End an existing session"""
         LOG.debug("Ending session: %s", mycroft_session_id)
-        session = self._sessions.pop(mycroft_session_id, None)
+        session = self._sessions.get(mycroft_session_id, None)
         if session is not None:
             if aborted:
                 session.aborted = True
@@ -326,7 +326,10 @@ class IntentService:
 
     def _run_session(self, session: Session):
         """Runs a session's actions until there aren't any more, or the session must wait for something."""
-        self._disable_idle_timeout()
+        if session.has_gui_actions:
+            # Prevent previous session's idle timeout from affecting this session
+            self._disable_idle_timeout()
+
         for action in session.run(self.bus):
             LOG.debug("Completed action for session %s: %s", session.id, action)
             if isinstance(action, GetResponseAction):
@@ -416,16 +419,20 @@ class IntentService:
             session = self._sessions.pop(mycroft_session_id, None)
 
             if session is not None:
-                if (
+                do_idle = False
+                if self._last_gui_session is None:
+                    do_idle = True
+                elif (
                     (self._last_gui_session is not None)
                     and (self._last_gui_session.id == session.id)
-                    and (not session.dont_clear_gui)
+                    and (session.aborted or (not session.dont_clear_gui))
                 ):
                     # The ended session owned the GUI, so now nobody owns it
                     self._last_gui_session = None
+                    do_idle = True
 
-                    if self._idle_seconds_left is not None:
-                        self._set_idle_timeout()
+                if do_idle and (self._idle_seconds_left is None):
+                    self._set_idle_timeout()
 
             if not self._sessions:
                 self.bus.emit(Message("mycroft.session.no-active-sessions"))
@@ -506,7 +513,9 @@ class IntentService:
         return handled
 
     def _disable_idle_timeout(self):
+        """Stop GUI screen from going to idle after a timeout"""
         self._idle_seconds_left = None
+        self.log.debug("Disabled idle timeout")
 
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""
