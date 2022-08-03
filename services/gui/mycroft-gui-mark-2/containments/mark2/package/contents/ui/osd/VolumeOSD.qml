@@ -46,7 +46,7 @@ SliderControl {
         target: Mycroft.MycroftController
 
         onIntentRecevied:{
-            if (type == "hardware.volume") {
+            if ((type == "hardware.volume") && !data.no_osd) {
                 root.parent.color = Qt.rgba(0, 0, 0, 0.5)
                 root.visible = true
                 root.value = data.volume;
