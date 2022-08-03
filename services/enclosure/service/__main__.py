@@ -71,6 +71,9 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.ready"))
         self.log.info("Ready")
 
+        # Set default volume
+        self.bus.emit(Message("mycroft.volume.set", data={"percent": 0.6}))
+
         # Show idle screen
         self.bus.emit(Message("mycroft.gui.idle"))
 
