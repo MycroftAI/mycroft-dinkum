@@ -57,7 +57,7 @@ class Mark2VolumeClient:
         self.bus.on("mycroft.volume.get", self._handle_volume_get)
         self.bus.on("mycroft.volume.mute", self._handle_volume_mute)
         self.bus.on("mycroft.volume.unmute", self._handle_volume_unmute)
-        self.set_volume(self._current_volume)
+        self.set_volume(self._current_volume, no_osd=True)
 
     def _handle_switch_state(self, message: Message):
         try:
@@ -88,7 +88,10 @@ class Mark2VolumeClient:
             volume = self._volume_min + (
                 percent * (self._volume_max - self._volume_min)
             )
-            self.set_volume(volume)
+            # True if volume OSD should not be displayed
+            no_osd = message.data.get("no_osd", False)
+
+            self.set_volume(volume, no_osd=no_osd)
         except Exception:
             self.log.exception("Error while setting volume")
 
@@ -113,7 +116,7 @@ class Mark2VolumeClient:
     def stop(self):
         pass
 
-    def set_volume(self, volume: int):
+    def set_volume(self, volume: int, no_osd: bool = False):
         """Sets the hardware volume using the I2C bus"""
         volume = min(self._volume_max, max(self._volume_min, volume))
         tas_volume = self._calc_log_y(volume)
@@ -123,7 +126,9 @@ class Mark2VolumeClient:
 
         # Normalize to [0, 1]
         norm_volume = volume / (self._volume_max - self._volume_min)
-        self.bus.emit(Message("hardware.volume", data={"volume": norm_volume}))
+        self.bus.emit(
+            Message("hardware.volume", data={"volume": norm_volume, "no_osd": no_osd})
+        )
 
     def _calc_log_y(self, x):
         """given x produce y. takes in an int
