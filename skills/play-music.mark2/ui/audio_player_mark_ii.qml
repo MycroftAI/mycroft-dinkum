@@ -25,37 +25,9 @@ Mycroft.CardDelegate {
     // If track length = 530000, position values range from 0 to 530000
     property var media: sessionData.media
     property var playerState: sessionData.status
-    property real playerPosition: sessionData.position
+    property real playerPosition: sessionData.playerPosition
     property bool isStreaming: media.streaming
     property bool streamTimerPaused: false
-
-
-    onPlayerStateChanged: {
-        //console.log(playerState)
-        if (!isStreaming) {
-            root.playerPosition = media.position
-        }
-        if (playerState === "Playing") {
-            streamTimer.running = true
-        } else if(playerState === "Paused") {
-            streamTimer.running = false
-        } else if(playerState === "Stopped") {
-            streamTimer.running = false
-            root.playerPosition = 0
-        }
-    }
-
-    Timer {
-        id: streamTimer
-        interval: 1000
-        running: false
-        repeat: true
-        onTriggered: {
-            if(!streamTimerPaused){
-                playerPosition = playerPosition + 1000
-            }
-        }
-    }
 
     Item {
         id: cardContents

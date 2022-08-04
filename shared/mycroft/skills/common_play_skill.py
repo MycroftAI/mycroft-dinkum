@@ -92,6 +92,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
 
     def __handle_play_query(self, message):
         """Query skill if it can start playback from given phrase."""
+        mycroft_session_id = message.data.get("mycroft_session_id")
         search_phrase = message.data["phrase"]
 
         # First, notify the requestor that we are attempting to handle
@@ -99,7 +100,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         self.bus.emit(
             message.response(
                 {
-                    "mycroft_session_id": message.data.get("mycroft_session_id"),
+                    "mycroft_session_id": mycroft_session_id,
                     "phrase": search_phrase,
                     "skill_id": self.skill_id,
                     "searching": True,
@@ -123,6 +124,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
                         "callback_data": callback,
                         "service_name": self.spoken_name,
                         "conf": confidence,
+                        "mycroft_session_id": mycroft_session_id,
                     }
                 )
             )
@@ -134,6 +136,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
                         "phrase": search_phrase,
                         "skill_id": self.skill_id,
                         "searching": False,
+                        "mycroft_session_id": mycroft_session_id,
                     }
                 )
             )
@@ -180,6 +183,8 @@ class CommonPlaySkill(MycroftSkill, ABC):
         if message.data["skill_id"] != self.skill_id:
             # Not for this skill!
             return
+
+        self._mycroft_session_id = message.data.get("mycroft_session_id")
         phrase = message.data["phrase"]
         data = message.data.get("callback_data")
 
@@ -197,7 +202,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         result: Optional[Message] = None
         try:
             # Invoke derived class to provide playback data
-            result = self.CQS_start(phrase, data)
+            result = self.CPS_start(phrase, data)
         except Exception:
             LOG.exception("Error starting common play service")
 
@@ -244,7 +249,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
                 data={"mycroft_session_id": self._audio_session_id},
             )
         )
-        self._audio_session_id = None
+        # self._audio_session_id = None
 
     def CPS_pause(self):
         self.bus.emit(

@@ -28,6 +28,10 @@ class Song:
     duration_sec: int
     file_path: Path
 
+    @property
+    def uri(self) -> str:
+        return f"file://{self.file_path.absolute()}"
+
 
 class MpdClient:
     """Bare bones MPD client using command-line mpc tool"""
@@ -36,9 +40,9 @@ class MpdClient:
         if music_dir:
             self.music_dir = Path(music_dir)
         else:
-            self.music_dir = Path("~/Music").expanduser()
+            self.music_dir = Path("/media")
 
-    def update(self, wait: bool = False):
+    def update(self, wait: bool = True):
         """Updates MPD database"""
         cmd = ["mpc", "update"]
         if wait:
@@ -65,6 +69,8 @@ class MpdClient:
                         duration_sec=self._time_to_seconds(time_str),
                         file_path=song_path,
                     )
+                else:
+                    LOG.warning("Missing file: %s", song_path)
 
     def _search(self, query_type: str, query: str) -> typing.List[typing.List[str]]:
         cmd = [
@@ -76,7 +82,7 @@ class MpdClient:
             query,
         ]
 
-        LOG.info(cmd)
+        LOG.debug(cmd)
         return [
             line.split("\t")
             for line in subprocess.check_output(
