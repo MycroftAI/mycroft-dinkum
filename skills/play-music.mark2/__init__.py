@@ -100,6 +100,9 @@ class LocalMusicSkill(CommonPlaySkill):
             return
 
         if self._mpd_playlist:
+            self._mpd_playlist = self._mpd_playlist[1:]
+
+        if self._mpd_playlist:
             self._play_next_song()
         elif self._gui_skill_id == self.skill_id:
             # Return to idle
@@ -166,14 +169,10 @@ class LocalMusicSkill(CommonPlaySkill):
         thumbnail_path = self._get_album_art(song.file_path)
         return {
             "theme": dict(fgColor="white", bgColor="black"),
-            "media": {
-                "artist": song.artist,
-                "title": f"{song.title} - {song.album}",
-                "length": song.duration_sec * 1000,
-                "image": f"file://{thumbnail_path}" if thumbnail_path else None,
-                "skill": self.skill_id,
-                "streaming": "true",
-            },
+            "artist": song.artist,
+            "title": f"{song.title} - {song.album}",
+            "length_ms": int(song.duration_sec * 1000),
+            "image": f"file://{thumbnail_path}" if thumbnail_path else None,
             "playerPosition": 0,
         }
 

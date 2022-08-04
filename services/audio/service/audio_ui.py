@@ -363,7 +363,12 @@ class AudioUserInterface:
         elif background:
             # Signal background stream complete
             LOG.info("Background stream finished")
-            self.bus.emit(Message("mycroft.audio.queue_end"))
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.queue_end",
+                    data={"mycroft_session_id": self._stream_session_id},
+                )
+            )
 
     def _speech_run(self):
         """Thread proc for text to speech"""

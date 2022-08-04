@@ -451,7 +451,7 @@ class IntentService:
 
     def handle_media_finished(self, message: Message):
         """Called when audio has finished playing"""
-        mycroft_session_id = message.data["mycroft_session_id"]
+        mycroft_session_id = message.data.get("mycroft_session_id")
         LOG.debug("Audio finished: %s", mycroft_session_id)
 
         with self._session_lock:
