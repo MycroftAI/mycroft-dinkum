@@ -149,7 +149,11 @@ class PlaybackControlSkill(MycroftSkill):
 
         try:
             skill_id = message.data["skill_id"]
-            conf = message.data["conf"]
+            conf = message.data.get("conf")
+            if conf is None:
+                self.log.debug("Skill couldn't handle request: %s", skill_id)
+                return
+
             phrase = message.data["phrase"]
 
             if (not self.reply_message) or (conf > self.reply_message.data["conf"]):
@@ -174,6 +178,7 @@ class PlaybackControlSkill(MycroftSkill):
                     "skill_id": skill_id,
                     "phrase": self.phrase,
                     "callback_data": self.reply_message.data.get("callback_data"),
+                    "mycroft_session_id": self._mycroft_session_id,
                 }
                 self.bus.emit(self.reply_message.forward("play:start", start_data))
             else:
