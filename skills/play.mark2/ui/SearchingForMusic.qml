@@ -42,7 +42,7 @@ Mycroft.Delegate {
             anchors.top: parent.top
             anchors.topMargin: gridUnit * 8
             anchors.left: parent.left
-            anchors.leftMargin: gridUnit * 8
+            anchors.leftmargin: gridunit * 10
             width: gridUnit * 24
             height: gridUnit * 4
             font.pixelSize: 47

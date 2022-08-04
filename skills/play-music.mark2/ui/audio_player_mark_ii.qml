@@ -23,11 +23,11 @@ Mycroft.CardDelegate {
     // Track lengths, durations and positions are always expressed in milliseconds
     // Position is always in milleseconds and relative to track length
     // If track length = 530000, position values range from 0 to 530000
-    property var media: sessionData.media
-    property var playerState: sessionData.status
+    property string mediaArtist: sessionData.artist
+    property string mediaTitle: sessionData.title
+    property real mediaLength: sessionData.length_ms
+    property string mediaImage: sessionData.image
     property real playerPosition: sessionData.playerPosition
-    property bool isStreaming: media.streaming
-    property bool streamTimerPaused: false
 
     Item {
         id: cardContents
@@ -46,7 +46,7 @@ Mycroft.CardDelegate {
                 anchors.horizontalCenter: parent.horizontalCenter
                 height: parent.height
                 width: gridUnit * 27
-                source: media.image
+                source: root.mediaImage
                 fillMode: Image.PreserveAspectCrop
                 z: 100
             }
@@ -63,7 +63,7 @@ Mycroft.CardDelegate {
             font.pixelSize: 35
             font.styleName: "Normal"
             height: gridUnit * 3
-            text: media.song
+            text: root.mediaTitle
             width: gridUnit * 26
         }
 
@@ -78,7 +78,7 @@ Mycroft.CardDelegate {
             font.pixelSize: 47
             font.styleName: "Bold"
             height: gridUnit * 4
-            text: media.artist
+            text: root.mediaArtist
             width: gridUnit * 26
         }
 
@@ -87,7 +87,7 @@ Mycroft.CardDelegate {
             anchors.bottom: trackProgressBackground.top
             anchors.left: parent.left
             anchors.leftMargin: gridUnit * 2
-            mediaLength: media.length
+            mediaLength: root.mediaLength
             duration: playerPosition
         }
 
@@ -97,8 +97,8 @@ Mycroft.CardDelegate {
             anchors.bottom: trackProgressBackground.top
             anchors.left: parent.right
             anchors.leftMargin: gridUnit * -9
-            mediaLength: media.length
-            duration: media.length
+            mediaLength: root.mediaLength
+            duration: root.mediaLength
             textWidth: gridUnit * 7
         }
 
@@ -108,7 +108,7 @@ Mycroft.CardDelegate {
             color: "#22A7F0"
             height: gridUnit * 2
             radius: 16
-            visible: media.length !== -1 ? 1 : 0
+            visible: root.mediaLength !== -1 ? 1 : 0
             width: parent.width
 
             Rectangle {
@@ -116,19 +116,9 @@ Mycroft.CardDelegate {
                 anchors.bottom: parent.bottom
                 height: gridUnit * 2
                 radius: 16
-                visible: media.length !== -1 ? 1 : 0
+                visible: root.mediaLength !== -1 ? 1 : 0
                 color: "#FFFFFF"
-                width: 200
-            }
-
-            NumberAnimation {
-                id: elapsedTimeAnimation
-                duration: media.length
-                from: 16
-                running: true
-                property: "width"
-                target: trackProgressForeground
-                to: gridUnit * 46
+                width: parent.width * (root.playerPosition / root.mediaLength)
             }
         }
     }
