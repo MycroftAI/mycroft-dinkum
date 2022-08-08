@@ -36,7 +36,12 @@ class Song:
 class MpdClient:
     """Bare bones MPD client using command-line mpc tool"""
 
-    def __init__(self, music_dir: typing.Optional[typing.Union[str, Path]] = None):
+    def __init__(
+        self,
+        music_dir: typing.Optional[typing.Union[str, Path]] = None,
+        host="127.0.0.1",
+    ):
+        self.host = host
         if music_dir:
             self.music_dir = Path(music_dir)
         else:
@@ -44,7 +49,7 @@ class MpdClient:
 
     def update(self, wait: bool = True):
         """Updates MPD database"""
-        cmd = ["mpc", "update"]
+        cmd = ["mpc", "-h", self.host, "update"]
         if wait:
             cmd.append("--wait")
 
@@ -75,6 +80,8 @@ class MpdClient:
     def _search(self, query_type: str, query: str) -> typing.List[typing.List[str]]:
         cmd = [
             "mpc",
+            "-h",
+            self.host,
             "search",
             "--format",  # https://www.musicpd.org/doc/mpc/html/#cmdoption-f
             "%artist%\t%album%\t%title%\t%time%\t%file%",  # tab-separated
