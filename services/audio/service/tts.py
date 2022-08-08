@@ -2,7 +2,7 @@ import hashlib
 import logging
 from pathlib import Path
 from threading import RLock
-from typing import Any, Optional
+from typing import Any, Dict, Optional, List
 from uuid import uuid4
 
 import pysbd
@@ -16,7 +16,7 @@ LOG = logging.getLogger("audio")
 
 
 class SpeakHandler:
-    def __init__(self, config: dict[str, Any], bus: MessageBusClient, tts: TTS):
+    def __init__(self, config: Dict[str, Any], bus: MessageBusClient, tts: TTS):
         self.config = config
         self.bus = bus
         self.tts = tts
@@ -135,7 +135,7 @@ class SpeakHandler:
         self.tts.get_tts(text, str(cache_path))
         return cache_path
 
-    def _segment(self, utterance: str) -> list[str]:
+    def _segment(self, utterance: str) -> List[str]:
         """Split an utterance into sentences"""
         if self._segmenter is not None:
             # Split into sentences intelligently
@@ -161,7 +161,7 @@ class SpeakHandler:
             LOG.debug("Loaded sentence segmenter for language %s", seg_lang)
 
 
-def load_tts_module(config: dict[str, Any]) -> TTS:
+def load_tts_module(config: Dict[str, Any]) -> TTS:
     """Load text to speech module as a plugin"""
     module_name = config["tts"]["module"]
     if module_name == "dummy":

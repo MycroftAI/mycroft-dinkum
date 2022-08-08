@@ -3,11 +3,10 @@ import os
 import queue
 import threading
 import time
-import typing
 from collections import deque
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
@@ -48,8 +47,8 @@ class TTSRequest:
     tts_session_id: str
     chunk_index: int
     num_chunks: int
-    skill_id: typing.Optional[str] = None
-    mycroft_session_id: typing.Optional[str] = None
+    skill_id: Optional[str] = None
+    mycroft_session_id: Optional[str] = None
 
     @property
     def is_first_chunk(self):
@@ -115,7 +114,7 @@ class AudioUserInterface:
     Listens for relevant bus events and manipulates the audio system.
     """
 
-    def __init__(self, config: dict[str, typing.Any]):
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
 
         self._ahal = AudioHAL(
@@ -123,7 +122,7 @@ class AudioUserInterface:
         )
 
         start_listening = self.config["sounds"]["start_listening"]
-        self._start_listening_uri: typing.Optional[str] = None
+        self._start_listening_uri: Optional[str] = None
 
         if start_listening:
             self._start_listening_uri = "file://" + resolve_resource_file(
@@ -134,12 +133,12 @@ class AudioUserInterface:
         self._stream_session_id: Optional[str] = None
 
         self._speech_queue = queue.Queue()
-        self._speech_thread: typing.Optional[threading.Thread] = None
-        self._tts_session_id: typing.Optional[str] = None
-        self._mycroft_session_id: typing.Optional[str] = None
+        self._speech_thread: Optional[threading.Thread] = None
+        self._tts_session_id: Optional[str] = None
+        self._mycroft_session_id: Optional[str] = None
         self._speech_finished = threading.Event()
 
-        self._activity_id: typing.Optional[str] = None
+        self._activity_id: Optional[str] = None
 
         self._bus_events = {
             "recognizer_loop:record_begin": self.handle_start_listening,
@@ -264,7 +263,7 @@ class AudioUserInterface:
     def _play_effect(
         self,
         uri: str,
-        volume: typing.Optional[float] = None,
+        volume: Optional[float] = None,
         mycroft_session_id: Optional[str] = None,
     ):
         """Play sound effect from uri"""
@@ -461,7 +460,7 @@ class AudioUserInterface:
     def _finish_tts_session(
         self,
         tts_session_id: str,
-        mycroft_session_id: typing.Optional[str] = None,
+        mycroft_session_id: Optional[str] = None,
     ):
         if self._tts_session_id == tts_session_id:
             self._tts_session_id = None

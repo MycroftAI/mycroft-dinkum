@@ -303,7 +303,7 @@ def _audio_input(queue: "Queue[bytes]"):
         LOG.exception("Unexpected error in audio input thread")
 
 
-def load_hotword_module(config: dict[str, Any]) -> HotWordEngine:
+def load_hotword_module(config: Dict[str, Any]) -> HotWordEngine:
     wake_word = config["listener"]["wake_word"]
     hotword_config = config["hotwords"][wake_word]
     module_name = hotword_config["module"]
@@ -317,7 +317,7 @@ def load_hotword_module(config: dict[str, Any]) -> HotWordEngine:
     return hotword
 
 
-def load_stt_module(config: dict[str, Any], bus: MessageBusClient) -> StreamingSTT:
+def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingSTT:
     stt_config = config["stt"]
     module_name = stt_config["module"]
     if module_name == "mycroft":
