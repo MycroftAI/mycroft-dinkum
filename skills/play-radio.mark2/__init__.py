@@ -14,13 +14,10 @@
 # TODO
 #   play <station name> should find if provided
 #   add to favorites and play favorite
-import subprocess
-import time
-from typing import Optional, Tuple
+from typing import Tuple
 
 import requests
-from mycroft.messagebus import Message
-from mycroft.skills import AdaptIntent, GuiClear, intent_handler
+from mycroft.skills import GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 
 from .RadioStations import RadioStations
@@ -118,14 +115,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
             "theme": dict(fgColor=self.fg_color, bgColor=self.bg_color),
-            "image": self.img_pth,
-            "artist": " NOW STREAMING: " + station_name,
-            "track": "Track",
-            "album": self.rs.last_search_terms,
-            "skill": self.skill_id,
-            "current_station_info": channel_info,
-            "streaming": True,
-            "status": status,
+            "media": {
+                "image": self.img_pth,
+                "artist": " NOW STREAMING: " + station_name,
+                "track": "Track",
+                "album": self.rs.last_search_terms,
+                "skill": self.skill_id,
+                "current_station_info": channel_info,
+                "streaming": True,
+                "status": status,
+            }
         }
         return ("AudioPlayer_scalable.qml", gui_data)
 
@@ -160,41 +159,44 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         return speak, gui
 
     ## Intents
-    # @intent_handler("HelpRadio.intent")
-    # def handle_radio_help(self, _):
-    #     with self.activity():
-    #         self.speak(
-    #             "Mycroft radio allows you to stream music and other content from a variety of free sources."
-    #         )
-    #         self.speak(
-    #             "If you ask me to play a specific type of music, like play Jazz, or play rock, I work very well."
-    #         )
-    #         self.speak(
-    #             "Play artist works Oh Kay for some artists but radio stations are not really artist specific."
-    #         )
-    #         self.speak(
-    #             "Next station and next channel or previous station and previous channel will select a different channel or station."
-    #         )
-    #         self.speak("You can also say change radio to change the radio Theme.")
-    #         self.speak("For the graphical you eye.")
+    @intent_handler("HelpRadio.intent")
+    def handle_radio_help(self, _):
+        speak = None
+        gui = None
 
-    # @intent_handler("ChangeRadio.intent")
-    # def handle_change_radio(self, _):
-    #     """change ui theme"""
-    #     with self.activity():
-    #         self.log.info(
-    #             "change_radio request, now playing = %s" % (self.now_playing,)
-    #         )
-    #         if self.fg_color == "white":
-    #             self.fg_color = "black"
-    #             self.bg_color = "white"
-    #         else:
-    #             self.fg_color = "white"
-    #             self.bg_color = "black"
+        speak = (
+            """Mycroft radio allows you to stream music and other content from a variety of free sources.
+            If you ask me to play a specific type of music, like play Jazz, or play rock, I work very well.
+            Play artist works Oh Kay for some artists but radio stations are not really artist specific.
+            Next station and next channel or previous station and previous channel will select a different channel or station.
+            You can also say change radio to change the radio Theme.
+            For the graphical you eye."""
+       )
 
-    #         if self.now_playing:
-    #             self.gui.release()
-    #             self.update_radio_theme("Playing")
+        return self.end_session(speak=speak, gui=gui, gui_clear=GuiClear.NEVER)
+
+    @intent_handler("ChangeRadio.intent")
+    def handle_change_radio(self, _):
+        """change ui theme"""
+        dialog = None
+        gui = None
+
+        if self.now_playing is not None:
+            self.log.info(
+                "change_radio request, now playing = %s" % (self.now_playing,)
+            )
+            if self.fg_color == "white":
+                self.fg_color = "black"
+                self.bg_color = "white"
+            else:
+                self.fg_color = "white"
+                self.bg_color = "black"
+
+            gui = self.update_radio_theme("Playing")
+        else:
+            dialog = "no.radio.playing"
+
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)    
 
     @intent_handler("ShowRadio.intent")
     def handle_show_radio(self, _):
@@ -208,57 +210,53 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
-    # @intent_handler("NextStation.intent")
-    # def handle_next_station(self, message):
-    #     with self.activity():
-    #         exit_flag = False
-    #         ctr = 0
-    #         while not exit_flag and ctr < self.rs.get_station_count():
-    #             new_current_station = self.rs.get_next_station()
-    #             self.current_station = new_current_station
-    #             self.stream_uri = self.current_station.get("url_resolved", "")
-    #             self.station_name = self.current_station.get("name", "")
-    #             self.station_name = self.station_name.replace("\n", " ")
+    @intent_handler("NextStation.intent")
+    def handle_next_station(self, message):
+        exit_flag = False
+        ctr = 0
+        while not exit_flag and ctr < self.rs.get_station_count():
+            new_current_station = self.rs.get_next_station()
+            self.current_station = new_current_station
+            self.stream_uri = self.current_station.get("url_resolved", "")
+            self.station_name = self.current_station.get("name", "")
+            self.station_name = self.station_name.replace("\n", " ")
 
-    #             try:
-    #                 self.handle_play_request()
-    #                 exit_flag = True
-    #             except:
-    #                 self.log.error("Caught Exception")
+            try:
+                self.handle_play_request()
+                exit_flag = True
+            except:
+                self.log.error("Caught Exception")
 
-    #             ctr += 1
+            ctr += 1
 
-    # @intent_handler("PreviousStation.intent")
-    # def handle_previous_station(self, message):
-    #     with self.activity():
-    #         exit_flag = False
-    #         ctr = 0
-    #         while not exit_flag and ctr < self.rs.get_station_count():
-    #             new_current_station = self.rs.get_previous_station()
-    #             self.current_station = new_current_station
-    #             self.stream_uri = self.current_station.get("url_resolved", "")
-    #             self.station_name = self.current_station.get("name", "")
-    #             self.station_name = self.station_name.replace("\n", " ")
+    @intent_handler("PreviousStation.intent")
+    def handle_previous_station(self, message):
+        exit_flag = False
+        ctr = 0
+        while not exit_flag and ctr < self.rs.get_station_count():
+            new_current_station = self.rs.get_previous_station()
+            self.current_station = new_current_station
+            self.stream_uri = self.current_station.get("url_resolved", "")
+            self.station_name = self.current_station.get("name", "")
+            self.station_name = self.station_name.replace("\n", " ")
 
-    #             try:
-    #                 self.handle_play_request()
-    #                 exit_flag = True
-    #             except:
-    #                 self.log.error("Caught Exception")
+            try:
+                self.handle_play_request()
+                exit_flag = True
+            except:
+                self.log.error("Caught Exception")
 
-    #             ctr += 1
+            ctr += 1
 
-    # @intent_handler("NextChannel.intent")
-    # def handle_next_channel(self, message):
-    #     with self.activity():
-    #         self.rs.get_next_channel()
-    #         self.handle_next_station(message)
+    @intent_handler("NextChannel.intent")
+    def handle_next_channel(self, message):
+        self.rs.get_next_channel()
+        self.handle_next_station(message)
 
-    # @intent_handler("PreviousChannel.intent")
-    # def handle_previous_channel(self, message):
-    #     with self.activity():
-    #         self.rs.get_previous_channel()
-    #         self.handle_previous_station(message)
+    @intent_handler("PreviousChannel.intent")
+    def handle_previous_channel(self, message):
+        self.rs.get_previous_channel()
+        self.handle_previous_station(message)
 
     @intent_handler("ListenToRadio.intent")
     def handle_listen_intent(self, message):
@@ -291,27 +289,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.log.error(
                 "of %s stations, none work!" % (self.rs.get_station_count(),)
             )
-
-    # @intent_handler("PlayRadio.intent")
-    # def handle_play_intent(self, message):
-    #     with self.activity():
-    #         if message.data:
-    #             self.setup_for_play(message.data.get("utterance", ""))
-    #             self.play_current()
-
-    # @intent_handler("TurnOnRadio.intent")
-    # def handle_turnon_intent(self, message):
-    #     if self.current_station is None:
-    #         self.setup_for_play(self.rs.get_next_channel())
-    #     self.play_current()
+ 
+    @intent_handler("TurnOnRadio.intent")
+    def handle_turnon_intent(self, _):
+        if self.current_station is None:
+            self.setup_for_play(self.rs.get_next_channel())
+        self.play_current()
 
     @intent_handler("StopRadio.intent")
     def handle_stop_radio(self, _):
         self.stop()
-
-    # @intent_handler("TurnOffRadio.intent")
-    # def handle_turnoff_intent(self, message):
-    #     self.handle_stop_radio(message)
 
     ## Common query stuff
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
@@ -364,7 +351,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """Handle request from Common Play System to start playback."""
         self.handle_play_request()
 
-    def stop(self) -> bool:
+    def stop(self) -> None:
         """Respond to system stop commands."""
         self.now_playing = None
         self.CPS_send_status()
