@@ -14,13 +14,10 @@
 # TODO
 #   play <station name> should find if provided
 #   add to favorites and play favorite
-import subprocess
-import time
-from typing import Optional, Tuple
+from typing import Tuple
 
 import requests
-from mycroft.messagebus import Message
-from mycroft.skills import AdaptIntent, GuiClear, intent_handler
+from mycroft.skills import GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 
 from .RadioStations import RadioStations
@@ -294,7 +291,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             )
  
     @intent_handler("TurnOnRadio.intent")
-    def handle_turnon_intent(self, message):
+    def handle_turnon_intent(self, _):
         if self.current_station is None:
             self.setup_for_play(self.rs.get_next_channel())
         self.play_current()
@@ -354,7 +351,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """Handle request from Common Play System to start playback."""
         self.handle_play_request()
 
-    def stop(self) -> bool:
+    def stop(self) -> None:
         """Respond to system stop commands."""
         self.now_playing = None
         self.CPS_send_status()
