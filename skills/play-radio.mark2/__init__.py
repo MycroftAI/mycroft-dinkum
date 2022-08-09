@@ -118,14 +118,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
             "theme": dict(fgColor=self.fg_color, bgColor=self.bg_color),
-            "image": self.img_pth,
-            "artist": " NOW STREAMING: " + station_name,
-            "track": "Track",
-            "album": self.rs.last_search_terms,
-            "skill": self.skill_id,
-            "current_station_info": channel_info,
-            "streaming": True,
-            "status": status,
+            "media": {
+                "image": self.img_pth,
+                "artist": " NOW STREAMING: " + station_name,
+                "track": "Track",
+                "album": self.rs.last_search_terms,
+                "skill": self.skill_id,
+                "current_station_info": channel_info,
+                "streaming": True,
+                "status": status,
+            }
         }
         return ("AudioPlayer_scalable.qml", gui_data)
 
