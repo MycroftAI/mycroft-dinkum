@@ -182,10 +182,12 @@ class NamespaceManager:
                 {
                     "type": "mycroft.session.set",
                     "namespace": namespace.name,
-                    "data": message.data.get("data", {}),
+                    "data": namespace.data,
                 }
             )
-            LOG.debug("Setting values for namespace %s to %s", namespace, data)
+            LOG.debug(
+                "Setting values for namespace %s to %s", namespace, namespace.data
+            )
         except Exception:
             LOG.exception("Unexpected error showing GUI page")
 
