@@ -25,9 +25,13 @@ def main():
         "--skill", action="append", default=[], help="Path to skill directory"
     )
     parser.add_argument(
+        "--venv-dir",
+        help="Directory with shared virtual environment (overrides --no-shared-venv)",
+    )
+    parser.add_argument(
         "--no-shared-venv",
         action="store_true",
-        help="Services and skills should not share a virtual environment",
+        help="Services and skills do not share a virtual environment",
     )
     parser.add_argument(
         "--user",
@@ -40,6 +44,9 @@ def main():
         help="Directory to write unit files",
     )
     args = parser.parse_args()
+
+    if args.venv_dir:
+        args.venv_dir = Path(args.venv_dir)
 
     config_home = Path("/home") / args.user / ".config"
 
@@ -77,7 +84,9 @@ def main():
             else:
                 service_path = Path(service_dir)
                 service_id = f"{service_path.name}.service"
-                if args.no_shared_venv:
+                if args.venv_dir:
+                    venv_dir = args.venv_dir
+                elif args.no_shared_venv:
                     venv_dir = (
                         config_home
                         / "mycroft"
