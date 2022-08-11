@@ -12,27 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import functools
-import time
+import logging
+import subprocess
+import sys
+from threading import Thread
+from typing import Optional
 
-import RPi.GPIO as GPIO
 from mycroft_bus_client import Message, MessageBusClient
-
-# sj201Rev4+
-PINS = {"volume_up": 22, "volume_down": 23, "action": 24, "mute": 25}
-
-# Switch debounce time in milliseconds
-DEBOUNCE = 100
-
-# Delay after callback before reading switch state in seconds
-WAIT_SEC = 0.05
-
-# Pin value when switch is active
-ACTIVE = 0
-
-# State strings reported for active (on) and inactive (off)
-SWITCH_ON = "on"
-SWITCH_OFF = "off"
 
 
 class Mark2SwitchClient:
@@ -40,39 +26,54 @@ class Mark2SwitchClient:
 
     def __init__(self, bus: MessageBusClient):
         self.bus = bus
+        self.log = logging.getLogger("hal.leds")
+        self._active = {
+            "volume_up": False,
+            "volume_down": False,
+            "action": False,
+            "mute": True,
+        }
+        self._proc_thread: Optional[Thread] = None
 
     def start(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
-
-        for name, pin in PINS.items():
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.add_event_detect(
-                pin,
-                GPIO.BOTH,
-                callback=functools.partial(self._handle_gpio_event, name, pin),
-                bouncetime=DEBOUNCE,
-            )
-
+        self._proc_thread = Thread(target=self._run_proc, daemon=True)
+        self._proc_thread.start()
         self.bus.on("mycroft.switch.report-states", self._handle_get_state)
 
-    def _handle_get_state(self, message: Message):
+    def _run_proc(self):
+        """Reads button state changes from the mark2-buttons command"""
+        try:
+            button_cmd = ["mark2-buttons"]
+            self.log.debug(button_cmd)
+            proc = subprocess.Popen(
+                button_cmd, stdout=subprocess.PIPE, universal_newlines=True
+            )
+            with proc:
+                for line in proc.stdout:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    name, is_active_str = line.split(maxsplit=1)
+                    is_active = is_active_str.strip().lower() == "true"
+                    self._active[name] = is_active
+                    self._report_state(name, is_active)
+        except Exception:
+            self.log.exception("Error reading button state")
+
+            # Just exit the service. systemd will restart it.
+            sys.exit(1)
+
+    def _handle_get_state(self, _message: Message):
         """Report the state of all switches"""
-        for name, pin in PINS.items():
-            value = GPIO.input(pin)
-            self._report_state(name, value)
+        for name, is_active in self._active.items():
+            self._report_state(name, is_active)
 
     def stop(self):
         pass
 
-    def _handle_gpio_event(self, name, pin, _channel):
-        """Read and report the state of a switch that has changed state"""
-        time.sleep(WAIT_SEC)
-        value = GPIO.input(pin)
-        self._report_state(name, value)
-
-    def _report_state(self, name: str, value: int):
-        state = SWITCH_ON if value == ACTIVE else SWITCH_OFF
+    def _report_state(self, name: str, is_active: bool):
+        state = "on" if is_active else "off"
         self.bus.emit(
             Message("mycroft.switch.state", data={"name": name, "state": state})
         )

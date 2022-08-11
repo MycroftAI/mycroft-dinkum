@@ -14,31 +14,24 @@
 #
 import itertools
 import logging
+import subprocess
 import time
 from threading import Thread
 from typing import List, Optional, Tuple
 
 from mycroft_bus_client import Message, MessageBusClient
-from smbus2 import SMBus
 
 from .led_animation import color
 from .led_animation.animation import Animation
-from .led_animation.animation.blink import Blink
 from .led_animation.animation.pulse import Pulse
 from .led_animation.animation.rainbowcomet import RainbowComet
 from .led_animation.animation.solid import Solid
-
-BUS_ID = 1
-DEVICE_ADDRESS = 0x04
 
 MAX_COLOR = 255
 MIN_COLOR = 0
 NUM_COLORS = 3
 
 NUM_LEDS = 12
-FIRST_LED = 0
-MAX_LEDS_PER_WRITE = 10
-COLORS_PER_WRITE = MAX_LEDS_PER_WRITE * NUM_COLORS
 
 
 class MycroftColor:
@@ -53,16 +46,16 @@ class Mark2LedClient:
     def __init__(self, bus: MessageBusClient):
         self.bus = bus
         self.log = logging.getLogger("hal.leds")
-        self.i2c_bus = SMBus(BUS_ID)
 
         # pixel_object
         self.auto_write = False
+        self._last_pixels: Optional[List[Tuple[int, int, int]]] = None
         self._pixels: List[Tuple[int, int, int]] = [color.BLACK] * NUM_LEDS
 
         self._asleep_color = color.BLACK
         self._is_running = True
         self._animation: Optional[Animation] = None
-        self._brightness: float = 0.5
+        self._brightness: int = 50
 
         self._state: Optional[str] = None
 
@@ -129,36 +122,33 @@ class Mark2LedClient:
         return iter(self._pixels)
 
     def show(self):
-        # Write colors in blocks since i2c data length cannot exceed 32 bytes
-        flat_rgb = list(
-            max(MIN_COLOR, min(MAX_COLOR, int(c * self._brightness)))
-            for c in itertools.chain.from_iterable(self._pixels)
-        )
+        """Sets the LED colors using the mark2-leds command"""
+        try:
+            if (self._last_pixels == self._pixels):
+                return
 
-        last_value = COLORS_PER_WRITE
-        write_offset = 0
-        while flat_rgb:
-            self.i2c_bus.write_i2c_block_data(
-                DEVICE_ADDRESS,
-                FIRST_LED + write_offset,
-                flat_rgb[:last_value],
+            self._last_pixels = list(self._pixels)
+
+            rgb_str = ",".join(
+                str(max(MIN_COLOR, min(MAX_COLOR, c)))
+                for c in itertools.chain.from_iterable(self._pixels)
             )
+            led_cmd = ["mark2-leds", rgb_str, str(self._brightness)]
+            self.log.debug(led_cmd)
+            subprocess.check_call(led_cmd)
+        except Exception:
+            self.log.exception("Error setting LEDs")
 
-            # Next block
-            flat_rgb = flat_rgb[last_value:]
-            write_offset += MAX_LEDS_PER_WRITE
-
-    def fill(self, color):
+    def fill(self, fill_color):
         """Fill all leds with the same color"""
-        self._pixels = [color] * NUM_LEDS
+        self._pixels = [fill_color] * NUM_LEDS
 
     def _animate(self):
         """Run animation in separate thread"""
         try:
             while self._is_running:
                 if self._animation is not None:
-                    if self._animation.animate():
-                        self.show()
+                    self._animation.animate()
 
                 time.sleep(0.001)
         except Exception:

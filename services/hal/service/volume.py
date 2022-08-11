@@ -14,18 +14,10 @@
 #
 import logging
 import subprocess
-from math import exp, log
 from typing import Optional
 
 from mycroft.util.file_utils import resolve_resource_file
 from mycroft_bus_client import Message, MessageBusClient
-from smbus2 import SMBus
-
-BUS_ID = 1
-DEVICE_ADDRESS = 0x2F
-VOLUME_ADDRESS = 0x4C
-
-MAX_VOL = 84
 
 
 class Mark2VolumeClient:
@@ -33,7 +25,6 @@ class Mark2VolumeClient:
 
     def __init__(self, bus: MessageBusClient):
         self.bus = bus
-        self.i2c_bus = SMBus(BUS_ID)
         self.log = logging.getLogger("hal.volume")
 
         self._beep_uri: Optional[str] = None
@@ -117,38 +108,22 @@ class Mark2VolumeClient:
         pass
 
     def set_volume(self, volume: int, no_osd: bool = False):
-        """Sets the hardware volume using the I2C bus"""
+        """Sets the hardware volume using the mark2-volume command"""
         volume = min(self._volume_max, max(self._volume_min, volume))
-        tas_volume = self._calc_log_y(volume)
-        self.i2c_bus.write_byte_data(DEVICE_ADDRESS, VOLUME_ADDRESS, tas_volume)
-        self._current_volume = volume
-        self.log.debug("Volume set to %s (hw=%s)", volume, tas_volume)
+        try:
+            volume_cmd = ["mark2-volume", str(volume)]
+            self.log.debug(volume_cmd)
+            subprocess.check_call(volume_cmd)
 
-        # Normalize to [0, 1]
-        norm_volume = volume / (self._volume_max - self._volume_min)
-        self.bus.emit(
-            Message("hardware.volume", data={"volume": norm_volume, "no_osd": no_osd})
-        )
+            self._current_volume = volume
+            self.log.debug("Volume set to %s", volume)
 
-    def _calc_log_y(self, x):
-        """given x produce y. takes in an int
-        0-100 returns a log oriented hardware
-        value with larger steps for low volumes
-        and smaller steps for loud volumes"""
-        if x < 0:
-            x = 0
-
-        if x > 100:
-            x = 100
-
-        x0 = 0  # input range low
-        x1 = 100  # input range hi
-
-        y0 = MAX_VOL  # max hw vol
-        y1 = 210  # min hw val
-
-        p1 = (x - x0) / (x1 - x0)
-        p2 = log(y0) - log(y1)
-        pval = p1 * p2 + log(y1)
-
-        return round(exp(pval))
+            # Normalize to [0, 1]
+            norm_volume = volume / (self._volume_max - self._volume_min)
+            self.bus.emit(
+                Message(
+                    "hardware.volume", data={"volume": norm_volume, "no_osd": no_osd}
+                )
+            )
+        except Exception:
+            self.log.exception("Error setting volume")
