@@ -130,8 +130,8 @@ def main():
                     )
                     print("Restart=always", file=f)
                     print("RestartSec=10", file=f)
-                    print("TimeoutStartSec=30", file=f)
-                    print("WatchdogSec=10", file=f)
+                    print("TimeoutStartSec=60", file=f)
+                    print("WatchdogSec=30", file=f)
                     print("StandardOutput=journal", file=f)
                     print("StandardError=journal", file=f)
 
@@ -232,8 +232,8 @@ def _write_skills_target(
             )
             print("Restart=always", file=f)
             print("RestartSec=10", file=f)
-            print("TimeoutStartSec=30", file=f)
-            print("WatchdogSec=10", file=f)
+            print("TimeoutStartSec=60", file=f)
+            print("WatchdogSec=30", file=f)
             print("StandardOutput=journal", file=f)
             print("StandardError=journal", file=f)
 
