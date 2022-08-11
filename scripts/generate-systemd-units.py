@@ -4,7 +4,7 @@ import operator
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 SERVICE_PREFIX = "dinkum-"
 MYCROFT_TARGET = "dinkum"
@@ -147,6 +147,7 @@ def main():
             config_home,
             unit_dir,
             args.user,
+            venv_dir=args.venv_dir,
             no_shared_venv=args.no_shared_venv,
         )
 
@@ -176,18 +177,21 @@ def _write_skills_target(
     config_home: Path,
     unit_dir: Path,
     user: str,
+    venv_dir: Optional[Path] = None,
     no_shared_venv: bool = False,
 ):
     skill_paths = [Path(d) for d in skill_dirs]
     skill_ids = {p.name for p in skill_paths}
-    service_ids = [f"{SERVICE_PREFIX}skill-{id}.service" for id in skill_ids]
+    # service_ids = [f"{SERVICE_PREFIX}skill-{id}.service" for id in skill_ids]
 
     for skill_path in skill_paths:
         skill_id = skill_path.name
-        if no_shared_venv:
-            venv_dir = config_home / "mycroft" / "skills" / skill_id / ".venv"
+        if venv_dir:
+            skill_venv_dir = venv_dir
+        elif no_shared_venv:
+            skill_venv_dir = config_home / "mycroft" / "skills" / skill_id / ".venv"
         else:
-            venv_dir = config_home / "mycroft" / ".venv"
+            skill_venv_dir = config_home / "mycroft" / ".venv"
         with open(
             unit_dir / f"{SERVICE_PREFIX}skill-{skill_id}.service",
             "w",
@@ -216,7 +220,7 @@ def _write_skills_target(
             )
             print(
                 "ExecStart=",
-                venv_dir,
+                skill_venv_dir,
                 "/bin/python -m service ",
                 "--skill-directory '",
                 skill_path.absolute(),
