@@ -57,6 +57,12 @@ class Configuration:
         return cast(ConfigType, config)
 
     @staticmethod
+    def reload():
+        LOG.debug("Reloading configuration")
+        new_config = Configuration.get(cache=False)
+        merge_dict(Configuration.__config, new_config)
+
+    @staticmethod
     def get_paths() -> Iterable[Path]:
         system_config = os.environ.get(
             "MYCROFT_SYSTEM_CONFIG", "/etc/mycroft/mycroft.conf"

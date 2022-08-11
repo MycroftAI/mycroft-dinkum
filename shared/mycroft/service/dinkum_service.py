@@ -143,7 +143,7 @@ class DinkumService(ABC):
 
         # Add event handlers
         self.bus.on(f"{self.service_id}.service.state", self._report_service_state)
-        self.bus.on("configuration.update", self._reload_config)
+        self.bus.on("configuration.updated", self._reload_config)
 
         self.bus.emit(Message(f"{self.service_id}.initialize.started"))
         self.log.info("Connected to Mycroft Core message bus")
@@ -154,7 +154,7 @@ class DinkumService(ABC):
 
     def _reload_config(self, _message):
         """Force reloading of config"""
-        self.config = Configuration.get(cache=False)
+        Configuration.reload()
 
     def _start_watchdog(self):
         """Run systemd watchdog in separate thread"""
