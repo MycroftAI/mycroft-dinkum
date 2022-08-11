@@ -40,7 +40,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.rs = RadioStations()
         self.now_playing = None
         self.current_station = None
-        self.station_name = "RFM"
+        self.station_name = "Mycroft Radio"
         self.img_pth = ""
         self.stream_uri = ""
         self.fg_color = "white"
@@ -114,17 +114,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         channel_info = "%s/%s" % (self.rs.index + 1, len(self.rs.stations))
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
-            "theme": dict(fgColor=self.fg_color, bgColor=self.bg_color),
-            "media": {
-                "image": self.img_pth,
-                "artist": " NOW STREAMING: " + station_name,
-                "track": "Track",
-                "album": self.rs.last_search_terms,
-                "skill": self.skill_id,
-                "current_station_info": channel_info,
-                "streaming": True,
-                "status": status,
-            }
+            "theme_bg": self.bg_color,
+            "theme_fg": self.fg_color,  
+            "media_image": self.img_pth,
+            "media_artist": " NOW STREAMING: " + station_name,
+            "media_track": "Track",
+            "media_album": self.rs.genre_to_play,
+            "media_skill": self.skill_id,
+            "media_current_station_info": channel_info,
+            "media_streaming": True,
+            "media_status": status,
         }
         return ("AudioPlayer_scalable.qml", gui_data)
 
@@ -151,7 +150,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.CPS_play((stream_uri, mime))
 
             self.now_playing = "Now Playing"
-            gui = self.update_radio_theme("Playing")
+            gui = self.update_radio_theme(self.now_playing)
+            self._stream_session_id = self._mycroft_session_id
+            self._mycroft_session_id = self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER,)
 
             # cast to str for json serialization
             self.CPS_send_status(image=self.img_pth, artist=station_name)
@@ -356,6 +357,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.now_playing = None
         self.CPS_send_status()
         self.CPS_release_output_focus()
+        gui_clear = GuiClear.AT_END
+
+        return self.end_session(dialog=None, gui_clear=gui_clear)
+
 
 
 def create_skill(skill_id: str):

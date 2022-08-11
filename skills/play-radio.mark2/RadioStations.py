@@ -49,6 +49,7 @@ class RadioStations:
         ]
         self.channel_index = 0
         self.last_search_terms = self.generic_search_terms[self.channel_index]
+        self.genre_to_play = ""
         self.stations = self.get_stations(self.last_search_terms)
         self.original_utterance = ""
 
@@ -130,13 +131,19 @@ class RadioStations:
     def search(self, sentence, limit):
         unique_stations = {}
         self.original_utterance = sentence
-        self.last_search_terms = self.clean_sentence(sentence)
+        search_term_candidate = self.clean_sentence(sentence)
+        if search_term_candidate in self.generic_search_terms:
+            self.last_search_terms = search_term_candidate
+            self.genre_to_play = self.last_search_terms
+        else:
+            self.last_search_terms = ""
         if self.last_search_terms == "":
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
             self.channel_index = randrange(len(self.generic_search_terms) - 1)
             self.last_search_terms = self.generic_search_terms[self.channel_index]
+            self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
 

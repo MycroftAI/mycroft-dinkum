@@ -28,18 +28,25 @@ Mycroft.CardDelegate {
     id: root
     fillWidth: true
     //skillBackgroundColorOverlay: "white"
-    property var theme: sessionData.theme
-    cardBackgroundOverlayColor: Qt.lighter(theme.bgColor)
+    property var theme_bg: sessionData.theme_bg
+    property var theme_fg: sessionData.theme_fg
+    cardBackgroundOverlayColor: Qt.lighter(theme_bg)
     cardRadius: Mycroft.Units.gridUnit
 
     // Track_Lengths, Durations, Positions are always in milliseconds
     // Position is always in milleseconds and relative to track_length if track_length = 530000, position values range from 0 to 530000
 
-    property var media: sessionData.media
-    property var playerDuration: media.length
+    property var media_image: sessionData.media_image
+    property var media_artist: sessionData.media_artist
+    property var media_track: sessionData.media_track
+    property var media_album: sessionData.media_album
+    property var media_skill: sessionData.media_skill
+    property var media_current_station_info: sessionData.media_current_station_info
+
+    property var playerDuration: sessionData.playerDuration
     property real playerPosition: 0
-    property var playerState: sessionData.status
-    property bool isStreaming: media.streaming
+    property var playerState: sessionData.media_status
+    property bool isStreaming: sessionData.media_streaming
     property bool countdowntimerpaused: false
 
     function formatTime(ms) {
@@ -68,7 +75,7 @@ Mycroft.CardDelegate {
         running: false
         repeat: true
         onTriggered: {
-            if(media.length > playerPosition){
+            if(playerDuration > playerPosition){
                 if(!countdowntimerpaused){
                     playerPosition = playerPosition + 1000
                 }
@@ -79,7 +86,7 @@ Mycroft.CardDelegate {
     Rectangle {
         anchors.fill: parent
         radius: Mycroft.Units.gridUnit
-        color: Qt.lighter(theme.bgColor)
+        color: Qt.lighter(theme_bg)
 
         ColumnLayout {
             anchors.top: parent.top
@@ -104,7 +111,7 @@ Mycroft.CardDelegate {
                     Rectangle {
                         width: Mycroft.Units.gridUnit * 18
                         height: Mycroft.Units.gridUnit * 18
-                        color: theme.bgColor
+                        color: theme_bg
                         radius: Mycroft.Units.gridUnit
 
                         Image {
@@ -116,7 +123,7 @@ Mycroft.CardDelegate {
                             anchors.topMargin: Mycroft.Units.gridUnit / 2
                             anchors.rightMargin: Mycroft.Units.gridUnit / 2
                             anchors.bottomMargin: Mycroft.Units.gridUnit / 2
-                            source: media.image
+                            source: media_image
                             fillMode: Image.PreserveAspectFit
                             z: 100
                         }
@@ -132,7 +139,7 @@ Mycroft.CardDelegate {
 
                             Controls.Label {
                                 id: authortitle
-                                text: media.album
+                                text: media_album
                                 maximumLineCount: 1
                                 Layout.fillWidth: true
                                 font.bold: true
@@ -141,22 +148,22 @@ Mycroft.CardDelegate {
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                                 font.capitalization: Font.Capitalize
-                                color: theme.fgColor
+                                color: theme_fg
                                 visible: true
                                 enabled: true
                             }
 
                             Controls.Label {
                                 id: station
-                                text: "RFM"
+                                text: "Mycroft Radio"
                                 maximumLineCount: 1
                                 Layout.fillWidth: true
-                                font.pixelSize: Mycroft.Units.gridUnit * 4
+                                font.pixelSize: Mycroft.Units.gridUnit * 3
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                                 font.capitalization: Font.Capitalize
-                                color: theme.fgColor
+                                color: theme_fg
                                 visible: true
                                 enabled: true
                             }
@@ -179,7 +186,7 @@ Mycroft.CardDelegate {
 
                                     contentItem: Kirigami.Icon {
                                         source: Qt.resolvedUrl("images/media-skip-backward.svg")
-                                        color: theme.fgColor
+                                        color: theme_fg
                                     }
 
                                     background: Rectangle {
@@ -199,20 +206,20 @@ Mycroft.CardDelegate {
                                     onClicked: {
                                         if (playerState != "Playing"){
                                             triggerGuiEvent("cps.gui.play", {"media": {
-                                                                    "image": media.image,
-                                                                    "track": media.track,
-                                                                    "album": media.album,
-                                                                    "skill_id": media.skill,
-                                                                    "length": media.length,
+                                                                    "image": media_image,
+                                                                    "track": media_track,
+                                                                    "album": media_album,
+                                                                    "skill_id": media_skill,
+                                                                    "length": playerDuration,
                                                                     "position": playerPosition
                                                                     }})
                                         } else {
                                             triggerGuiEvent("cps.gui.pause", {"media": {
-                                                                    "image": media.image,
-                                                                    "track": media.track,
-                                                                    "album": media.album,
-                                                                    "skill_id":media.skill,
-                                                                    "length": media.length,
+                                                                    "image": media_image,
+                                                                    "track": media_track,
+                                                                    "album": media_album,
+                                                                    "skill_id":media_skill,
+                                                                    "length": playerDuration,
                                                                     "position": playerPosition
                                                                     }})
                                         }
@@ -223,7 +230,7 @@ Mycroft.CardDelegate {
                                     }
 
                                     contentItem: Kirigami.Icon {
-                                        color: theme.fgColor
+                                        color: theme_fg
                                         source: playerState === "Playing" ? Qt.resolvedUrl("images/media-playback-pause.svg") : Qt.resolvedUrl("images/media-playback-start.svg")
                                     }
                                 }
@@ -243,7 +250,7 @@ Mycroft.CardDelegate {
 
                                     contentItem: Kirigami.Icon {
                                         source: Qt.resolvedUrl("images/media-skip-forward.svg")
-                                        color: theme.fgColor
+                                        color: theme_fg
                                     }
                                 }
                             }
@@ -265,7 +272,7 @@ Mycroft.CardDelegate {
 
                                     contentItem: Kirigami.Icon {
                                         source: Qt.resolvedUrl("images/media-playlist-repeat.svg")
-                                        color: theme.fgColor
+                                        color: theme_fg
                                     }
 
                                     background: Rectangle {
@@ -292,7 +299,7 @@ Mycroft.CardDelegate {
 
                                     contentItem: Kirigami.Icon {
                                         source: Qt.resolvedUrl("images/media-playlist-shuffle.svg")
-                                        color: theme.fgColor
+                                        color: theme_fg
                                     }
                                 }
                             }
@@ -312,8 +319,8 @@ Mycroft.CardDelegate {
             RowLayout {
                 anchors.left: parent.left
                 anchors.right: parent.right
-                visible: media.length !== -1 ? 1 : 0
-                enabled: media.length !== -1 ? 1 : 0
+                visible: playerDuration !== -1 ? 1 : 0
+                enabled: playerDuration !== -1 ? 1 : 0
                 
                 Controls.Label {
                     anchors.left: parent.left
@@ -323,8 +330,8 @@ Mycroft.CardDelegate {
                     horizontalAlignment: Text.AlignLeft
                     verticalAlignment: Text.AlignVCenter
                     //text: formatTime(playerPosition)
-                    text: media.current_station_info
-                    color: theme.fgColor
+                    text: media_current_station_info
+                    color: theme_fg
                 }
 
                 Controls.Label {
@@ -335,7 +342,7 @@ Mycroft.CardDelegate {
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                     text: formatTime(playerDuration)
-                    color: theme.fgColor
+                    color: theme_fg
                 }
             }
 
@@ -348,8 +355,8 @@ Mycroft.CardDelegate {
                 height: Mycroft.Units.gridUnit * 2
                 property bool sync: false
                 live: false
-                visible: media.length !== -1 ? 1 : 0
-                enabled: media.length !== -1 ? 1 : 0
+                visible: playerDuration !== -1 ? 1 : 0
+                enabled: playerDuration !== -1 ? 1 : 0
                 value: playerPosition
 
                 onPressedChanged: {
@@ -380,7 +387,7 @@ Mycroft.CardDelegate {
                         implicitHeight: Mycroft.Units.gridUnit * 2
                         radius: 100
                         color: seekableslider.pressed ? "#f0f0f0" : "#f6f6f6"
-                        border.color: theme.bgColor
+                        border.color: theme_bg
                     }
                 }
 
@@ -393,11 +400,11 @@ Mycroft.CardDelegate {
                     //horizontalAlignment: Text.AlignHCenter
                     horizontalAlignment: Text.AlignHLeft
                     verticalAlignment: Text.AlignVCenter
-                    text: media.artist
+                    text: media_artist
                     font.pixelSize: Mycroft.Units.gridUnit * 1.5
                     font.capitalization: Font.Capitalize
                     font.bold: true
-                    color: theme.fgColor
+                    color: theme_fg
                 }
 
                 background: Rectangle {
@@ -407,7 +414,7 @@ Mycroft.CardDelegate {
                     width: seekableslider.availableWidth
                     height: Mycroft.Units.gridUnit * 2
                     radius: Mycroft.Units.gridUnit
-                    color: theme.bgColor
+                    color: theme_bg
 
                     Rectangle {
                         width: seekableslider.visualPosition * parent.width
