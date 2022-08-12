@@ -177,6 +177,25 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Kirigami.Units.largeSpacing * 2
             }
+
+            Kirigami.Heading {
+                id: networkAddressesHeading
+                level: 2
+                Layout.alignment: Qt.AlignHCenter
+                text: "Network Addresses"
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.smallSpacing
+            }
+
+            Label {
+                id: networkAddressesLabel
+                Layout.alignment: Qt.AlignHCenter
+                text: sessionData.networkAddresses
+            }
+
         }
     }
 

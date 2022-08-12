@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Dict
 
 from mycroft.api import get_pantacor_device_id
 from mycroft.messagebus.message import Message
@@ -481,6 +482,12 @@ class Mark2(MycroftSkill):
         # mycroft_uuid = get_mycroft_uuid()
         pantacor_device_id = get_pantacor_device_id()
 
+        network_addresses = self._request_addresses()
+        network_addresses_str = "\n".join(
+            f"{interface}: {address}"
+            for interface, address in sorted(network_addresses.items())
+        )
+
         self.emit_start_session(
             gui=(
                 "all.qml",
@@ -489,10 +496,19 @@ class Mark2(MycroftSkill):
                     "deviceName": device_name,
                     # "mycroftUUID": mycroft_uuid,
                     "pantacorDeviceId": pantacor_device_id,
+                    "networkAddresses": network_addresses_str,
                 },
             ),
             gui_clear=GuiClear.NEVER,
         )
+
+    def _request_addresses(self) -> Dict[str, str]:
+        addresses = {}
+        response = self.bus.wait_for_response(Message("skill.ip.request-addresses"))
+        if response:
+            addresses = response.data
+
+        return addresses
 
 
 def create_skill(skill_id: str):

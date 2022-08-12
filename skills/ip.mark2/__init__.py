@@ -82,6 +82,8 @@ class IPSkill(MycroftSkill):
         if which("iwlist"):
             self.register_intent_file("what.ssid.intent", self.handle_SSID_query)
 
+        self.add_event("skill.ip.request-addresses", self._handle_address_request)
+
     @intent_handler(IntentBuilder("IPIntent").require("query").require("IP"))
     def handle_query_IP(self, _):
         dialog = None
@@ -175,6 +177,10 @@ class IPSkill(MycroftSkill):
                 dialog, gui = self.speak_multiple_last_digits(addr)
 
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.ON_IDLE)
+
+    def _handle_address_request(self, message):
+        addresses = get_ifaces()
+        self.bus.emit(message.response(data=addresses))
 
     def gui_show(self, ip):
         return ("ip-address.qml", {"ip": ip})
