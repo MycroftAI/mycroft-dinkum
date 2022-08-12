@@ -227,7 +227,6 @@ class AudioUserInterface:
 
         self._drain_speech_queue()
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
-        self._speech_finished.set()
 
         # Restore background stream volume
         self._unduck_volume()
