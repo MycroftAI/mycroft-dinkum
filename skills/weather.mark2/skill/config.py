@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Parse the device configuration and skill settings to determine the """
+from typing import Any, Dict
+
 FAHRENHEIT = "fahrenheit"
 CELSIUS = "celsius"
 METRIC = "metric"
@@ -22,7 +24,7 @@ MILES_PER_HOUR = "miles per hour"
 class WeatherConfig:
     """Build an object representing the configuration values for the weather skill."""
 
-    def __init__(self, core_config: dict, settings: dict):
+    def __init__(self, core_config: Dict[str, Any], settings: Dict[str, Any]):
         self.core_config = core_config
         self.settings = settings
 

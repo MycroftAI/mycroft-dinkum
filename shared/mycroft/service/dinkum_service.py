@@ -155,6 +155,7 @@ class DinkumService(ABC):
     def _reload_config(self, _message):
         """Force reloading of config"""
         Configuration.reload()
+        self.log.debug("Reloaded configuration")
 
     def _start_watchdog(self):
         """Run systemd watchdog in separate thread"""

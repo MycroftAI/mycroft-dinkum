@@ -667,6 +667,7 @@ class ConnectCheck(MycroftSkill):
             # Save to ~/.config/mycroft/mycroft.remote.conf
             with open(settings_path, "w", encoding="utf-8") as settings_file:
                 json.dump(remote_config, settings_file)
+            self.log.debug("Wrote remote config: %s", settings_path)
 
             # skills.json with installed skills
             self.log.debug("Uploading skills manifest")

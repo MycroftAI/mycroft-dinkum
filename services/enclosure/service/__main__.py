@@ -75,7 +75,7 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.switch.report-states"))
 
         # Inform services that config may have changed
-        self.bus.emit(Message("configuraton.updated"))
+        self.bus.emit(Message("configuration.updated"))
 
         # Inform skills that we're ready
         self.mycroft_ready = True

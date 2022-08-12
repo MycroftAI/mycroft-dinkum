@@ -17,7 +17,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Union, cast
+from typing import Any, ClassVar, Dict, Iterable, Optional, Union, cast
 
 import xdg.BaseDirectory
 
@@ -31,24 +31,23 @@ ConfigType = Dict[str, Any]
 
 
 class Configuration:
-    __config: Optional[ConfigType] = None
+    __config: ClassVar[ConfigType] = dict()
+    __is_loaded: ClassVar[bool] = False
 
     @staticmethod
     def get(*args, cache: bool = True, **kwargs) -> ConfigType:
         """Get singleton configuration (load if necessary)"""
-        if (not cache) or (Configuration.__config is None):
-            config: ConfigType = {}
+        if (not cache) or (not Configuration.__is_loaded):
             for config_path in Configuration.get_paths():
                 LOG.debug("Loading config file: %s", config_path)
                 try:
                     delta_config = Configuration.load(config_path)
-                    merge_dict(config, delta_config)
+                    merge_dict(Configuration.__config, delta_config)
                 except Exception:
                     LOG.exception("Error loading config file: %s", config_path)
 
-            Configuration.__config = config
+            Configuration.__is_loaded = True
 
-        assert Configuration.__config is not None
         return Configuration.__config
 
     @staticmethod
@@ -59,8 +58,7 @@ class Configuration:
     @staticmethod
     def reload():
         LOG.debug("Reloading configuration")
-        new_config = Configuration.get(cache=False)
-        merge_dict(Configuration.__config, new_config)
+        Configuration.get(cache=False)
 
     @staticmethod
     def get_paths() -> Iterable[Path]:

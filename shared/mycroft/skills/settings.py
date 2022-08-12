@@ -293,6 +293,16 @@ class SkillSettingsDownloader:
         if remote_settings:
             settings_changed = self.last_download_result != remote_settings
             if settings_changed:
+                # Save settings to cache
+                self.remote_cache_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(
+                    self.remote_cache_path, "w", encoding="utf-8"
+                ) as remote_cache_file:
+                    json.dump(remote_settings, remote_cache_file)
+
+                LOG.debug("Wrote remote skill settings to %s", self.remote_cache_path)
+
+                # Emit change event
                 LOG.debug("Skill settings changed since last download")
                 self._emit_settings_change_events(remote_settings)
                 self.last_download_result = remote_settings
@@ -318,15 +328,6 @@ class SkillSettingsDownloader:
         remote_settings = None
         try:
             remote_settings = self.api.get_skill_settings()
-
-            # Save settings to cache
-            self.remote_cache_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(
-                self.remote_cache_path, "w", encoding="utf-8"
-            ) as remote_cache_file:
-                json.dump(remote_settings, remote_cache_file)
-
-            LOG.debug("Wrote remote skill settings to %s", self.remote_cache_path)
         except requests.HTTPError as http_error:
             if http_error.response.status_code == HTTPStatus.UNAUTHORIZED:
                 LOG.warning("Settings not downloaded - device not paired")
