@@ -800,6 +800,7 @@ class TimerSkill(MycroftSkill):
                 self.active_timers = list()
                 dialog = "cancelled-single-timer"
                 self._save_timers()
+                self._reset()
             else:
                 # Need a timer name
                 dialog = self._ask_which_timer(
