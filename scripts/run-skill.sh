@@ -51,15 +51,19 @@ fi
 : "${XDG_CONFIG_HOME:=${HOME}/.config}"
 
 # User-writable directory where virtual environment is stored
-if [ -n "${DINKUM_SHARED_VENV}" ]; then
-    # Shared virtual enviroment
-    service_config_dir="${XDG_CONFIG_HOME}/mycroft"
+if [ -n "${DINKUM_VENV_DIR}" ]; then
+    venv_dir="${DINKUM_VENV_DIR}"
 else
-    # Isolated service virtual enviroment
-    service_config_dir="${XDG_CONFIG_HOME}/mycroft/skills/${skill_id}"
-fi
+    if [ -n "${DINKUM_SHARED_VENV}" ]; then
+        # Shared virtual enviroment
+        service_config_dir="${XDG_CONFIG_HOME}/mycroft"
+    else
+        # Isolated service virtual enviroment
+        service_config_dir="${XDG_CONFIG_HOME}/mycroft/skills/${skill_id}"
+    fi
 
-venv_dir="${service_config_dir}/.venv"
+    venv_dir="${service_config_dir}/.venv"
+fi
 
 if [ ! -d "${venv_dir}" ]; then
     echo "Missing virtual environment at ${venv_dir}";
