@@ -45,6 +45,18 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.stream_uri = ""
         self.fg_color = "white"
         self.bg_color = "black"
+        self.genre_images = {
+            "alternative": "genre_alternative.svg",
+            "classical": "genre_classical.svg",
+            "country": "genre_country.svg",
+            "generic": "genre_generic_radio.svg",
+            "hip-hop": "genre_hip_hop.svg",
+            "jazz": "genre_jazz.svg",
+            "metal": "genre_metal.svg",
+            "pop": "genre_pop.svg",
+            "rnb": "genre_rnb.svg",
+            "rock": "genre_rock.svg",
+        }
 
     def initialize(self):
         self.register_gui_handlers()
@@ -106,10 +118,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.CPS_pause()
 
     def update_radio_theme(self, status):
-        if self.fg_color == "white":
-            self.img_pth = self.find_resource("radio4.jpg", "ui/images")
+        if self.rs.genre_to_play and self.rs.genre_to_play in self.genre_images.keys():
+            self.img_pth = self.find_resource(self.genre_images[self.rs.genre_to_play], "ui/images")
         else:
-            self.img_pth = self.find_resource("radio.jpg", "ui/images")
+            self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
         channel_info = "%s/%s" % (self.rs.index + 1, len(self.rs.stations))
         station_name = self.current_station.get("name", "").replace("\n", "")
