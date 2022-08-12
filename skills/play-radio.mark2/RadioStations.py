@@ -34,19 +34,14 @@ class RadioStations:
         self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio"]
         self.search_limit = 1000
 
+        uri_genres = "http://de1.api.radio-browser.info/json/tags"
+        resp = requests.get(uri_genres)
+        genres = resp.json()
+
         self.generic_search_terms = [
-            "jazz",
-            "rock",
-            "classical",
-            "easy listening",
-            "ska",
-            "fusion",
-            "punk",
-            "rockabily",
-            "metal",
-            "bluegrass",
-            "country",
+            genre["name"] for genre in genres
         ]
+ 
         self.channel_index = 0
         self.last_search_terms = self.generic_search_terms[self.channel_index]
         self.genre_to_play = ""
