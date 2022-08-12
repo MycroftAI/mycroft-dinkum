@@ -12,13 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import asyncio
+import functools
 import logging
 import subprocess
 import sys
 from threading import Thread
 from typing import Optional
 
+from dbus_next import Message as DBusMessage
+from dbus_next.aio import MessageBus
+from dbus_next.service import ServiceInterface, dbus_property
+from dbus_next import BusType
 from mycroft_bus_client import Message, MessageBusClient
+
+MARK2_BUTTON = """
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node name="/ai/mycroft/mark2/button">
+  <interface name="ai.mycroft.Mark2ButtonInterface">
+    <signal name="volume_up">
+      <arg name="new_value" type="b"/>
+    </signal>
+    <signal name="volume_down">
+      <arg name="new_value" type="b"/>
+    </signal>
+    <signal name="action">
+      <arg name="new_value" type="b"/>
+    </signal>
+    <signal name="mute">
+      <arg name="new_value" type="b"/>
+    </signal>
+  </interface>
+</node>
+"""
 
 
 class Mark2SwitchClient:
@@ -41,28 +68,44 @@ class Mark2SwitchClient:
         self.bus.on("mycroft.switch.report-states", self._handle_get_state)
 
     def _run_proc(self):
-        """Reads button state changes from the mark2-buttons command"""
-        try:
-            button_cmd = ["mark2-buttons"]
-            self.log.debug(button_cmd)
-            proc = subprocess.Popen(
-                button_cmd, stdout=subprocess.PIPE, universal_newlines=True
-            )
-            with proc:
-                for line in proc.stdout:
-                    line = line.strip()
-                    if not line:
-                        continue
+        """Runs asyncio loop for dbus-next"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._run_proc_async())
+        loop.close()
 
-                    name, is_active_str = line.split(maxsplit=1)
-                    is_active = is_active_str.strip().lower() == "true"
-                    self._active[name] = is_active
-                    self._report_state(name, is_active)
+    async def _run_proc_async(self):
+        """Reads button state changes from Mark II DBus HAL service"""
+        try:
+            # Connect to DBus HAL service
+            mark2_name = "ai.mycroft.mark2"
+            button_namespace = "ai.mycroft.Mark2ButtonInterface"
+            button_path = "/ai/mycroft/mark2/button"
+
+            dbus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+            introspection = await dbus.introspect(mark2_name, button_path)
+            button_object = dbus.get_proxy_object(
+                mark2_name, button_path, introspection
+            )
+            button_interface = button_object.get_interface(button_namespace)
+
+            async def button_changed(name: str, is_active: bool):
+                self._active[name] = is_active
+                self._report_state(name, is_active)
+
+            button_interface.on_volume_up(
+                functools.partial(button_changed, "volume_up")
+            )
+            button_interface.on_volume_down(
+                functools.partial(button_changed, "volume_down")
+            )
+            button_interface.on_action(functools.partial(button_changed, "action"))
+            button_interface.on_mute(functools.partial(button_changed, "mute"))
+
+            await dbus.wait_for_disconnect()
+            self.log.debug("Disconnected from DBus")
         except Exception:
             self.log.exception("Error reading button state")
-
-            # Just exit the service. systemd will restart it.
-            sys.exit(1)
 
     def _handle_get_state(self, _message: Message):
         """Report the state of all switches"""
