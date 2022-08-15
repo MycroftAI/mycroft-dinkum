@@ -225,6 +225,7 @@ class AudioUserInterface:
                 mycroft_session_id=self._mycroft_session_id,
             )
 
+        self._mycroft_session_id = None
         self._drain_speech_queue()
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
 
