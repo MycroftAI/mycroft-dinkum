@@ -1,4 +1,19 @@
+# Copyright 2022 Mycroft AI Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import asyncio
+import audioop
 import itertools
 import json
 import logging
@@ -29,6 +44,9 @@ AUDIO_TIMEOUT = 2
 
 # Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 4096
+
+AUDIO_LOUDNESS_FACTOR = 2.0
+"""Factor to multiply incoming audio by"""
 
 # Onnx model path for Silero VAD
 VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
@@ -288,17 +306,20 @@ class VoiceLoop:
 def _audio_input(queue: "Queue[bytes]"):
     try:
         # TODO: Use config
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             ["arecord", "-q", "-r", "16000", "-c", "1", "-f", "S16_LE", "-t", "raw"],
             stdout=subprocess.PIPE,
-        )
-        assert proc.stdout is not None
+        ) as proc:
+            assert proc.stdout is not None
 
-        while True:
-            chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
-            assert chunk, "Empty audio chunk"
+            while True:
+                chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
+                assert chunk, "Empty audio chunk"
 
-            queue.put_nowait(chunk)
+                # Increase loudness of audio
+                chunk = audioop.mul(chunk, 2, AUDIO_LOUDNESS_FACTOR)
+
+                queue.put_nowait(chunk)
     except Exception:
         LOG.exception("Unexpected error in audio input thread")
 
