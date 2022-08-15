@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import json
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -44,6 +42,10 @@ class EnclosureService(DinkumService):
         self.bus.on("mycroft.session.ended", self.handle_session_ended)
         self.bus.on("mycroft.gui.idle", self.handle_idle)
         self.bus.on("mycroft.switch.state", self.handle_switch_state)
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown",
+            self.handle_unknown_recognition,
+        )
 
         # Return to idle screen if GUI reconnects
         self.bus.on("gui.initialize.ended", self.handle_gui_reconnect)
@@ -145,6 +147,10 @@ class EnclosureService(DinkumService):
             self.bus.emit(Message("mycroft.mic.listen"))
 
     def handle_gui_reconnect(self, _message):
+        # Show idle skill GUI
+        self.bus.emit(Message("mycroft.gui.idle"))
+
+    def handle_unknown_recognition(self, _message):
         # Show idle skill GUI
         self.bus.emit(Message("mycroft.gui.idle"))
 
