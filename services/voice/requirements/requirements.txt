@@ -1,3 +1,6 @@
+# audio in
+PyAudio==0.2.11
+
 # precise lite
 numpy
 sonopy~=0.1.0

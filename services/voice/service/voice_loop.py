@@ -12,6 +12,7 @@ from threading import Thread
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
+import pyaudio
 import numpy as np
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT
@@ -287,15 +288,12 @@ class VoiceLoop:
 
 def _audio_input(queue: "Queue[bytes]"):
     try:
-        # TODO: Use config
-        proc = subprocess.Popen(
-            ["arecord", "-q", "-r", "16000", "-c", "1", "-f", "S16_LE", "-t", "raw"],
-            stdout=subprocess.PIPE,
+        pa = pyaudio.PyAudio()
+        stream = pa.open(
+            format=pa.get_format_from_width(2), channels=1, rate=16000, input=True
         )
-        assert proc.stdout is not None
-
         while True:
-            chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
+            chunk = stream.read(AUDIO_CHUNK_SIZE // 2)
             assert chunk, "Empty audio chunk"
 
             queue.put_nowait(chunk)
