@@ -74,10 +74,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_media_finished,
         )
         self.gui.register_handler(
-            "cps.gui.pause", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+            "cps.gui.pause", "AudioPlayer_mark_ii.qml", self.handle_gui_status_change
         )
         self.gui.register_handler(
-            "cps.gui.play", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+            "cps.gui.play", "AudioPlayer_mark_ii.qml", self.handle_gui_status_change
         )
 
     def handle_audioservice_status_change(self, message):
@@ -95,7 +95,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         # TODO
         # self.gui["status"] = new_status
-        self.update_gui_values("AudioPlayer_scalable.qml", {"status": new_status})
+        self.update_gui_values("AudioPlayer_mark_ii.qml", {"status": new_status})
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
@@ -126,18 +126,15 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         channel_info = "%s/%s" % (self.rs.index + 1, len(self.rs.stations))
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
-            "theme_bg": self.bg_color,
-            "theme_fg": self.fg_color,  
             "media_image": self.img_pth,
-            "media_artist": " NOW STREAMING: " + station_name,
-            "media_track": "Track",
-            "media_album": self.rs.genre_to_play,
+            "media_station": station_name,
+            "media_genre": self.rs.genre_to_play,
             "media_skill": self.skill_id,
             "media_current_station_info": channel_info,
             "media_streaming": True,
             "media_status": status,
         }
-        return ("AudioPlayer_scalable.qml", gui_data)
+        return ("AudioPlayer_mark_ii.qml", gui_data)
 
     def setup_for_play(self, utterance):
         self.rs.get_stations(utterance)
@@ -217,7 +214,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         gui = None
 
         if self.now_playing is not None:
-            gui = "AudioPlayer_scalable.qml"
+            gui = "AudioPlayer_mark_ii.qml"
         else:
             dialog = "no.radio.playing"
 
