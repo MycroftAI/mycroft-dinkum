@@ -14,7 +14,7 @@
 # TODO
 #   play <station name> should find if provided
 #   add to favorites and play favorite
-from typing import Tuple
+from typing import Optional, Tuple
 
 import requests
 from mycroft.skills import GuiClear, intent_handler
@@ -57,12 +57,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "rnb": "genre_rnb.svg",
             "rock": "genre_rock.svg",
         }
+        self._is_playing = False
+        self._stream_session_id: Optional[str] = None
 
     def initialize(self):
         self.register_gui_handlers()
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
+        self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
+        self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
             "mycroft.audio.service.pause", self.handle_audioservice_status_change
         )
@@ -100,6 +104,18 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
         self.log.warning("RadioMediaFinished! should never get here!")
+
+    def handle_media_playing(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = True
+        else:
+            self._is_playing = False
+
+    def handle_media_stopped(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = False
 
     def handle_gui_status_change(self, message):
         """Handle play and pause status changes from the GUI.
@@ -365,6 +381,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         gui_clear = GuiClear.AT_END
 
         return self.end_session(dialog=None, gui_clear=gui_clear)
+
+    def handle_gui_idle(self):
+        if self._is_playing:
+            gui = "AudioPlayer_scalable.qml"
+            self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+            return True
+
+        return False
 
 
 def create_skill(skill_id: str):

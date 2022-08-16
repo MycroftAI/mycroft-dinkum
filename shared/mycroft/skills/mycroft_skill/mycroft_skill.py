@@ -345,6 +345,7 @@ class MycroftSkill:
             self._register_public_api()
 
             self._bus.on("mycroft.skill-response", self.__handle_skill_response)
+            self._bus.on("mycroft.gui.handle-idle", self.__handle_gui_idle)
 
     def _register_public_api(self):
         """Find and register api methods.
@@ -1488,3 +1489,17 @@ class MycroftSkill:
                 result_message = self.end_session()
 
             self.bus.emit(result_message)
+
+    def handle_gui_idle(self) -> bool:
+        """Allow skill to override idle GUI screen"""
+        return False
+
+    def __handle_gui_idle(self, message: Message):
+        if message.data.get("skill_id") == self.skill_id:
+            handled = False
+            try:
+                handled = self.handle_gui_idle()
+            except Exception:
+                LOG.exception("Unexpected error handling GUI idle message")
+            finally:
+                self.bus.emit(message.response(data={"handled": handled}))

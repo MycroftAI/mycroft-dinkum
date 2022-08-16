@@ -52,6 +52,8 @@ class NewsSkill(CommonPlaySkill):
         self.add_event(
             "mycroft.audio.service.position", self.handle_audioservice_position
         )
+        self.add_event("mycroft.audio.service.playing", self.handle_media_playing)
+        self.add_event("mycroft.audio.service.stopped", self.handle_media_stopped)
 
     def load_alternate_station_names(self) -> dict:
         """Load the list of alternate station names from alt.feed.name.value
@@ -87,6 +89,16 @@ class NewsSkill(CommonPlaySkill):
             data={"playerPosition": position_ms},
             overwrite=False,
         )
+
+    def handle_media_playing(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            self.now_playing = None
+
+    def handle_media_stopped(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self.now_playing = None
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
@@ -288,6 +300,14 @@ class NewsSkill(CommonPlaySkill):
             self.now_playing = None
 
             return self.end_session(gui_clear=GuiClear.AT_END)
+
+    def handle_gui_idle(self):
+        if self.now_playing is not None:
+            gui = "AudioPlayer_mark_ii.qml"
+            self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+            return True
+
+        return False
 
 
 def create_skill(skill_id: str):

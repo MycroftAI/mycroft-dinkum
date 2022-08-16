@@ -23,6 +23,13 @@ from mycroft_bus_client import Message
 from .connect_check import ConnectCheck
 
 IDLE_SKILL_ID = "homescreen.mark2"
+IDLE_OVERRIDE_SKILL_IDS = [
+    "timer.mark2",
+    "news.mark2",
+    "play-music.mark2",
+    "play-radio.mark2",
+    IDLE_SKILL_ID,
+]
 
 
 class EnclosureService(DinkumService):
@@ -40,7 +47,7 @@ class EnclosureService(DinkumService):
         self.bus.on("mycroft.skill-response", self.handle_skill_response)
         self.bus.on("mycroft.session.started", self.handle_session_started)
         self.bus.on("mycroft.session.ended", self.handle_session_ended)
-        self.bus.on("mycroft.gui.idle", self.handle_idle)
+        self.bus.on("mycroft.gui.idle", self.handle_gui_idle)
         self.bus.on("mycroft.switch.state", self.handle_switch_state)
         self.bus.on(
             "recognizer_loop:speech.recognition.unknown",
@@ -128,9 +135,17 @@ class EnclosureService(DinkumService):
                 Message("mycroft.feedback.set-state", data={"state": "asleep"})
             )
 
-    def handle_idle(self, message):
+    def handle_gui_idle(self, message):
         self.led_session_id = None
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
+
+        for skill_id in IDLE_OVERRIDE_SKILL_IDS:
+            response = self.bus.wait_for_response(
+                Message("mycroft.gui.handle-idle", data={"skill_id": skill_id})
+            )
+            if response and response.data.get("handled", False):
+                self.log.debug("Idle was handled by %s", skill_id)
+                break
 
     def handle_switch_state(self, message):
         name = message.data.get("name")
