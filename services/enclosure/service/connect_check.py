@@ -304,7 +304,7 @@ class ConnectCheck(MycroftSkill):
 
         # User has viewed the portal page.
         # Setup will continue when the user has entered their wi-fi credentials.
-        self._state = State.WIFI_SETUP_CREDS_
+        self._state = State.WIFI_SETUP_CREDS_ENTERED
         self.bus.emit(
             self.continue_session(
                 dialog="choose-wifi-network",
