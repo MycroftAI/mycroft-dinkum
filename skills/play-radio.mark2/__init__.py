@@ -119,7 +119,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def update_radio_theme(self, status):
         if self.rs.genre_to_play and self.rs.genre_to_play in self.genre_images.keys():
-            self.img_pth = self.find_resource(self.genre_images[self.rs.genre_to_play], "ui/images")
+            self.img_pth = self.find_resource(
+                self.genre_images[self.rs.genre_to_play], "ui/images"
+            )
         else:
             self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
@@ -127,7 +129,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
             "theme_bg": self.bg_color,
-            "theme_fg": self.fg_color,  
+            "theme_fg": self.fg_color,
             "media_image": self.img_pth,
             "media_artist": " NOW STREAMING: " + station_name,
             "media_track": "Track",
@@ -164,7 +166,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.now_playing = "Now Playing"
             gui = self.update_radio_theme(self.now_playing)
             self._stream_session_id = self._mycroft_session_id
-            self._mycroft_session_id = self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER,)
+            self._mycroft_session_id = self.emit_start_session(
+                gui=gui,
+                gui_clear=GuiClear.NEVER,
+            )
 
             # cast to str for json serialization
             self.CPS_send_status(image=self.img_pth, artist=station_name)
@@ -174,19 +179,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     ## Intents
     @intent_handler("HelpRadio.intent")
     def handle_radio_help(self, _):
-        speak = None
-        gui = None
-
-        speak = (
-            """Mycroft radio allows you to stream music and other content from a variety of free sources.
-            If you ask me to play a specific type of music, like play Jazz, or play rock, I work very well.
-            Play artist works Oh Kay for some artists but radio stations are not really artist specific.
-            Next station and next channel or previous station and previous channel will select a different channel or station.
-            You can also say change radio to change the radio Theme.
-            For the graphical you eye."""
-       )
-
-        return self.end_session(speak=speak, gui=gui, gui_clear=GuiClear.NEVER)
+        return self.end_session(dialog="radio.help", gui_clear=GuiClear.NEVER)
 
     @intent_handler("ChangeRadio.intent")
     def handle_change_radio(self, _):
@@ -209,7 +202,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         else:
             dialog = "no.radio.playing"
 
-        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)    
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     @intent_handler("ShowRadio.intent")
     def handle_show_radio(self, _):
@@ -302,7 +295,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.log.error(
                 "of %s stations, none work!" % (self.rs.get_station_count(),)
             )
- 
+
     @intent_handler("TurnOnRadio.intent")
     def handle_turnon_intent(self, _):
         if self.current_station is None:
@@ -372,7 +365,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         gui_clear = GuiClear.AT_END
 
         return self.end_session(dialog=None, gui_clear=gui_clear)
-
 
 
 def create_skill(skill_id: str):
