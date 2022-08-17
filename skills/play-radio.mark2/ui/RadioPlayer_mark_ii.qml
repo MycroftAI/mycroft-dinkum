@@ -36,6 +36,7 @@ Mycroft.CardDelegate {
     cardRadius: Mycroft.Units.gridUnit
 
     // Vars with station info.
+    readonly property var audioService: Mycroft.MediaService
     property var media_image: sessionData.media_image
     property var media_station: sessionData.media_station
     property var media_genre: sessionData.media_genre
@@ -45,6 +46,19 @@ Mycroft.CardDelegate {
     property var playerState: sessionData.media_status
 
     readonly property var mediaService: Mycroft.MediaService
+
+    /* Image {
+        id: trackImage
+        anchors.top: parent.top
+        anchors.topMargin: gridUnit * 2
+        anchors.left: parent.left
+        anchors.rightMargin: gridUnit * 2
+        source: sessionData.media_image
+        fillMode: Image.PreserveAspectFit
+        height: gridUnit * 18
+        width: gridUnit * 18
+        z: 100
+    } */
 
     Rectangle {
         anchors.fill: parent
@@ -112,22 +126,30 @@ Mycroft.CardDelegate {
                         source: "images/radio_skill_logo.svg"
                     }
 
-                    Rectangle {
-                        id: prevGenreBox
+                    Controls.Button {
+                        id: prevGenreButton
                         anchors.right: genre.left
                         anchors.top: skillNameLogo.bottom
                         anchors.topMargin: Mycroft.Units.gridUnit * 1
                         width: Mycroft.Units.gridUnit * 3
                         height: Mycroft.Units.gridUnit * 3
-                        color: "transparent"
-                        Image {
-                            id: prevGenreButton
-                            visible: true
-                            enabled: true
-                            anchors.fill: parent
-                            source: "images/prev_genre.svg"
-                            // fillMode: Image.PreserveAspectFit
-                            // z: 100
+
+                        onClicked: {
+                            triggerGuiEvent("gui.prev_genre", {})
+                        }
+
+                        background: Rectangle {
+                            id: prevGenreBox
+                            color: "transparent"
+                            Image {
+                                id: prevGenreIcon
+                                visible: true
+                                enabled: true
+                                anchors.fill: parent
+                                source: "images/prev_genre.svg"
+                                // fillMode: Image.PreserveAspectFit
+                                // z: 100
+                            }
                         }
                     }
                     
@@ -148,22 +170,30 @@ Mycroft.CardDelegate {
                         color: "white"
                     }
 
-                    Rectangle {
-                        id: nextGenreBox
+                    Controls.Button {
+                        id: nextGenreButton
                         anchors.left: genre.right
                         anchors.top: skillNameLogo.bottom
                         anchors.topMargin: Mycroft.Units.gridUnit * 1
                         width: Mycroft.Units.gridUnit * 3
                         height: Mycroft.Units.gridUnit * 3
-                        color: "transparent"
-                        Image {
-                            id: nextGenreButton
-                            visible: true
-                            enabled: true
-                            anchors.fill: parent
-                            source: "images/next_genre_flipped.svg"
-                            // fillMode: Image.PreserveAspectFit
-                            // z: 100
+
+                        onClicked: {
+                            triggerGuiEvent("gui.prev_genre", {})
+                        }
+
+                        background: Rectangle {
+                            id: nextGenreBox
+                            color: "transparent"
+                            Image {
+                                id: nextGenreIcon
+                                visible: true
+                                enabled: true
+                                anchors.fill: parent
+                                source: "images/next_genre_flipped.svg"
+                                // fillMode: Image.PreserveAspectFit
+                                // z: 100
+                            }
                         }
                     }
 
@@ -194,28 +224,41 @@ Mycroft.CardDelegate {
                     height: Mycroft.Units.gridUnit * 5
 
                     Rectangle {
-                        id: prevStationBox
-                        anchors.right: stopBox.left
+                        
+                    }
+
+                    Controls.Button {
+                        id: prevStationButton
+                        anchors.right: stopButton.left
                         anchors.top: parent.top
                         // anchors.topMargin: Mycroft.Units.gridUnit * 1
                         anchors.leftMargin: Mycroft.Units.gridUnit * 4
                         anchors.rightMargin: Mycroft.Units.gridUnit * 4
                         width: Mycroft.Units.gridUnit * 3
                         height: Mycroft.Units.gridUnit * 3
-                        color: "transparent"
-                        Image {
-                            id: prevStationButton
-                            visible: true
-                            enabled: true
-                            anchors.fill: parent
-                            source: "images/prev_station.svg"
-                            // fillMode: Image.PreserveAspectFit
-                            // z: 100
+
+                        onClicked: {
+                            triggerGuiEvent("gui.prev_station", {})
+                        }
+
+                        background: Rectangle {
+                            id: prevStationBox
+                            
+                            color: "transparent"
+                            Image {
+                                id: prevStationIcon
+                                visible: true
+                                enabled: true
+                                anchors.fill: parent
+                                source: "images/prev_station.svg"
+                                // fillMode: Image.PreserveAspectFit
+                                // z: 100
+                            }
                         }
                     }
-
-                    Rectangle {
-                        id: stopBox
+                    
+                    Controls.Button {
+                        id: stopButton
                         // anchors.right: nextStationBox.left
                         anchors.top: parent.top
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -226,37 +269,53 @@ Mycroft.CardDelegate {
                         anchors.rightMargin: Mycroft.Units.gridUnit * 4
                         width: Mycroft.Units.gridUnit * 3
                         height: Mycroft.Units.gridUnit * 3
-                        color: "transparent"
-                        Image {
-                            id: stopButton
-                            visible: true
-                            enabled: true
-                            anchors.fill: parent
-                            source: "images/stop.svg"
-                            // fillMode: Image.PreserveAspectFit
-                            // z: 100
+
+                        onClicked: {
+                            triggerGuiEvent("gui.stop_radio", {})
+                        }
+
+                        background: Rectangle {
+                            id: stopBox
+                            color: "transparent"
+                            Image {
+                                id: stopIcon
+                                visible: true
+                                enabled: true
+                                anchors.fill: parent
+                                source: "images/stop.svg"
+                                // fillMode: Image.PreserveAspectFit
+                                // z: 100
+                            }
                         }
                     }
 
-                    Rectangle {
-                        id: nextStationBox
-                        anchors.left: stopBox.right
+                    Controls.Button {
+                        id: nextStationButton
+                        anchors.left: stopButton.right
                         anchors.top: parent.top
                         // anchors.topMargin: Mycroft.Units.gridUnit * 1
                         anchors.leftMargin: Mycroft.Units.gridUnit * 4
                         anchors.rightMargin: Mycroft.Units.gridUnit * 4
                         width: Mycroft.Units.gridUnit * 3
                         height: Mycroft.Units.gridUnit * 3
-                        color: "transparent"
-                        Image {
-                            id: nextStationButton
-                            visible: true
-                            enabled: true
-                            anchors.fill: parent
-                            source: "images/next_station.svg"
-                            // paintedWidth: 20px
-                            // fillMode: Image.PreserveAspectFit
-                            // z: 100
+
+                        onClicked: {
+                            triggerGuiEvent("gui.next_station", {})
+                        }
+
+                        background: Rectangle {
+                            id: nextStationBox
+                            color: "transparent"
+                            Image {
+                                id: nextStationIcon
+                                visible: true
+                                enabled: true
+                                anchors.fill: parent
+                                source: "images/next_station.svg"
+                                // paintedWidth: 20px
+                                // fillMode: Image.PreserveAspectFit
+                                // z: 100
+                            }
                         }
                     }
                 }
