@@ -21,10 +21,9 @@ import os
 import signal
 import subprocess
 import tempfile
-import typing
 from pathlib import Path
 from threading import RLock
-from typing import Optional
+from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 import sdl2
@@ -70,19 +69,16 @@ class AudioHAL:
         self.audio_width = audio_width
         self.audio_chunk_size = audio_chunk_size
 
-        # Cache of mixer chunks
-        self._fg_cache: typing.Dict[str, mixer.Mix_Chunk] = {}
-
-        # Mixer chunks to free after finished playing
-        self._fg_free: typing.Dict[ChannelType, mixer.Mix_Chunk] = {}
+        # Mixer chunks to free
+        self._fg_free: Dict[ChannelType, mixer.Mix_Chunk] = {}
 
         # Media ids by channel
-        self._fg_media_ids: typing.Dict[ChannelType, typing.Optional[str]] = {}
-        self._fg_session_ids: typing.Dict[ChannelType, typing.Optional[str]] = {}
-        self._bg_media_id: typing.Optional[str] = None
+        self._fg_media_ids: Dict[ChannelType, Optional[str]] = {}
+        self._fg_session_ids: Dict[ChannelType, Optional[str]] = {}
+        self._bg_media_id: Optional[str] = None
 
         # Background VLC process
-        self._bg_proc: typing.Optional[subprocess.Popen] = None
+        self._bg_proc: Optional[subprocess.Popen] = None
         self._bg_paused: bool = True
         self._bg_volume: float = 1.0
         self._bg_position: int = 0
@@ -105,12 +101,6 @@ class AudioHAL:
                         },
                     )
                 )
-
-                # Free audio chunk if it wasn't cached
-                chunk = self._fg_free.pop(channel, None)
-                if chunk is not None:
-                    with self._mixer_lock:
-                        mixer.Mix_FreeChunk(chunk)
             except Exception:
                 LOG.exception("Error finishing channel: %s", channel)
 
@@ -197,7 +187,6 @@ class AudioHAL:
     def _reset_caches(self):
         """Clear all media caches"""
         self._fg_free = {}
-        self._fg_cache = {}
         self._fg_media_ids = {}
         self._bg_media_id = None
 
@@ -244,44 +233,37 @@ class AudioHAL:
     def play_foreground(
         self,
         channel: ChannelType,
-        file_path: typing.Union[str, Path],
-        media_id: typing.Optional[str] = None,
-        volume: typing.Optional[float] = None,
-        cache: bool = False,
+        file_path: Union[str, Path],
+        media_id: Optional[str] = None,
+        volume: Optional[float] = None,
         mycroft_session_id: Optional[str] = None,
     ) -> float:
         """Play an audio file on a foreground channel."""
         file_path_str = str(file_path)
-        chunk: typing.Optional[mixer.Mix_Chunk] = None
 
-        if cache:
-            # Try to retrieve chunk from cache first
-            chunk = self._fg_cache.get(file_path_str)
+        # Need to load new chunk
+        LOG.debug("Loading audio file: %s", file_path)
+        with self._mixer_lock:
+            last_chunk: Optional[mixer.Mix_Chunk] = self._fg_free.pop(channel, None)
+            if last_chunk is not None:
+                # Free previously played audio chunk
+                mixer.Mix_FreeChunk(last_chunk)
 
-        if chunk is None:
-            # Need to load new chunk
-            LOG.debug("Loading audio file: %s", file_path)
-            with self._mixer_lock:
-                chunk = mixer.Mix_LoadWAV(file_path_str.encode())
+            chunk: Optional[mixer.Mix_Chunk] = mixer.Mix_LoadWAV(file_path_str.encode())
 
             if not chunk:
                 raise SDLException(self._get_mixer_error())
 
-            if cache:
-                # Store in cache
-                self._fg_cache[file_path_str] = chunk
+            duration_sec = chunk.contents.alen / (
+                self.audio_sample_rate * self.audio_channels * self.audio_width
+            )
 
-        duration_sec = chunk.contents.alen / (
-            self.audio_sample_rate * self.audio_channels * self.audio_width
-        )
+            self._fg_media_ids[channel] = media_id
+            self._fg_session_ids[channel] = mycroft_session_id
 
-        self._fg_media_ids[channel] = media_id
-        self._fg_session_ids[channel] = mycroft_session_id
+            # Chunk will be freed when next sound is played on this channel
+            self._fg_free[channel] = chunk
 
-        # Chunk will be freed after playing it not caching
-        self._fg_free[channel] = chunk if not cache else None
-
-        with self._mixer_lock:
             if volume is not None:
                 # Set channel volume
                 mixer.Mix_Volume(channel, self._clamp_volume(volume))
@@ -289,10 +271,11 @@ class AudioHAL:
                 # Max volume
                 mixer.Mix_Volume(channel, self._clamp_volume(1.0))
 
+            mixer.Mix_HaltChannel(channel)
             ret = mixer.Mix_PlayChannel(channel, chunk, 0)  # 0 = no looping
             self._check_sdl(ret)
 
-        return duration_sec
+            return duration_sec
 
     def pause_foreground(self, channel: int = -1):
         """Pause media on a foreground channel (-1 for all)"""
@@ -325,7 +308,7 @@ class AudioHAL:
     # -------------------------------------------------------------------------
 
     def start_background(
-        self, uri_playlist: typing.Iterable[str], media_id: typing.Optional[str] = None
+        self, uri_playlist: Iterable[str], media_id: Optional[str] = None
     ):
         """Start a playlist playing on a background channel"""
         self._stop_bg_process()

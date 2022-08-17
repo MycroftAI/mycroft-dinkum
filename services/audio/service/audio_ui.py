@@ -273,7 +273,6 @@ class AudioUserInterface:
             self._ahal.play_foreground(
                 ForegroundChannel.EFFECT,
                 file_path,
-                cache=True,
                 volume=volume,
                 mycroft_session_id=mycroft_session_id,
             )
