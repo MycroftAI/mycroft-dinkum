@@ -78,10 +78,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_media_finished,
         )
         self.gui.register_handler(
-            "cps.gui.pause", "AudioPlayer_mark_ii.qml", self.handle_gui_status_change
+            "cps.gui.pause", "RadioPlayer_mark_ii.qml", self.handle_gui_status_change
         )
         self.gui.register_handler(
-            "cps.gui.play", "AudioPlayer_mark_ii.qml", self.handle_gui_status_change
+            "cps.gui.play", "RadioPlayer_mark_ii.qml", self.handle_gui_status_change
         )
 
     def handle_audioservice_status_change(self, message):
@@ -99,7 +99,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         # TODO
         # self.gui["status"] = new_status
-        self.update_gui_values("AudioPlayer_mark_ii.qml", {"status": new_status})
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
@@ -152,7 +152,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "media_streaming": True,
             "media_status": status,
         }
-        return ("AudioPlayer_mark_ii.qml", gui_data)
+        return ("RadioPlayer_mark_ii.qml", gui_data)
 
     def setup_for_play(self, utterance):
         self.rs.get_stations(utterance)
@@ -223,7 +223,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         gui = None
 
         if self.now_playing is not None:
-            gui = "AudioPlayer_mark_ii.qml"
+            gui = "RadioPlayer_mark_ii.qml"
         else:
             dialog = "no.radio.playing"
 
