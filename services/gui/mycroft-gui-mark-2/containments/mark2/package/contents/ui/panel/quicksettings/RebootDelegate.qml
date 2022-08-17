@@ -25,7 +25,7 @@ Delegate {
     iconSource: Qt.resolvedUrl("./system-reboot.svg")
     text: i18n("Restart")
     onClicked: {
-        Mark2SystemAccess.requestReboot();
+        Mark2SystemAccess.executeCommand("sudo reboot");
     }
 }
 

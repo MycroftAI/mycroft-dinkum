@@ -144,7 +144,6 @@ class HomescreenSkill(MycroftSkill):
         )
         self.add_event("mycroft.mic.mute", self.handle_mute)
         self.add_event("mycroft.mic.unmute", self.handle_unmute)
-        self.add_event("mycroft.gui.idle", self.handle_gui_idle)
 
     def handle_initial_skill_load(self):
         """Queries other skills for data to display and shows the resting screen.
@@ -185,8 +184,10 @@ class HomescreenSkill(MycroftSkill):
         gui = self._show_idle_screen()
         return self.end_session(gui=gui, gui_clear=GuiClear.NEVER)
 
-    def handle_gui_idle(self, _message: Message):
-        self.emit_start_session(gui=self._show_idle_screen(), gui_clear=GuiClear.NEVER)
+    def handle_gui_idle(self):
+        gui = self._show_idle_screen()
+        self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+        return True
 
     def _show_idle_screen(self):
         """Populates and shows the resting screen."""

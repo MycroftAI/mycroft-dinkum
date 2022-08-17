@@ -814,6 +814,14 @@ class TimerSkill(MycroftSkill):
 
         return self.end_session(dialog=dialog, gui_clear=GuiClear.AT_END)
 
+    def handle_gui_idle(self):
+        if self.active_timers:
+            gui = ("timer_mark_ii.qml", self._get_gui_data())
+            self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+            return True
+
+        return False
+
     def _clear_expired_timers(self):
         """The user wants the beeping to stop so cancel all expired timers."""
         for timer in self.expired_timers:

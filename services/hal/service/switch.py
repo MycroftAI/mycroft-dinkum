@@ -43,6 +43,8 @@ MARK2_BUTTON = """
     <signal name="mute">
       <arg name="new_value" type="b"/>
     </signal>
+    <method name="report">
+    </method>
   </interface>
 </node>
 """
@@ -101,6 +103,9 @@ class Mark2SwitchClient:
             )
             button_interface.on_action(functools.partial(button_changed, "action"))
             button_interface.on_mute(functools.partial(button_changed, "mute"))
+
+            # Request current button states
+            await button_interface.call_report()
 
             await dbus.wait_for_disconnect()
             self.log.debug("Disconnected from DBus")

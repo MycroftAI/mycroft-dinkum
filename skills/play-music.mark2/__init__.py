@@ -40,6 +40,7 @@ class LocalMusicSkill(CommonPlaySkill):
 
     def initialize(self):
         self._stream_session_id: Optional[str] = None
+        self._is_playing = False
 
         # Used for local music
         self.mpd_client = MpdClient()
@@ -56,6 +57,8 @@ class LocalMusicSkill(CommonPlaySkill):
 
     def register_handlers(self):
         """Register handlers for events to or from the GUI."""
+        self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
+        self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         # self.bus.on("mycroft.audio.service.pause", self.handle_media_pause)
         # self.bus.on("mycroft.audio.service.resume", self.handle_media_resume)
         self.add_event("gui.namespace.displayed", self.handle_gui_namespace_displayed)
@@ -106,7 +109,20 @@ class LocalMusicSkill(CommonPlaySkill):
             self._play_next_song()
         elif self._gui_skill_id == self.skill_id:
             # Return to idle
+            self._is_playing = False
             self.bus.emit(Message("mycroft.gui.idle"))
+
+    def handle_media_playing(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = True
+        else:
+            self._is_playing = False
+
+    def handle_media_stopped(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = False
 
     def handle_gui_namespace_displayed(self, message: Message):
         self._gui_skill_id = message.data.get("skill_id")
@@ -214,6 +230,14 @@ class LocalMusicSkill(CommonPlaySkill):
             return art_path
         except Exception:
             self.log.exception("Failed to get album art")
+
+    def handle_gui_idle(self):
+        if self._is_playing:
+            gui = "audio_player_mark_ii.qml"
+            self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+            return True
+
+        return False
 
 
 def create_skill(skill_id: str):

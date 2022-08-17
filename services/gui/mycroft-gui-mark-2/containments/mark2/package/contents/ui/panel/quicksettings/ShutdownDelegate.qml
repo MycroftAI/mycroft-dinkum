@@ -25,7 +25,7 @@ Delegate {
     iconSource: Qt.resolvedUrl("./system-shutdown.svg")
     text: i18n("Turn Off")
     onClicked: {
-        Mark2SystemAccess.requestShutdown();
+        Mark2SystemAccess.executeCommand("sudo shutdown -h now");
     }
 }
 

@@ -14,7 +14,7 @@
 # TODO
 #   play <station name> should find if provided
 #   add to favorites and play favorite
-from typing import Tuple
+from typing import Optional, Tuple
 
 import requests
 from mycroft.skills import GuiClear, intent_handler
@@ -57,12 +57,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "rnb": "genre_rnb.svg",
             "rock": "genre_rock.svg",
         }
+        self._is_playing = False
+        self._stream_session_id: Optional[str] = None
 
     def initialize(self):
         self.register_gui_handlers()
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
+        self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
+        self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
             "mycroft.audio.service.pause", self.handle_audioservice_status_change
         )
@@ -101,6 +105,18 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """Handle media playback finishing."""
         self.log.warning("RadioMediaFinished! should never get here!")
 
+    def handle_media_playing(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = True
+        else:
+            self._is_playing = False
+
+    def handle_media_stopped(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self._is_playing = False
+
     def handle_gui_status_change(self, message):
         """Handle play and pause status changes from the GUI.
         This notifies the audioservice. The GUI state only changes once the
@@ -119,7 +135,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def update_radio_theme(self, status):
         if self.rs.genre_to_play and self.rs.genre_to_play in self.genre_images.keys():
-            self.img_pth = self.find_resource(self.genre_images[self.rs.genre_to_play], "ui/images")
+            self.img_pth = self.find_resource(
+                self.genre_images[self.rs.genre_to_play], "ui/images"
+            )
         else:
             self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
@@ -161,7 +179,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.now_playing = "Now Playing"
             gui = self.update_radio_theme(self.now_playing)
             self._stream_session_id = self._mycroft_session_id
-            self._mycroft_session_id = self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER,)
+            self._mycroft_session_id = self.emit_start_session(
+                gui=gui,
+                gui_clear=GuiClear.NEVER,
+            )
 
             # cast to str for json serialization
             self.CPS_send_status(image=self.img_pth, artist=station_name)
@@ -171,19 +192,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     ## Intents
     @intent_handler("HelpRadio.intent")
     def handle_radio_help(self, _):
-        speak = None
-        gui = None
-
-        speak = (
-            """Mycroft radio allows you to stream music and other content from a variety of free sources.
-            If you ask me to play a specific type of music, like play Jazz, or play rock, I work very well.
-            Play artist works Oh Kay for some artists but radio stations are not really artist specific.
-            Next station and next channel or previous station and previous channel will select a different channel or station.
-            You can also say change radio to change the radio Theme.
-            For the graphical you eye."""
-       )
-
-        return self.end_session(speak=speak, gui=gui, gui_clear=GuiClear.NEVER)
+        return self.end_session(dialog="radio.help", gui_clear=GuiClear.NEVER)
 
     @intent_handler("ChangeRadio.intent")
     def handle_change_radio(self, _):
@@ -206,7 +215,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         else:
             dialog = "no.radio.playing"
 
-        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)    
+        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     @intent_handler("ShowRadio.intent")
     def handle_show_radio(self, _):
@@ -299,7 +308,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.log.error(
                 "of %s stations, none work!" % (self.rs.get_station_count(),)
             )
- 
+
     @intent_handler("TurnOnRadio.intent")
     def handle_turnon_intent(self, _):
         if self.current_station is None:
@@ -370,6 +379,13 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         return self.end_session(dialog=None, gui_clear=gui_clear)
 
+    def handle_gui_idle(self):
+        if self._is_playing:
+            gui = "AudioPlayer_scalable.qml"
+            self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
+            return True
+
+        return False
 
 
 def create_skill(skill_id: str):
