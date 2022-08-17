@@ -28,7 +28,7 @@ CONF_LIKELY_MATCH = 0.7
 CONF_GENERIC_MATCH = 0.6
 
 """
-MIA - RestartRadio.intent
+Provides base functionality for Mycroft's radio skill.
 """
 
 
