@@ -44,6 +44,8 @@ Mycroft.CardDelegate {
     // Vars with state info.
     property var playerState: sessionData.media_status
 
+    readonly property var mediaService: Mycroft.MediaService
+
     Rectangle {
         anchors.fill: parent
         radius: Mycroft.Units.gridUnit
@@ -92,7 +94,7 @@ Mycroft.CardDelegate {
                 anchors.bottomMargin: Mycroft.Units.gridUnit * 2
                 anchors.leftMargin: Mycroft.Units.gridUnit * 2
                 width: Mycroft.Units.gridUnit * 24
-                height: Mycroft.Units.gridUnit * 22 - bottomArea.height
+                height: Mycroft.Units.gridUnit * 15 - bottomArea.height
                 color: "transparent"
 
                 Item {
@@ -110,28 +112,152 @@ Mycroft.CardDelegate {
                         source: "images/radio_skill_logo.svg"
                     }
 
+                    Rectangle {
+                        id: prevGenreBox
+                        anchors.right: genre.left
+                        anchors.top: skillNameLogo.bottom
+                        anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        width: Mycroft.Units.gridUnit * 3
+                        height: Mycroft.Units.gridUnit * 3
+                        color: "transparent"
+                        Image {
+                            id: prevGenreButton
+                            visible: true
+                            enabled: true
+                            anchors.fill: parent
+                            source: "images/prev_genre.svg"
+                            // fillMode: Image.PreserveAspectFit
+                            // z: 100
+                        }
+                    }
+                    
                     Title {
                         id: genre
                         anchors.top: skillNameLogo.bottom
+                        anchors.horizontalCenter: parent.horizontalCenter
                         anchors.topMargin: Mycroft.Units.gridUnit * 1
                         font.pixelSize: 47
                         // font.styleName: "SemiBold"
                         font.capitalization: Font.Capitalize
-                        // heightUnits: 4
+                        heightUnits: 4
+                        widthUnits: 15
+                        // leftPadding: Mycroft.Units.gridUnit * 1
+                        // rightPadding: Mycroft.Units.gridUnit * 1
                         text: media_genre
                         maxTextLength: 13
+                        color: "white"
+                    }
+
+                    Rectangle {
+                        id: nextGenreBox
+                        anchors.left: genre.right
+                        anchors.top: skillNameLogo.bottom
+                        anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        width: Mycroft.Units.gridUnit * 3
+                        height: Mycroft.Units.gridUnit * 3
+                        color: "transparent"
+                        Image {
+                            id: nextGenreButton
+                            visible: true
+                            enabled: true
+                            anchors.fill: parent
+                            source: "images/next_genre_flipped.svg"
+                            // fillMode: Image.PreserveAspectFit
+                            // z: 100
+                        }
                     }
 
                     Title {
                         id: station
                         anchors.top: genre.bottom
-                        // anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        anchors.topMargin: Mycroft.Units.gridUnit * 1
                         font.pixelSize: 24
                         font.capitalization: Font.AllUppercase
                         // font.styleName: "SemiBold"
                         // heightUnits: 4
                         text: media_station
                         maxTextLength: 15
+                        color: "white"
+                    }
+                }
+
+                Item {
+                    id: transportControls
+                    anchors.top: skillNameLine.bottom
+                    // anchors.centerIn: parent
+                    // anchors.topMargin: Mycroft.Units.gridUnit * 1
+                    // anchors.horizontalCenter: parent.horizontalCenter
+                    // anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: Mycroft.Units.gridUnit * 5
+
+                    Rectangle {
+                        id: prevStationBox
+                        anchors.right: stopBox.left
+                        anchors.top: parent.top
+                        // anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        anchors.leftMargin: Mycroft.Units.gridUnit * 4
+                        anchors.rightMargin: Mycroft.Units.gridUnit * 4
+                        width: Mycroft.Units.gridUnit * 3
+                        height: Mycroft.Units.gridUnit * 3
+                        color: "transparent"
+                        Image {
+                            id: prevStationButton
+                            visible: true
+                            enabled: true
+                            anchors.fill: parent
+                            source: "images/prev_station.svg"
+                            // fillMode: Image.PreserveAspectFit
+                            // z: 100
+                        }
+                    }
+
+                    Rectangle {
+                        id: stopBox
+                        // anchors.right: nextStationBox.left
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        // anchors.verticalCenter: parent.verticalCenter
+                        // anchors.centerIn: parent
+                        // anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        anchors.leftMargin: Mycroft.Units.gridUnit * 4
+                        anchors.rightMargin: Mycroft.Units.gridUnit * 4
+                        width: Mycroft.Units.gridUnit * 3
+                        height: Mycroft.Units.gridUnit * 3
+                        color: "transparent"
+                        Image {
+                            id: stopButton
+                            visible: true
+                            enabled: true
+                            anchors.fill: parent
+                            source: "images/stop.svg"
+                            // fillMode: Image.PreserveAspectFit
+                            // z: 100
+                        }
+                    }
+
+                    Rectangle {
+                        id: nextStationBox
+                        anchors.left: stopBox.right
+                        anchors.top: parent.top
+                        // anchors.topMargin: Mycroft.Units.gridUnit * 1
+                        anchors.leftMargin: Mycroft.Units.gridUnit * 4
+                        anchors.rightMargin: Mycroft.Units.gridUnit * 4
+                        width: Mycroft.Units.gridUnit * 3
+                        height: Mycroft.Units.gridUnit * 3
+                        color: "transparent"
+                        Image {
+                            id: nextStationButton
+                            visible: true
+                            enabled: true
+                            anchors.fill: parent
+                            source: "images/next_station.svg"
+                            // paintedWidth: 20px
+                            // fillMode: Image.PreserveAspectFit
+                            // z: 100
+                        }
                     }
                 }
             }
@@ -141,36 +267,18 @@ Mycroft.CardDelegate {
             id: bottomArea
             width: parent.width
             anchors.bottom: parent.bottom
-            height: Mycroft.Units.gridUnit * 5
-            color: "transparent"
+            height: Mycroft.Units.gridUnit * 2
+            color: "#22A7F0"
+            radius: Mycroft.Units.gridUnit
 
-            RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                visible: media.length !== -1 ? 1 : 0
-                enabled: media.length !== -1 ? 1 : 0
-                
-                Controls.Label {
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.leftMargin: Mycroft.Units.gridUnit * 2
-                    font.pixelSize: Mycroft.Units.gridUnit * 2
-                    font.bold: true
-                    horizontalAlignment: Text.AlignLeft
-                    verticalAlignment: Text.AlignVCenter
-                    text: formatTime(playerPosition)
-                    // color: theme.fgColor
-                }
-
-                Controls.Label {
-                    Layout.alignment: Qt.AlignRight
-                    Layout.rightMargin: Mycroft.Units.gridUnit * 2
-                    font.pixelSize: Mycroft.Units.gridUnit * 2
-                    font.bold: true
-                    horizontalAlignment: Text.AlignRight
-                    verticalAlignment: Text.AlignVCenter
-                    text: formatTime(playerDuration)
-                    // color: theme.fgColor
-                }
+            Title {
+                id: streamingText
+                font.pixelSize: 24
+                font.capitalization: Font.AllUppercase
+                font.styleName: "Bold"
+                text: "STREAMING"
+                maxTextLength: 15
+                color: "white"
             }
         }
     }
