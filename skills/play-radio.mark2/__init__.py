@@ -380,7 +380,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
-        self.handle_play_request()
+        dialog, gui = self.handle_play_request()
+        return self.end_session(dialog=dialog, gui=gui)
 
     def stop(self) -> Optional[Message]:
         """Respond to system stop commands."""
