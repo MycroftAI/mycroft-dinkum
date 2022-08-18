@@ -175,29 +175,23 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def handle_play_request(self):
         """play the current station if there is one"""
-        dialog = None
-        gui = None
+        assert self.current_station is not None
+        stream_uri = self.current_station.get("url_resolved", "")
+        station_name = self.current_station.get("name", "").replace("\n", "")
 
-        if self.current_station is None:
-            self.log.error(
-                "Can't find any matching stations for = %s", self.rs.last_search_terms
-            )
-            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
-        else:
-            stream_uri = self.current_station.get("url_resolved", "")
-            station_name = self.current_station.get("name", "").replace("\n", "")
+        mime = self.rs.find_mime_type(stream_uri)
 
-            mime = self.rs.find_mime_type(stream_uri)
+        self.CPS_play((stream_uri, mime))
 
-            self.CPS_play((stream_uri, mime))
+        gui = self.update_radio_theme("Now Playing")
+        self._stream_session_id = self._mycroft_session_id
 
-            gui = self.update_radio_theme("Now Playing")
-            self._stream_session_id = self._mycroft_session_id
+        self._mycroft_session_id = self.emit_start_session(
+            gui=gui, gui_clear=GuiClear.NEVER
+        )
 
-            # cast to str for json serialization
-            self.CPS_send_status(image=self.img_pth, artist=station_name)
-
-        return dialog, gui
+        # cast to str for json serialization
+        self.CPS_send_status(image=self.img_pth, artist=station_name)
 
     # Intents
     @intent_handler("HelpRadio.intent")
@@ -241,9 +235,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("NextStation.intent")
     def handle_next_station(self, message=None):
-        exit_flag = False
+        station_found = False
         ctr = 0
-        while not exit_flag and ctr < self.rs.get_station_count():
+        while (not station_found) and (ctr < self.rs.get_station_count()):
             new_current_station = self.rs.get_next_station()
             self.current_station = new_current_station
             self.stream_uri = self.current_station.get("url_resolved", "")
@@ -252,7 +246,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
             try:
                 self.handle_play_request()
-                exit_flag = True
+                station_found = True
             except Exception:
                 self.log.exception("Error in next station")
 
@@ -260,9 +254,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("PreviousStation.intent")
     def handle_previous_station(self, message=None):
-        exit_flag = False
+        station_found = False
         ctr = 0
-        while not exit_flag and ctr < self.rs.get_station_count():
+        while (not station_found) and (ctr < self.rs.get_station_count()):
             new_current_station = self.rs.get_previous_station()
             self.current_station = new_current_station
             self.stream_uri = self.current_station.get("url_resolved", "")
@@ -271,7 +265,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
             try:
                 self.handle_play_request()
-                exit_flag = True
+                station_found = True
             except Exception:
                 self.log.exception("Error in previous station")
 
@@ -291,12 +285,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_listen_intent(self, message):
         if message.data:
             self.setup_for_play(message.data.get("utterance", ""))
-            dialog, gui = self.handle_play_request()
-            return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
+            self.handle_play_request()
 
     def play_current(self):
-        dialog = None
-        gui = None
         station_found = False
         ctr = 0
         while not station_found and ctr < self.rs.get_station_count():
@@ -307,7 +298,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.station_name = self.station_name.replace("\n", " ")
 
             try:
-                dialog, gui = self.handle_play_request()
+                self.handle_play_request()
                 station_found = True
             except Exception:
                 self.log.exception("Error while playing station")
@@ -318,8 +309,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.log.error(
                 "of %s stations, none work!" % (self.rs.get_station_count(),)
             )
-
-        return dialog, gui
 
     @intent_handler("TurnOnRadio.intent")
     def handle_turnon_intent(self, _):
@@ -380,8 +369,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
-        dialog, gui = self.handle_play_request()
-        return self.end_session(dialog=dialog, gui=gui)
+        if self.current_station is not None:
+            self.handle_play_request()
+        else:
+            self.log.error(
+                "Can't find any matching stations for = %s", self.rs.last_search_terms
+            )
+            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            return self.end_session(dialog=dialog)
 
     def stop(self) -> Optional[Message]:
         """Respond to system stop commands."""
