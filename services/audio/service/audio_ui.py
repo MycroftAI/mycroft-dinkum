@@ -186,7 +186,8 @@ class AudioUserInterface:
                 # Drain queue and signal thread to stop
                 while not self._speech_queue.empty():
                     self._speech_queue.get()
-                    self._speech_queue.put(None)
+                self._speech_queue.put(None)
+                self._speech_finished.set()
 
                 self._speech_thread.join()
                 self._speech_thread = None
