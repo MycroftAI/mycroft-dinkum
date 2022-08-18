@@ -54,12 +54,16 @@ CLOCK_SYNC_WAIT_SEC = 1
 
 
 class Authentication(str, Enum):
+    """Result of pairing check with mycroft.ai"""
+
     AUTHENTICATED = "authenticated"
     NOT_AUTHENTICATED = "not_authenticated"
     SERVER_UNAVAILABLE = "server_unavailable"
 
 
-class State:
+class State(Enum):
+    """State of this skill"""
+
     CHECK_INTERNET = auto()
     #
     WIFI_SETUP_START = auto()
@@ -84,6 +88,18 @@ class State:
 
 
 class ConnectCheck(MycroftSkill):
+    """
+    Skill for doing:
+
+    1. Internet detection
+    2. Wi-Fi setup
+    3. NTP clock sync
+    4. Pairing with mycroft.ai
+    5. Remote config download
+    6. Short tutorial
+
+    """
+
     def __init__(
         self, bus: MessageBusClient, skill_settings_downloader: SkillSettingsDownloader
     ):
@@ -98,6 +114,7 @@ class ConnectCheck(MycroftSkill):
         self.pairing_state = str(uuid4())
         self.nato_alphabet = None
 
+        self._was_greeting_spoken = False
         self._state: State = State.CHECK_INTERNET
         self._awconnect_client: Optional[AwconnectClient] = None
 
@@ -187,7 +204,7 @@ class ConnectCheck(MycroftSkill):
 
     # -------------------------------------------------------------------------
 
-    def _check_internet(self, message: Message):
+    def _check_internet(self, _message: Message):
         if self._state != State.CHECK_INTERNET:
             return
 
@@ -257,7 +274,7 @@ class ConnectCheck(MycroftSkill):
     # Wi-Fi Setup
     # -------------------------------------------------------------------------
 
-    def _wifi_setup_start(self, message: Message):
+    def _wifi_setup_start(self, _message: Message):
         if self._state != State.WIFI_SETUP_START:
             return
 
@@ -270,16 +287,23 @@ class ConnectCheck(MycroftSkill):
         )
 
         self._state = State.WIFI_SETUP_AP_ACTIVATED
+
+        dialog = ["network-connection-needed"]
+        if not self._was_greeting_spoken:
+            # Hi, I'm Mycroft...
+            dialog.insert(0, "greeting")
+            self._was_greeting_spoken = True
+
         self.bus.emit(
             self.continue_session(
-                dialog="network-connection-needed",
+                dialog=dialog,
                 gui="ap_starting_mark_ii.qml",
                 message=Message("hardware.awconnect.create-ap"),
                 gui_clear=GuiClear.NEVER,
             )
         )
 
-    def _wifi_setup_ap_activated(self, message: Message):
+    def _wifi_setup_ap_activated(self, _message: Message):
         if self._state != State.WIFI_SETUP_AP_ACTIVATED:
             return
 
@@ -295,7 +319,7 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
-    def _wifi_setup_portal_viewed(self, message: Message):
+    def _wifi_setup_portal_viewed(self, _message: Message):
         if self._state != State.WIFI_SETUP_PORTAL_VIEWED:
             return
 
@@ -311,7 +335,7 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
-    def _wifi_setup_credentials_entered(self, message: Message):
+    def _wifi_setup_credentials_entered(self, _message: Message):
         if self._state != State.WIFI_SETUP_CREDS_ENTERED:
             return
 
@@ -329,7 +353,7 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
-    def _wifi_setup_ap_deactivated(self, message: Message):
+    def _wifi_setup_ap_deactivated(self, _message: Message):
         if self._state != State.WIFI_SETUP_AP_DEACTIVATED:
             return
 
@@ -363,7 +387,7 @@ class ConnectCheck(MycroftSkill):
     # Pairing
     # -------------------------------------------------------------------------
 
-    def _check_pairing(self, message: Message):
+    def _check_pairing(self, _message: Message):
         if self._state != State.CHECK_PAIRING:
             return
 
@@ -385,12 +409,11 @@ class ConnectCheck(MycroftSkill):
                 self.api.get()
                 server_state = Authentication.AUTHENTICATED
                 break
-            except Exception as e:
-                if isinstance(e, HTTPError) and (
-                    e.response.status_code == HTTPStatus.UNAUTHORIZED
-                ):
-                    server_state = Authentication.NOT_AUTHENTICATED
-                    break
+            except Exception as error:
+                if isinstance(error, HTTPError):
+                    if error.response.status_code == HTTPStatus.UNAUTHORIZED:
+                        server_state = Authentication.NOT_AUTHENTICATED
+                        break
 
                 self.log.exception("Error while connecting to Mycroft servers")
                 server_state = Authentication.SERVER_UNAVAILABLE
@@ -428,7 +451,7 @@ class ConnectCheck(MycroftSkill):
                 )
             )
 
-    def _pairing_start(self, message: Message):
+    def _pairing_start(self, _message: Message):
         """Get pairing code and guide user through the process"""
         if self._state != State.PAIRING_START:
             return
@@ -450,13 +473,20 @@ class ConnectCheck(MycroftSkill):
             self._fail_and_restart()
 
         self._state = State.PAIRING_SHOW_CODE
+
+        dialog = ["pairing.intro"]
+        if not self._was_greeting_spoken:
+            # Hi, I'm Mycroft...
+            dialog.insert(0, "greeting")
+            self._was_greeting_spoken = True
+
         self._mycroft_session_id = self.emit_start_session(
+            dialog=dialog,
             gui="pairing_start_mark_ii.qml",
-            dialog="pairing.intro",
             gui_clear=GuiClear.NEVER,
         )
 
-    def _pairing_show_code(self, message: Message):
+    def _pairing_show_code(self, _message: Message):
         """Speak pairing code to user"""
         if self._state != State.PAIRING_SHOW_CODE:
             return
@@ -531,7 +561,7 @@ class ConnectCheck(MycroftSkill):
                 self.log.exception("API call to retrieve pairing data failed")
                 time.sleep(PAIRING_WAIT_SEC)
             else:
-                self.log.info("Pairing code obtained: " + self.pairing_code)
+                self.log.info("Pairing code obtained: %s")
 
     def _display_pairing_code(self):
         """Show the pairing code on the display, if one is available"""
@@ -571,7 +601,6 @@ class ConnectCheck(MycroftSkill):
                         "Restarting the pairing sequence..."
                     )
                     self.log.exception(log_msg)
-                    self._restart_pairing()
             else:
                 self.log.info("Identity file saved.")
                 break
@@ -580,7 +609,7 @@ class ConnectCheck(MycroftSkill):
     # Tutorial
     # -------------------------------------------------------------------------
 
-    def _tutorial_start(self, message: Message):
+    def _tutorial_start(self, _message: Message):
         """Give user a quick tutorial on how to get started"""
         if self._state != State.TUTORIAL_START:
             return
@@ -612,7 +641,7 @@ class ConnectCheck(MycroftSkill):
     # NTP clock sync
     # -------------------------------------------------------------------------
 
-    def _sync_clock(self):
+    def _sync_clock(self, _message: Message):
         """Block until system clock is synced with NTP"""
         if self._state != State.SYNC_CLOCK:
             return
@@ -642,7 +671,7 @@ class ConnectCheck(MycroftSkill):
     # Remote settings from mycroft.ai
     # -------------------------------------------------------------------------
 
-    def _download_remote_settings(self):
+    def _download_remote_settings(self, _message: Message):
         """Download user config from mycroft.ai"""
         if self._state != State.DOWNLOAD_SETTINGS:
             return

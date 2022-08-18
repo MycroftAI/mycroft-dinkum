@@ -27,7 +27,7 @@ from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from queue import Queue
 from threading import Event, Lock
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -58,11 +58,11 @@ from .skill_control import SkillControl
 
 SessionDialogDataType = Optional[Dict[str, Any]]
 SessionDialogType = Union[str, Tuple[str, SessionDialogDataType]]
-SessionDialogsType = Union[SessionDialogType, List[SessionDialogType]]
+SessionDialogsType = Union[SessionDialogType, Sequence[SessionDialogType]]
 
 SessionGuiDataType = Optional[Dict[str, Any]]
 SessionGuiType = Union[str, Tuple[str, SessionGuiDataType]]
-SessionGuisType = Union[SessionGuiType, List[SessionGuiType]]
+SessionGuisType = Union[SessionGuiType, Sequence[SessionGuiType]]
 
 
 class GuiClear(str, Enum):
