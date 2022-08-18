@@ -198,6 +198,7 @@ class IntentService:
         self.bus.on("mycroft.tts.session.ended", self.handle_tts_finished)
         self.bus.on("mycroft.audio.hal.media.ended", self.handle_media_finished)
         self.bus.on("mycroft.stop", self.handle_stop)
+        self.bus.on("mycroft.gui.screen.close", self.handle_gui_screen_close)
 
         self.bus.on("detach_intent", self.handle_detach_intent)
         self.bus.on("detach_skill", self.handle_detach_skill)
@@ -280,6 +281,14 @@ class IntentService:
                 # Return GUI to idle
                 self._disable_idle_timeout()
                 self.bus.emit(Message("mycroft.gui.idle"))
+
+    def handle_gui_screen_close(self, message: Message):
+        skill_id = message.data.get("skill_id")
+        if (self._last_gui_session is not None) and (
+            self._last_gui_session.skill_id == skill_id
+        ):
+            self._last_gui_session = None
+            self._set_idle_timeout(IDLE_QUICK_TIMEOUT)
 
     def start_session(self, mycroft_session_id: str, **session_kwargs):
         """Start a new session"""

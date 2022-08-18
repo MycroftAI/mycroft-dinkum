@@ -18,6 +18,7 @@ from typing import Optional, Tuple
 
 from mycroft.skills import GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
+from mycroft_bus_client import Message
 
 from .RadioStations import RadioStations
 
@@ -37,7 +38,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def __init__(self, skill_id: str):
         super().__init__(skill_id=skill_id, name="RfmSkill")
         self.rs = RadioStations()
-        self.now_playing = None
         self.current_station = None
         self.station_name = "Mycroft Radio"
         self.img_pth = ""
@@ -95,25 +95,26 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "gui.prev_genre", "RadioPlayer_mark_ii.qml", self.handle_previous_channel
         )
         self.gui.register_handler(
-            "gui.stop_radio", "RadioPlayer_mark_ii.qml", lambda message: self.bus.emit(self.handle_stop_radio(message))
+            "gui.stop_radio",
+            "RadioPlayer_mark_ii.qml",
+            self.handle_stop_radio,
         )
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
         Eg when someone verbally asks to pause.
         """
-        if not self.now_playing:
-            return
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            command = message.msg_type.split(".")[-1]
+            if command == "resume":
+                new_status = "Playing"
+            elif command == "pause":
+                new_status = "Paused"
 
-        command = message.msg_type.split(".")[-1]
-        if command == "resume":
-            new_status = "Playing"
-        elif command == "pause":
-            new_status = "Paused"
-
-        # TODO
-        # self.gui["status"] = new_status
-        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+            # TODO
+            # self.gui["status"] = new_status
+            self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
@@ -136,7 +137,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         This notifies the audioservice. The GUI state only changes once the
         audioservice emits the relevant messages to say the state has changed.
         """
-        if not self.now_playing:
+        if not self._is_playing:
             return
 
         command = message.msg_type.split(".")[-1]
@@ -174,14 +175,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def handle_play_request(self):
         """play the current station if there is one"""
-        speak = None
+        dialog = None
         gui = None
 
         if self.current_station is None:
             self.log.error(
                 "Can't find any matching stations for = %s", self.rs.last_search_terms
             )
-            speak = f"Can not find any {self.rs.last_search_terms} stations"
+            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
         else:
             stream_uri = self.current_station.get("url_resolved", "")
             station_name = self.current_station.get("name", "").replace("\n", "")
@@ -190,18 +191,13 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
             self.CPS_play((stream_uri, mime))
 
-            self.now_playing = "Now Playing"
-            gui = self.update_radio_theme(self.now_playing)
+            gui = self.update_radio_theme("Now Playing")
             self._stream_session_id = self._mycroft_session_id
-            self._mycroft_session_id = self.emit_start_session(
-                gui=gui,
-                gui_clear=GuiClear.NEVER,
-            )
 
             # cast to str for json serialization
             self.CPS_send_status(image=self.img_pth, artist=station_name)
 
-        return speak, gui
+        return dialog, gui
 
     # Intents
     @intent_handler("HelpRadio.intent")
@@ -214,9 +210,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         dialog = None
         gui = None
 
-        if self.now_playing is not None:
+        if self._is_playing:
             self.log.info(
-                "change_radio request, now playing = %s" % (self.now_playing,)
+                "change_radio request, now playing = %s" % (self._is_playing,)
             )
             if self.fg_color == "white":
                 self.fg_color = "black"
@@ -236,7 +232,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         dialog = None
         gui = None
 
-        if self.now_playing is not None:
+        if self._is_playing:
             gui = "RadioPlayer_mark_ii.qml"
         else:
             dialog = "no.radio.playing"
@@ -295,15 +291,15 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_listen_intent(self, message):
         if message.data:
             self.setup_for_play(message.data.get("utterance", ""))
-            speak, gui = self.handle_play_request()
-            return self.end_session(speak=speak, gui=gui, gui_clear=GuiClear.NEVER)
-
-        return self.end_session()
+            dialog, gui = self.handle_play_request()
+            return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     def play_current(self):
-        exit_flag = False
+        dialog = None
+        gui = None
+        station_found = False
         ctr = 0
-        while not exit_flag and ctr < self.rs.get_station_count():
+        while not station_found and ctr < self.rs.get_station_count():
             new_current_station = self.rs.get_next_station()
             self.current_station = new_current_station
             self.stream_uri = self.current_station.get("url_resolved", "")
@@ -311,17 +307,19 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.station_name = self.station_name.replace("\n", " ")
 
             try:
-                self.handle_play_request()
-                exit_flag = True
+                dialog, gui = self.handle_play_request()
+                station_found = True
             except Exception:
                 self.log.exception("Error while playing station")
 
             ctr += 1
 
-        if not exit_flag:
+        if not station_found:
             self.log.error(
                 "of %s stations, none work!" % (self.rs.get_station_count(),)
             )
+
+        return dialog, gui
 
     @intent_handler("TurnOnRadio.intent")
     def handle_turnon_intent(self, _):
@@ -384,14 +382,12 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """Handle request from Common Play System to start playback."""
         self.handle_play_request()
 
-    def stop(self) -> None:
+    def stop(self) -> Optional[Message]:
         """Respond to system stop commands."""
-        self.now_playing = None
-        self.CPS_send_status()
-        self.CPS_release_output_focus()
-        gui_clear = GuiClear.AT_END
-
-        return self.end_session(mycroft_session_id=self._mycroft_session_id, dialog=None, gui_clear=gui_clear)
+        if self._is_playing:
+            self.CPS_send_status()
+            self.CPS_release_output_focus()
+            self.gui.release()
 
     def handle_gui_idle(self):
         if self._is_playing:

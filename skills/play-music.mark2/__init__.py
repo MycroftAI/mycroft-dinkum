@@ -192,19 +192,12 @@ class LocalMusicSkill(CommonPlaySkill):
             "playerPosition": 0,
         }
 
-    def stop(self) -> bool:
+    def stop(self) -> Optional[Message]:
         dialog = None
         self.log.debug("Music Skill Stopping")
         if self._mpd_playlist:
-            # self._mpd_playlist = []
-            # self._stream_session_id = None
             self.CPS_release_output_focus()
-            gui_clear = GuiClear.AT_END
-        else:
-            dialog = "no-music"
-            gui_clear = GuiClear.NEVER
-
-        return self.end_session(dialog=dialog, gui_clear=gui_clear)
+            self.gui.release()
 
     def _get_album_art(self, file_path: Union[str, Path]) -> Optional[Union[str, Path]]:
         """Use eyeD3 to get the album art from a music file"""

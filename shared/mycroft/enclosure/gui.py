@@ -398,16 +398,14 @@ class SkillGUI:
     #     self["url"] = url
     #     self.replace_page("SYSTEM_UrlFrame.qml", override_idle)
 
-    # def release(self):
-    #     """Signal that this skill is no longer using the GUI,
-    #     allow different platforms to properly handle this event.
-    #     Also calls self.clear() to reset the state variables
-    #     Platforms can close the window or go back to previous page"""
-    #     self.clear()
-    #     if self.skill is not None:
-    #         self.skill.bus.emit(
-    #             Message("mycroft.gui.screen.close", {"skill_id": self.skill.skill_id})
-    #         )
+    def release(self):
+        """Signal that this skill is no longer using the GUI,
+        allow different platforms to properly handle this event.
+        Platforms can close the window or go back to previous page"""
+        if self.skill is not None:
+            self.skill.bus.emit(
+                Message("mycroft.gui.screen.close", {"skill_id": self.skill.skill_id})
+            )
 
     def shutdown(self):
         """Shutdown gui interface.
