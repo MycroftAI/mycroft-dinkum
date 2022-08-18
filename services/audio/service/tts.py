@@ -36,6 +36,7 @@ class SpeakHandler:
         self.bus.on("speak", self._handle_speak)
         self.bus.on("speak.cache", self._handle_speak)
         self.bus.on("mycroft.tts.stop", self._handle_tts_stop)
+        self.bus.on("mycroft.tts.session.ended", self._handle_tts_session_ended)
 
     def stop(self):
         pass
@@ -92,6 +93,7 @@ class SpeakHandler:
                     cache_path = self._synthesize(sentence)
                     if cache_only:
                         # Don't speak, just cache the chunk
+                        LOG.debug("Not speaking (cache only): %s", sentence)
                         continue
 
                     # Ask audio service to play the chunk
@@ -105,8 +107,17 @@ class SpeakHandler:
                                 "chunk_index": i,
                                 "num_chunks": len(segments),
                                 "mycroft_session_id": mycroft_session_id,
+                                "text": sentence,
                             },
                         )
+                    )
+                    LOG.debug(
+                        "Submitted TTS chunk %s/%s for TTS session %s, mycroft session %s: %s",
+                        i + 1,
+                        len(segments),
+                        tts_session_id,
+                        mycroft_session_id,
+                        sentence,
                     )
         except Exception:
             LOG.exception("Unexpected error handling speak")
@@ -114,6 +125,12 @@ class SpeakHandler:
     def _handle_tts_stop(self, message: Message):
         # Cancel any active TTS session
         self._mycroft_session_id = None
+
+    def _handle_tts_session_ended(self, message: Message):
+        # Cancel active TTS session
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._mycroft_session_id:
+            self._mycroft_session_id = None
 
     def _synthesize(self, text: str) -> Path:
         """Synthesize audio from text or use cached WAV if available"""
