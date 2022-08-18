@@ -531,7 +531,7 @@ class ConnectCheck(MycroftSkill):
             )
         except Exception:
             self.log.exception("Error while activating")
-            self._state = State.PAIRING_CHECK_ACTIVATION
+            self._state = State.PAIRING_SHOW_CODE
             self._pairing_show_code(message)
 
     def _get_pairing_data(self):
