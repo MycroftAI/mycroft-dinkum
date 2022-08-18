@@ -33,6 +33,9 @@ NUM_COLORS = 3
 
 NUM_LEDS = 12
 
+MAX_BRIGHTNESS = 50
+MIN_BRIGHTNESS = 0
+
 
 class MycroftColor:
     RED = (216, 17, 89)
@@ -55,7 +58,7 @@ class Mark2LedClient:
         self._asleep_color = color.BLACK
         self._is_running = True
         self._animation: Optional[Animation] = None
-        self._brightness: int = 50
+        self._brightness: int = MAX_BRIGHTNESS
 
         self._state: Optional[str] = None
 
@@ -68,30 +71,43 @@ class Mark2LedClient:
         self.bus.on("mycroft.feedback.set-state", self._handle_set_state)
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
+        self.bus.on("mycroft.screen.brightness", self._handle_brightness_change)
+
+    def _set_state(self, state: str):
+        self._state = state
+
+        if state == "asleep":
+            self.asleep()
+        elif state == "awake":
+            self.awake()
+        elif state == "thinking":
+            self.thinking()
 
     def _handle_set_state(self, message: Message):
         state = message.data.get("state")
         if state != self._state:
-            self._state = state
-
-            if state == "asleep":
-                self.asleep()
-            elif state == "awake":
-                self.awake()
-            elif state == "thinking":
-                self.thinking()
+            self._set_state(state)
 
     def _handle_mute(self, _message: Message):
         self._asleep_color = MycroftColor.RED
-
         if self._state == "asleep":
             self.asleep()
 
     def _handle_unmute(self, _message: Message):
         self._asleep_color = color.BLACK
-
         if self._state == "asleep":
             self.asleep()
+
+    def _handle_brightness_change(self, message: Message):
+        value = message.data.get("value")
+        if value is not None:
+            value = max(0.0, min(1.0, float(value)))
+            self._brightness = (MAX_BRIGHTNESS - MIN_BRIGHTNESS) * value
+            self.log.debug("Brightness changed to %s", self._brightness)
+
+            # Show LEDs with new brightness
+            self._last_pixels = None
+            self._set_state(self._state)
 
     def stop(self):
         self._state = None
