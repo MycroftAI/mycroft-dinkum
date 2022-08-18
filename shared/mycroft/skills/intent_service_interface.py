@@ -15,12 +15,10 @@
 """The intent service interface offers a unified wrapper class for the
 Intent Service. Including both adapt and padatious.
 """
-from os.path import exists, isfile
+from os.path import exists
 
 from adapt.intent import Intent
-from mycroft.messagebus.client import MessageBusClient
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
 
 
 class IntentServiceInterface:

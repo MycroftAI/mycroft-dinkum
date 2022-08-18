@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import asyncio
 import audioop
 import itertools
-import json
 import logging
 import subprocess
 import time

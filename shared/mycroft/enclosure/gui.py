@@ -13,13 +13,10 @@
 # limitations under the License.
 #
 """ Interface for interacting with the Mycroft gui qml viewer. """
-import time
-from os.path import join
 from typing import Optional
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
-from mycroft.util.file_utils import resolve_resource_file
 
 
 class SkillGUI:

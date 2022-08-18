@@ -38,7 +38,7 @@ def search_ddg_images(query, file_path: str) -> Optional[str]:
         "accept-language": "en-GB,en-US;q=0.8,en;q=0.6,ms;q=0.4",
         "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36",
         "referer": "https://duckduckgo.com/",
-        "accept-language": "en-US,en;q=0.9",
+        # "accept-language": "en-US,en;q=0.9",
         "sec-fetch-site": "same-origin",
         "sec-fetch-mode": "cors",
     }

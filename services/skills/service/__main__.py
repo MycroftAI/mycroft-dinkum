@@ -19,7 +19,6 @@ from lingua_franca import load_languages
 from mycroft.service import DinkumService
 from mycroft.skills import MycroftSkill
 from mycroft.skills.settings import SettingsMetaUploader
-from mycroft_bus_client import Message
 
 from .load import create_skill_instance, load_skill_source
 

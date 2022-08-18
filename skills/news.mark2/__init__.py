@@ -11,17 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import os
-import subprocess
-import time
 from typing import Optional, Tuple
-from urllib.parse import quote
 
 from mycroft.messagebus import Message
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
-from mycroft.util.file_utils import get_cache_directory
 
 from .stations.match import Match, match_station_from_utterance
 from .stations.station import (
@@ -30,7 +24,6 @@ from .stations.station import (
     create_custom_station,
     stations,
 )
-from .stations.util import contains_html, find_mime_type
 
 # Minimum confidence levels
 CONF_EXACT_MATCH = 0.9

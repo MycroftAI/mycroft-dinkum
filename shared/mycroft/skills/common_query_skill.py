@@ -11,12 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
 from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Optional
 
-from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
 from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.log import LOG

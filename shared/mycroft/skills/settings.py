@@ -342,7 +342,6 @@ class SkillSettingsDownloader:
         """Emit changed settings events for each affected skill."""
         changed_data = {}
         for skill_gid, skill_settings in remote_settings.items():
-            settings_changed = False
             try:
                 previous_settings = self.last_download_result.get(skill_gid)
             except Exception:

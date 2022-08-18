@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 import json
-import logging
 import time
 from enum import Enum, auto
 from http import HTTPStatus

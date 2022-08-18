@@ -18,7 +18,6 @@ Intent Service. Including both adapt and padatious.
 from os.path import exists
 
 from adapt.intent import Intent
-from mycroft.messagebus.client import MessageBusClient
 from mycroft.messagebus.message import Message
 
 

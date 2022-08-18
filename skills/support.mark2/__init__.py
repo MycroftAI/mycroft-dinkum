@@ -127,7 +127,7 @@ class SupportSkill(MycroftSkill):
     def get_device_name(self):
         try:
             return DeviceApi().get()["name"]
-        except:
+        except Exception:
             self.log.exception("API Error")
             return ":error:"
 

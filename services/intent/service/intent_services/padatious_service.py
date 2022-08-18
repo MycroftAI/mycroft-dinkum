@@ -16,9 +16,8 @@
 from functools import partial
 from os.path import expanduser, isfile
 from subprocess import call
-from threading import Event, Thread
+from threading import Thread
 from time import sleep
-from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.util.log import LOG
@@ -185,7 +184,7 @@ class PadatiousService:
             self.registered_intents.remove(intent_name)
             self.container.remove_intent(intent_name)
 
-    def handle_detach_intent(self, message):
+    def handle_detach_intent(self, message: Message):
         """Messagebus handler for detaching padatious intent.
 
         Args:
@@ -193,7 +192,7 @@ class PadatiousService:
         """
         self.__detach_intent(message.data.get("intent_name"))
 
-    def handle_detach_skill(self, message):
+    def handle_detach_skill(self, message: Message):
         """Messagebus handler for detaching all intents for skill.
 
         Args:
@@ -204,7 +203,7 @@ class PadatiousService:
         for i in remove_list:
             self.__detach_intent(i)
 
-    def _register_object(self, message, object_name, register_func):
+    def _register_object(self, message: Message, object_name: str, register_func):
         """Generic method for registering a padatious object.
 
         Args:
@@ -227,7 +226,7 @@ class PadatiousService:
 
         return True
 
-    def register_intent(self, message):
+    def register_intent(self, message: Message):
         """Messagebus handler for registering intents.
 
         Args:
@@ -244,7 +243,7 @@ class PadatiousService:
         else:
             LOG.warning("Failed to register Padatious intent: %s", message.data["name"])
 
-    def register_entity(self, message):
+    def register_entity(self, message: Message):
         """Messagebus handler for registering entities.
 
         Args:

@@ -19,16 +19,14 @@ import re
 import sys
 import traceback
 import typing
-from contextlib import contextmanager
 from copy import deepcopy
-from datetime import datetime
 from enum import Enum
 from itertools import chain
 from os import walk
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
-from queue import Empty, Queue
-from threading import Event, Lock, Timer
+from queue import Queue
+from threading import Event, Lock
 from typing import Any, Dict, List, Optional, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -42,9 +40,7 @@ from mycroft.enclosure.gui import SkillGUI
 from mycroft.filesystem import FileSystemAccess
 from mycroft.messagebus.message import Message
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.format import join_list, pronounce_number
 from mycroft.util.log import LOG
-from mycroft.util.parse import extract_number, match_one
 from mycroft.util.string_utils import camel_case_split
 from xdg import BaseDirectory
 

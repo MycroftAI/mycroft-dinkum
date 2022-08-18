@@ -3,12 +3,10 @@ import os
 import queue
 import threading
 import time
-from collections import deque
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, Optional
 
-from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.util.file_utils import resolve_resource_file

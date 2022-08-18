@@ -47,7 +47,7 @@ def get_from_nested_dict(obj: dict, key: str) -> Optional[Any]:
                     item = get_from_nested_dict(list_item, key)
                     if item is not None:
                         return item
-    except:
+    except Exception:
         pass
 
 
@@ -165,5 +165,5 @@ def clear_cache(cache_dir):
         for file in os.listdir(cache_dir):
             os.remove(os.path.join(cache_dir, file))
         return True
-    except:
+    except Exception:
         return False

@@ -16,7 +16,6 @@
 #   add to favorites and play favorite
 from typing import Optional, Tuple
 
-import requests
 from mycroft.skills import GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 
@@ -192,7 +191,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         return speak, gui
 
-    ## Intents
+    # Intents
     @intent_handler("HelpRadio.intent")
     def handle_radio_help(self, _):
         return self.end_session(dialog="radio.help", gui_clear=GuiClear.NEVER)
@@ -246,8 +245,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             try:
                 self.handle_play_request()
                 exit_flag = True
-            except:
-                self.log.error("Caught Exception")
+            except Exception:
+                self.log.exception("Error in next station")
 
             ctr += 1
 
@@ -265,8 +264,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             try:
                 self.handle_play_request()
                 exit_flag = True
-            except:
-                self.log.error("Caught Exception")
+            except Exception:
+                self.log.exception("Error in previous station")
 
             ctr += 1
 
@@ -302,8 +301,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             try:
                 self.handle_play_request()
                 exit_flag = True
-            except:
-                self.log.error("Caught Exception")
+            except Exception:
+                self.log.exception("Error while playing station")
 
             ctr += 1
 
@@ -322,7 +321,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_stop_radio(self, _):
         self.stop()
 
-    ## Common query stuff
+    # Common query stuff
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
         """Respond to Common Play Service query requests.
         Args:

@@ -14,17 +14,16 @@
 #
 import logging
 import signal
-import sys
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from threading import Event, Thread
-from typing import Any, Collection, Dict, Optional
+from typing import Collection, Optional
 
 import sdnotify
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import create_client
-from mycroft_bus_client import Message, MessageBusClient
+from mycroft_bus_client import Message
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5

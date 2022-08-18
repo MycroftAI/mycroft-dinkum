@@ -19,7 +19,6 @@ from stations.match import (
     CONF_EXACT_MATCH,
     CONF_GENERIC_MATCH,
     CONF_LIKELY_MATCH,
-    match_station_from_utterance,
     match_station_name,
 )
 
@@ -68,8 +67,3 @@ class TestSingleStationMatching(unittest.TestCase):
             station_match, confidence = self.match_npr_name(phrase)
             self.assertEqual(station_match, stations["NPR"])
             self.assertTrue(0 < confidence < CONF_GENERIC_MATCH)
-
-
-class TestMatchStationFromUtterance(unittest.TestCase):
-    def test_generic_news_request(self):
-        test_utterances = [""]

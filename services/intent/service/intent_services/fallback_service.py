@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 """Intent service for Mycroft's fallback system."""
-import itertools
 import operator
 from collections import defaultdict, namedtuple
 from typing import Dict, Optional, Set

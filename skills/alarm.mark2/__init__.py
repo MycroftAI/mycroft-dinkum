@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Defines a skill for setting one-time or repeating alarms."""
-import dataclasses
-import pickle
-from collections import namedtuple
-from datetime import date, datetime, time, timedelta
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from time import monotonic, sleep
+from time import monotonic
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus.message import Message
@@ -30,9 +27,7 @@ from mycroft.skills import (
     intent_handler,
     skill_api_method,
 )
-from mycroft.skills.skill_data import RegexExtractor
-from mycroft.util.format import date_time_format, join_list, nice_time
-from mycroft.util.parse import extract_datetime, extract_number
+from mycroft.util.format import date_time_format, join_list
 from mycroft.util.time import now_local, to_system
 
 from .skill import (
@@ -41,8 +36,6 @@ from .skill import (
     Alarms,
     StaticResources,
     build_day_of_week_repeat_rule,
-    determine_next_occurrence,
-    extract_repeat_rule,
     nice_relative_time,
 )
 
@@ -796,9 +789,9 @@ class AlarmSkill(MycroftSkill):
 
         return self.end_session(dialog=dialog, gui=gui)
 
-    ####################################################
-    #### SKILL API METHODS FOR VOIGHT KAMPF TESTING ####
-    ####################################################
+    # --------------------------------------------------
+    #    SKILL API METHODS FOR VOIGHT KAMPF TESTING
+    # --------------------------------------------------
 
     # @skill_api_method
     # def _create_single_test_alarm(self, utterance: str):

@@ -11,15 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import random
-import re
-from os.path import exists, join
 from typing import Optional
 
 from adapt.intent import IntentBuilder
 from mycroft.messagebus.message import Message
 from mycroft.skills import GuiClear, MycroftSkill, intent_handler
-from mycroft.skills.audioservice import AudioService
 
 STATUS_KEYS = ["track", "artist", "album", "image"]
 

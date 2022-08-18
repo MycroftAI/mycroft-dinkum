@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import typing
-
 import numpy as np
 import onnxruntime
 

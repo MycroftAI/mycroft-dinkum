@@ -1,8 +1,6 @@
-import time
 from typing import List
 
 from behave import given, then
-from mycroft.messagebus.message import Message
 
 SKILL_ID = "alarm.mark2"
 CANCEL_RESPONSES = (

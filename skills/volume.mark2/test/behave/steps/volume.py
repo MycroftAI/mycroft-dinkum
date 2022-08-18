@@ -29,7 +29,7 @@ def then_check_volume(context, level):
     level = int(level)
 
     # Block until volume has been updated
-    message = context.client.wait_for_message("hardware.volume")
+    context.client.wait_for_message("hardware.volume")
 
     response = context.client.bus.wait_for_response(Message("mycroft.volume.get"))
     assert response is not None, "No response for volume"

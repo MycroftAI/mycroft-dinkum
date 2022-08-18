@@ -14,7 +14,6 @@
 #
 import os
 import re
-import time
 from subprocess import CalledProcessError, check_output
 
 from adapt.intent import IntentBuilder

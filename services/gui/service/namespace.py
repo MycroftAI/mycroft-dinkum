@@ -40,10 +40,8 @@ code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
 from dataclasses import dataclass, field
-from threading import Lock, Timer
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from mycroft.configuration import Configuration
 from mycroft.messagebus import Message, MessageBusClient
 from mycroft.util.log import LOG
 
@@ -53,10 +51,6 @@ from .bus import (
     get_gui_websocket_config,
     send_message_to_gui,
 )
-
-# namespace_lock = Lock()
-
-# RESERVED_KEYS = ["__from", "__idle"]
 
 
 @dataclass

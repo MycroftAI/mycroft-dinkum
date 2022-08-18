@@ -15,7 +15,7 @@
 import typing
 from collections import namedtuple
 
-from mycroft.skills import AdaptIntent, GuiClear, intent_handler
+from mycroft.skills import AdaptIntent, intent_handler
 from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from requests.exceptions import ConnectionError, ReadTimeout
 from urllib3.exceptions import HTTPError

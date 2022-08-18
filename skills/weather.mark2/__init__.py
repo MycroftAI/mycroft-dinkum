@@ -21,7 +21,6 @@ city name provided in the request.
 """
 from datetime import datetime
 from pathlib import Path
-from time import sleep
 from typing import List, Tuple
 
 from mycroft.messagebus.message import Message
@@ -40,7 +39,6 @@ from .skill import (
     LocationNotFoundError,
     OpenWeatherMapApi,
     WeatherConfig,
-    WeatherDialog,
     WeatherIntent,
     WeatherReport,
     WeeklyDialog,

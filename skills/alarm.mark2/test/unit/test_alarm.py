@@ -13,14 +13,12 @@
 # limitations under the License.
 
 import unittest
-from datetime import datetime, timezone
 
 import pytest
 from lingua_franca import set_default_lang
 from mycroft.util.parse import extract_datetime
-from mycroft.util.time import now_local, now_utc, to_local, to_utc
+from mycroft.util.time import now_local, to_local
 from skill.alarm import (
-    alarm_log_dump,
     curate_alarms,
     get_alarm_local,
     get_next_repeat,

@@ -20,8 +20,6 @@ import xdg.BaseDirectory
 from mycroft.util.log import LOG
 from mycroft.util.string_utils import camel_case_split
 
-from .util import load_commented_json
-
 
 def get_remote_settings_path() -> Path:
     return Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / "mycroft.remote.conf"
@@ -33,7 +31,7 @@ def download_remote_settings(api) -> Dict[str, Any]:
     location = None
     try:
         location = api.get_location()
-    except:
+    except Exception:
         LOG.exception("RequestException fetching remote location")
 
     if location:

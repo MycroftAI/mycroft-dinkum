@@ -30,16 +30,12 @@ NOTE ON REGULAR EXPRESSION HANDLING:
     Adapt.  Instead, it pulls the future offset out of the user's request first,
     leaving only the city to match the regular expression looking for a location.
 """
-import time
-from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.format import date_time_format
-from mycroft.util.time import now_local
 
 from .skill import LocationNotFoundError, Response, get_display_time
 

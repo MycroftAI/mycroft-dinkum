@@ -14,9 +14,8 @@
 #
 """Mycroft's intent service, providing intent parsing since forever!"""
 import time
-from copy import copy
 from threading import RLock, Thread
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from mycroft.configuration import Configuration
@@ -27,10 +26,8 @@ from mycroft.util.parse import normalize
 from mycroft_bus_client import Message, MessageBusClient
 
 from .intent_services import (
-    AdaptIntent,
     AdaptService,
     FallbackService,
-    IntentMatch,
     PadatiousMatcher,
     PadatiousService,
     RegexService,
@@ -41,7 +38,6 @@ from .session import (
     MessageAction,
     Session,
     ShowPageAction,
-    SpeakAction,
     WaitForIdleAction,
 )
 
