@@ -38,10 +38,8 @@ class RadioStations:
         resp = requests.get(uri_genres)
         genres = resp.json()
 
-        self.generic_search_terms = [
-            genre["name"] for genre in genres
-        ]
- 
+        self.generic_search_terms = [genre["name"] for genre in genres]
+
         self.channel_index = 0
         self.last_search_terms = self.generic_search_terms[self.channel_index]
         self.genre_to_play = ""

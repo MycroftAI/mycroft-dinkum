@@ -20,10 +20,10 @@ import sys
 from threading import Thread
 from typing import Optional
 
+from dbus_next import BusType
 from dbus_next import Message as DBusMessage
 from dbus_next.aio import MessageBus
 from dbus_next.service import ServiceInterface, dbus_property
-from dbus_next import BusType
 from mycroft_bus_client import Message, MessageBusClient
 
 MARK2_BUTTON = """

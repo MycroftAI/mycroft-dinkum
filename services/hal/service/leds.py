@@ -124,7 +124,7 @@ class Mark2LedClient:
     def show(self):
         """Sets the LED colors using the mark2-leds command"""
         try:
-            if (self._last_pixels == self._pixels):
+            if self._last_pixels == self._pixels:
                 return
 
             self._last_pixels = list(self._pixels)
