@@ -16,6 +16,7 @@
  */
 
 import QtQuick 2.9
+import Mycroft 1.0 as Mycroft
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 SliderBase {
@@ -56,8 +57,8 @@ SliderBase {
     slider.value: plasmoid.configuration.fakeBrightness
     slider.onMoved: {
         plasmoid.configuration.fakeBrightness = slider.value;
+        Mycroft.MycroftController.sendRequest("mycroft.screen.brightness", { "value": slider.value });
     }
     slider.from: 0
     slider.to: 1
 }
-

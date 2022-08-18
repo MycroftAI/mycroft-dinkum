@@ -78,7 +78,7 @@ Item {
         anchors.fill: parent
         z: mainParent.z + 1
         // Avoid hiding everything completely
-        color: Qt.rgba(0, 0, 0, (1 - plasmoid.configuration.fakeBrightness) * 0.8)
+        color: Qt.rgba(0, 0, 0, (1 - plasmoid.configuration.fakeBrightness) * 0.99)
     }
 
     Item {
