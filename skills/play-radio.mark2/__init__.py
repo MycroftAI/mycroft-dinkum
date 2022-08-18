@@ -27,7 +27,7 @@ CONF_LIKELY_MATCH = 0.7
 CONF_GENERIC_MATCH = 0.6
 
 """
-MIA - RestartRadio.intent
+Provides base functionality for Mycroft's radio skill.
 """
 
 
@@ -77,10 +77,25 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_media_finished,
         )
         self.gui.register_handler(
-            "cps.gui.pause", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+            "cps.gui.pause", "RadioPlayer_mark_ii.qml", self.handle_gui_status_change
         )
         self.gui.register_handler(
-            "cps.gui.play", "AudioPlayer_scalable.qml", self.handle_gui_status_change
+            "cps.gui.play", "RadioPlayer_mark_ii.qml", self.handle_gui_status_change
+        )
+        self.gui.register_handler(
+            "gui.next_station", "RadioPlayer_mark_ii.qml", self.handle_next_station
+        )
+        self.gui.register_handler(
+            "gui.prev_station", "RadioPlayer_mark_ii.qml", self.handle_previous_station
+        )
+        self.gui.register_handler(
+            "gui.next_genre", "RadioPlayer_mark_ii.qml", self.handle_next_channel
+        )
+        self.gui.register_handler(
+            "gui.prev_genre", "RadioPlayer_mark_ii.qml", self.handle_previous_channel
+        )
+        self.gui.register_handler(
+            "gui.stop_radio", "RadioPlayer_mark_ii.qml", lambda message: self.bus.emit(self.handle_stop_radio(message))
         )
 
     def handle_audioservice_status_change(self, message):
@@ -98,7 +113,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
         # TODO
         # self.gui["status"] = new_status
-        self.update_gui_values("AudioPlayer_scalable.qml", {"status": new_status})
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
 
     def handle_media_finished(self, _):
         """Handle media playback finishing."""
@@ -143,18 +158,15 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         channel_info = "%s/%s" % (self.rs.index + 1, len(self.rs.stations))
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
-            "theme_bg": self.bg_color,
-            "theme_fg": self.fg_color,
             "media_image": self.img_pth,
-            "media_artist": " NOW STREAMING: " + station_name,
-            "media_track": "Track",
-            "media_album": self.rs.genre_to_play,
+            "media_station": station_name,
+            "media_genre": self.rs.genre_to_play,
             "media_skill": self.skill_id,
             "media_current_station_info": channel_info,
             "media_streaming": True,
             "media_status": status,
         }
-        return ("AudioPlayer_scalable.qml", gui_data)
+        return ("RadioPlayer_mark_ii.qml", gui_data)
 
     def setup_for_play(self, utterance):
         self.rs.get_stations(utterance)
@@ -225,14 +237,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         gui = None
 
         if self.now_playing is not None:
-            gui = "AudioPlayer_scalable.qml"
+            gui = "RadioPlayer_mark_ii.qml"
         else:
             dialog = "no.radio.playing"
 
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     @intent_handler("NextStation.intent")
-    def handle_next_station(self, message):
+    def handle_next_station(self, message=None):
         exit_flag = False
         ctr = 0
         while not exit_flag and ctr < self.rs.get_station_count():
@@ -251,7 +263,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             ctr += 1
 
     @intent_handler("PreviousStation.intent")
-    def handle_previous_station(self, message):
+    def handle_previous_station(self, message=None):
         exit_flag = False
         ctr = 0
         while not exit_flag and ctr < self.rs.get_station_count():
@@ -319,7 +331,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("StopRadio.intent")
     def handle_stop_radio(self, _):
-        self.stop()
+        return self.stop()
 
     # Common query stuff
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
@@ -379,11 +391,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.CPS_release_output_focus()
         gui_clear = GuiClear.AT_END
 
-        return self.end_session(dialog=None, gui_clear=gui_clear)
+        return self.end_session(mycroft_session_id=self._mycroft_session_id, dialog=None, gui_clear=gui_clear)
 
     def handle_gui_idle(self):
         if self._is_playing:
-            gui = "AudioPlayer_scalable.qml"
+            gui = "RadioPlayer_mark_ii.qml"
             self.emit_start_session(gui=gui, gui_clear=GuiClear.NEVER)
             return True
 
