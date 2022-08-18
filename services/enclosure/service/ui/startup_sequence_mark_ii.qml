@@ -49,22 +49,22 @@ Mycroft.Delegate {
         }
 
         StartupSequenceStep {
-            id: connectingToServer2
+            id: syncingClock2
             anchors.top: connectingToInternet1.top
             anchors.topMargin: gridUnit * 6
             anchors.left: connectingToInternet1.left
-            text: "Pair with mycroft.ai"
+            text: "Synchronize clock"
             height: gridUnit * 5
             success: step > 2
             showSpinner: step == 2
         }
 
         StartupSequenceStep {
-            id: syncingClock3
-            anchors.top: connectingToServer2.top
+            id: connectingToServer3
+            anchors.top: syncingClock2.top
             anchors.topMargin: gridUnit * 6
             anchors.left: connectingToInternet1.left
-            text: "Synchronize clock"
+            text: "Pair with mycroft.ai"
             height: gridUnit * 5
             success: step > 3
             showSpinner: step == 3
@@ -72,7 +72,7 @@ Mycroft.Delegate {
 
         StartupSequenceStep {
             id: downloadingSettings4
-            anchors.top: syncingClock3.top
+            anchors.top: connectingToServer3.top
             anchors.topMargin: gridUnit * 6
             anchors.left: connectingToInternet1.left
             text: "Download settings"

@@ -69,6 +69,8 @@ class State:
     WIFI_SETUP_CREDS_ENTERED = auto()
     WIFI_SETUP_AP_DEACTIVATED = auto()
     #
+    SYNC_CLOCK = auto()
+    #
     CHECK_PAIRING = auto()
     PAIRING_START = auto()
     PAIRING_SHOW_CODE = auto()
@@ -76,8 +78,6 @@ class State:
     PAIRING_ACTIVATING = auto()
     #
     TUTORIAL_START = auto()
-    #
-    SYNC_CLOCK = auto()
     #
     DOWNLOAD_SETTINGS = auto()
     #
@@ -107,7 +107,7 @@ class ConnectCheck(MycroftSkill):
 
         # Internet detection
         self.add_event("internet-connect.detect.start", self._check_internet)
-        self.add_event("internet-connect.detected", self._check_pairing)
+        self.add_event("internet-connect.detected", self._sync_clock)
 
         # WiFi setup step
         self.add_event("internet-connect.setup.start", self._wifi_setup_start)
@@ -129,6 +129,7 @@ class ConnectCheck(MycroftSkill):
         )
 
         # Pairing steps
+        self.add_event("server-connect.pairing.check", self._check_pairing)
         self.add_event("server-connect.pairing.start", self._pairing_start)
 
         # Sent from GUI (button or timeout)
@@ -145,10 +146,7 @@ class ConnectCheck(MycroftSkill):
         self.add_event("server-connect.tutorial.start", self._tutorial_start)
 
         # After pairing check or tutorial
-        self.add_event("server-connect.authenticated", self._sync_clock)
-        self.add_event(
-            "server-connect.download-settings", self._download_remote_settings
-        )
+        self.add_event("server-connect.authenticated", self._download_remote_settings)
 
     def start(self):
         self._state = State.CHECK_INTERNET
@@ -232,8 +230,8 @@ class ConnectCheck(MycroftSkill):
         )
 
         if is_connected:
-            # Connected to the internet, check pairing next
-            self._state = State.CHECK_PAIRING
+            # Connected to the internet, sync clock next
+            self._state = State.SYNC_CLOCK
             self.bus.emit(
                 Message(
                     "internet-connect.detected",
@@ -423,8 +421,8 @@ class ConnectCheck(MycroftSkill):
             self.log.warning("Server was unavailable. Retrying...")
             self._fail_and_restart()
         else:
-            # Paired already, continue with clock sync
-            self._state = State.SYNC_CLOCK
+            # Paired already, continue with settings download
+            self._state = State.DOWNLOAD_SETTINGS
             self.bus.emit(
                 Message(
                     "server-connect.authenticated",
@@ -595,8 +593,8 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
-        # Continue with clock sync, etc.
-        self._state = State.SYNC_CLOCK
+        # Continue with settings download, etc.
+        self._state = State.DOWNLOAD_SETTINGS
         self._mycroft_session_id = self.emit_start_session(
             dialog="pairing.paired",
             gui="pairing_done_mark_ii.qml",
@@ -638,8 +636,8 @@ class ConnectCheck(MycroftSkill):
         except Exception:
             self.log.exception("Error while syncing clock")
 
-        self._state = State.DOWNLOAD_SETTINGS
-        self.bus.emit(Message("server-connect.download-settings"))
+        self._state = State.CHECK_PAIRING
+        self.bus.emit(Message("server-connect.pairing.check"))
 
     # -------------------------------------------------------------------------
     # Remote settings from mycroft.ai
