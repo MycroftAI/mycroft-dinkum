@@ -193,7 +193,6 @@ class LocalMusicSkill(CommonPlaySkill):
         }
 
     def stop(self) -> Optional[Message]:
-        dialog = None
         self.log.debug("Music Skill Stopping")
         if self._mpd_playlist:
             self.CPS_release_output_focus()
