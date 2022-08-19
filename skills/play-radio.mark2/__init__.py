@@ -16,7 +16,7 @@
 #   add to favorites and play favorite
 from typing import Optional, Tuple
 
-from mycroft.skills import GuiClear, intent_handler
+from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
 
@@ -281,11 +281,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.rs.get_previous_channel()
         self.handle_previous_station(message)
 
+    @intent_handler(AdaptIntent("").require("Play").require("Radio"))
+    def handle_play_radio(self, message):
+        return self.handle_listen_intent(message)
+
     @intent_handler("ListenToRadio.intent")
     def handle_listen_intent(self, message):
-        if message.data:
-            self.setup_for_play(message.data.get("utterance", ""))
-            self.handle_play_request()
+        self.setup_for_play(message.data.get("utterance", ""))
+        self.handle_play_request()
 
     def play_current(self):
         station_found = False
