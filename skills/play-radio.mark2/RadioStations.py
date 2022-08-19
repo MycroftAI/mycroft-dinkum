@@ -209,7 +209,7 @@ class RadioStations:
 
     def get_current_station(self):
         if len(self.stations) > 0:
-            if self.index > len(self.stations):
+            if self.index > (len(self.stations) - 1):
                 # this covers up a bug
                 self.index = 0
             return self.stations[self.index]
