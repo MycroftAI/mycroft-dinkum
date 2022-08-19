@@ -46,7 +46,7 @@ def main():
     args = parser.parse_args()
 
     if args.venv_dir:
-        args.venv_dir = Path(args.venv_dir)
+        args.venv_dir = Path(args.venv_dir).absolute()
 
     config_home = Path("/home") / args.user / ".config"
 
@@ -126,7 +126,13 @@ def main():
                         file=f,
                     )
                     print(
-                        "ExecStart=", venv_dir, "/bin/python -m service", sep="", file=f
+                        "ExecStart=",
+                        venv_dir,
+                        "/bin/python -m service ",
+                        "--service-id ",
+                        service_path.name,
+                        sep="",
+                        file=f,
                     )
                     print("Restart=always", file=f)
                     print("RestartSec=10", file=f)

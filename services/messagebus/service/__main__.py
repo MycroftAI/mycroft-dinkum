@@ -43,7 +43,7 @@ def main():
     try:
 
         # Disable all tornado logging so mycroft loglevel isn't overridden
-        tornado.options.parse_command_line(sys.argv + ["--logging=None"])
+        tornado.options.parse_command_line(["--logging=None"])
 
         config = load_message_bus_config()
         routes = [(config.route, MessageBusEventHandler)]

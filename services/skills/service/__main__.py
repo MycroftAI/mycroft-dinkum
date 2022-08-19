@@ -101,9 +101,9 @@ def main():
         "--skill-directory", required=True, help="Path to skill directory"
     )
     parser.add_argument("--skill-id", required=True, help="Mycroft skill id")
-    args = parser.parse_args()
+    args, rest = parser.parse_known_args()
 
-    SkillsService(args).main()
+    SkillsService(args).main(rest)
 
 
 if __name__ == "__main__":

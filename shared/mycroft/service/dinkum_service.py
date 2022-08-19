@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import argparse
 import logging
 import signal
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from threading import Event, Thread
-from typing import Collection, Optional
+from typing import Collection, List, Optional
 
 import sdnotify
 from mycroft.configuration import Configuration
@@ -49,8 +50,15 @@ class DinkumService(ABC):
     def state(self):
         return self._state
 
-    def main(self):
+    def main(self, argv: Optional[List[str]] = None):
         """Service entry point"""
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--service-id", help="Override service id")
+        args = parser.parse_args(argv)
+
+        if args.service_id is not None:
+            self.service_id = args.service_id
+
         try:
             self._state = ServiceState.NOT_STARTED
             self.before_start()
