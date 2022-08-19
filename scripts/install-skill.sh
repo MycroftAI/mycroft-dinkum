@@ -37,6 +37,7 @@ this_dir="$( cd "$( dirname "$0" )" && pwd )"
 
 # Directory of repo
 base_dir="$(realpath "${this_dir}/../")"
+repo_venv="${base_dir}/.venv"
 
 service_code_dir="${base_dir}/services/skills"
 
@@ -51,6 +52,8 @@ fi
 if [ -n "${DINKUM_SHARED_VENV}" ]; then
     # Shared virtual enviroment
     service_config_dir="${XDG_CONFIG_HOME}/mycroft"
+elif [ -d "${repo_venv}" ]; then
+    service_config_dir="${base_dir}"
 else
     # Isolated service virtual enviroment
     service_config_dir="${XDG_CONFIG_HOME}/mycroft/skills/${skill_id}"
