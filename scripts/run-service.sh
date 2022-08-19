@@ -34,6 +34,13 @@ if [ -z "$1" ]; then
     exit 1;
 fi
 
+# Directory of *this* script
+this_dir="$( cd "$( dirname "$0" )" && pwd )"
+
+# Directory of repo
+base_dir="$(realpath "${this_dir}/../")"
+repo_venv="${base_dir}/.venv"
+
 service_dir="$1"
 service_id="$(basename "${service_dir}")"
 
@@ -50,6 +57,8 @@ fi
 # User-writable directory where virtual environment is stored
 if [ -n "${DINKUM_VENV_DIR}" ]; then
     venv_dir="${DINKUM_VENV_DIR}"
+elif [ -d "${repo_venv}" ]; then
+    venv_dir="${repo_venv}"
 else
     if [ -n "${DINKUM_SHARED_VENV}" ]; then
         # Shared virtual enviroment

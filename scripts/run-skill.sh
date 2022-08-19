@@ -40,6 +40,7 @@ this_dir="$( cd "$( dirname "$0" )" && pwd )"
 
 # Directory of repo
 base_dir="$(realpath "${this_dir}/../")"
+repo_venv="${base_dir}/.venv"
 
 service_code_dir="${base_dir}/services/skills"
 
@@ -53,6 +54,8 @@ fi
 # User-writable directory where virtual environment is stored
 if [ -n "${DINKUM_VENV_DIR}" ]; then
     venv_dir="${DINKUM_VENV_DIR}"
+elif [ -d "${repo_venv}" ]; then
+    venv_dir="${repo_venv}"
 else
     if [ -n "${DINKUM_SHARED_VENV}" ]; then
         # Shared virtual enviroment
