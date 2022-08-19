@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from random import randrange
 
+import random
 import requests
+
+from pyradios.base_url import fetch_hosts
 
 
 def sort_on_vpc(k):
@@ -34,17 +36,41 @@ class RadioStations:
         self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio"]
         self.search_limit = 1000
 
-        uri_genres = "http://de1.api.radio-browser.info/json/tags"
-        resp = requests.get(uri_genres)
-        genres = resp.json()
+        self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
+        self.base_url = random.choice(self.base_urls)
+        self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
+        if not self.genre_tags_response:
+            # TODO: Figure out what to do if we can't get a server at all.
+            pass
 
-        self.generic_search_terms = [genre["name"] for genre in genres]
+        self.genre_tags = [genre.get("name", "") for genre in self.genre_tags_response]
 
         self.channel_index = 0
-        self.last_search_terms = self.generic_search_terms[self.channel_index]
+        # Default to using the genre tag with the most radio stations.
+        # As of this comment it is "pop".
+        self.last_search_terms = self.genre_tags[self.channel_index]
         self.genre_to_play = ""
         self.stations = self.get_stations(self.last_search_terms)
         self.original_utterance = ""
+
+    def query_server(self, endpoint):
+        """
+        Since we have a list of possible servers to hit,
+        and since servers can be unresponsive sometimes, if we
+        don't get a success code we will retry with 10 different
+        servers before giving up.
+
+        Returns: a decoded response object.
+        """
+        uri = self.base_url + endpoint
+        response = requests.get(uri)
+        retries = 0
+        while retries < 10:
+            if 200 <= response.status_code < 300:
+                return response.json()
+            else:
+                self.base_url = random.choice(self.base_urls)
+                retries += 1
 
     def find_mime_type(self, url: str) -> str:
         """Determine the mime type of a file at the given url.
@@ -84,18 +110,16 @@ class RadioStations:
         return False
 
     def _search(self, srch_term, limit):
-        uri = (
-            "https://de1.api.radio-browser.info/json/stations/search?limit=%s&hidebroken=true&order=clickcount&reverse=true&tagList="
-            % (limit,)
-        )
+        endpoint = f"stations/search?limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = srch_term.replace(" ", "+")
-        uri += query
-        print("\n\n%s\n\n" % (uri,))
-        res = requests.get(uri)
-        if res:
-            return res.json()
-
-        return []
+        endpoint += query
+        # print("\n\n%s\n\n" % (uri,)) -- Where are print statements going?
+        stations = self.query_server(endpoint)
+        if stations:
+            return stations
+        else:
+            # TODO: What if it fails?
+            return []
 
     def confidence(self, phrase, station):
         # TODO this needs to be shared between radio
@@ -125,7 +149,7 @@ class RadioStations:
         unique_stations = {}
         self.original_utterance = sentence
         search_term_candidate = self.clean_sentence(sentence)
-        if search_term_candidate in self.generic_search_terms:
+        if search_term_candidate in self.genre_tags:
             self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
         else:
@@ -134,8 +158,8 @@ class RadioStations:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
-            self.channel_index = randrange(len(self.generic_search_terms) - 1)
-            self.last_search_terms = self.generic_search_terms[self.channel_index]
+            self.channel_index = random.randrange(len(self.genre_tags) - 1)
+            self.last_search_terms = self.genre_tags[self.channel_index]
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
@@ -230,19 +254,19 @@ class RadioStations:
         return self.get_current_station()
 
     def get_next_channel(self):
-        if self.channel_index == len(self.generic_search_terms) - 1:
+        if self.channel_index == len(self.genre_tags) - 1:
             self.channel_index = 0
         else:
             self.channel_index += 1
         self.index = 0
-        self.get_stations(self.generic_search_terms[self.channel_index])
-        return self.generic_search_terms[self.channel_index]
+        self.get_stations(self.genre_tags[self.channel_index])
+        return self.genre_tags[self.channel_index]
 
     def get_previous_channel(self):
         if self.channel_index == 0:
-            self.channel_index = len(self.generic_search_terms) - 1
+            self.channel_index = len(self.genre_tags) - 1
         else:
             self.channel_index -= 1
         self.index = 0
-        self.get_stations(self.generic_search_terms[self.channel_index])
-        return self.generic_search_terms[self.channel_index]
+        self.get_stations(self.genre_tags[self.channel_index])
+        return self.genre_tags[self.channel_index]
