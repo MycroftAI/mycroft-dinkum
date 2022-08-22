@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 import argparse
+from pathlib import Path
 from typing import Optional
 
 from lingua_franca import load_languages
@@ -29,17 +30,17 @@ class SkillsService(DinkumService):
     """
 
     def __init__(self, args: argparse.Namespace):
-        super().__init__(service_id=args.skill_id)
+        super().__init__(service_id="skills")
         self.args = args
-        self._skill_instance: Optional[MycroftSkill] = None
-        self._meta_uploader: Optional[SettingsMetaUploader] = None
+        self._skill_instances: List[MycroftSkill] = []
+        self._meta_uploaders: List[SettingsMetaUploader] = []
 
     def start(self):
         self._load_language()
 
         # We can't register intents until the intent service is up
         self._wait_for_service("intent")
-        self._load_skill()
+        self._load_skills()
 
     def after_start(self):
         super().after_start()
@@ -51,45 +52,49 @@ class SkillsService(DinkumService):
         self._upload_settings_meta()
 
     def stop(self):
-        self._unload_skill()
+        self._unload_skills()
 
     def _load_language(self):
         """Load language for Lingua Franca"""
         lang_code = self.config.get("lang", "en-us")
         load_languages([lang_code, "en-us"])
 
-    def _load_skill(self):
-        """Load/create skill instance and initialize"""
-        self._skill_module = load_skill_source(
-            self.args.skill_directory, self.args.skill_id
-        )
-        assert (
-            self._skill_module is not None
-        ), f"Failed to load skill module from {self.args.skill_directory}"
+    def _load_skills(self):
+        """Load/create skill instances and initialize"""
+        for skill_directory in self.args.skill:
+            skill_id = Path(skill_directory).name
+            self.log.debug("Loading skill %s", skill_id)
+            skill_module = load_skill_source(skill_directory, skill_id)
+            assert (
+                skill_module is not None
+            ), f"Failed to load skill module from {skill_directory}"
 
-        self._skill_instance = create_skill_instance(
-            self._skill_module, self.args.skill_id, self.bus
-        )
-        assert (
-            self._skill_instance is not None
-        ), f"Failed to create skill {self.args.skill_id}"
+            skill_instance = create_skill_instance(skill_module, skill_id, self.bus)
+            assert skill_instance is not None, f"Failed to create skill {skill_id}"
 
-    def _unload_skill(self):
+            self._skill_instances.append(skill_instance)
+
+    def _unload_skills(self):
         try:
-            if self._skill_instance is not None:
-                self._skill_instance.default_shutdown()
-                self._skill_instance = None
+            for skill_instance in self._skill_instances:
+                self.log.debug("Unloading skill %s", skill_instance.skill_id)
+                skill_instance.default_shutdown()
+
+            self._skill_instances.clear()
         finally:
-            if self._meta_uploader is not None:
-                self._meta_uploader.stop()
-                self._meta_uploader = None
+            self.log.debug("Stopping meta uploaders")
+            for meta_uploader in self._meta_uploaders:
+                meta_uploader.stop()
+
+            self._meta_uploaders.clear()
 
     def _upload_settings_meta(self):
         try:
-            self._meta_uploader = SettingsMetaUploader(
-                self.args.skill_directory, self.args.skill_id
-            )
-            self._meta_uploader.upload()
+            for skill_directory in self.args.skill:
+                skill_id = Path(skill_directory).name
+                meta_uploader = SettingsMetaUploader(skill_directory, skill_id)
+                meta_uploader.upload()
+                self._meta_uploaders.append(meta_uploader)
         except Exception:
             self.log.exception("Error while uploading settings meta")
 
@@ -98,9 +103,8 @@ def main():
     """Service entry point"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--skill-directory", required=True, help="Path to skill directory"
+        "--skill", required=True, action="append", help="Path to skill directory",
     )
-    parser.add_argument("--skill-id", required=True, help="Mycroft skill id")
     args, rest = parser.parse_known_args()
 
     SkillsService(args).main(rest)
