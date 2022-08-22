@@ -48,7 +48,10 @@ class RadioStations:
         # only take tags that have 2 or more.
         self.genre_tags = [
             genre.get("name", "") for genre in self.genre_tags_response
-            if genre["stationcount"] and genre["stationcount"] > 1
+            if genre["stationcount"] and genre["stationcount"] > 2
+        ]
+        self.genre_weights = [
+            genre.get("stationcount") for genre in self.genre_tags_response
         ]
 
         self.channel_index = 0
@@ -164,8 +167,8 @@ class RadioStations:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
-            self.channel_index = random.randrange(len(self.genre_tags) - 1)
-            self.last_search_terms = self.genre_tags[self.channel_index]
+            # weighted by the number of stations in each
+            self.last_search_terms = random.choices(self.genre_tags, weights=self.genre_weights, k=1)
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
