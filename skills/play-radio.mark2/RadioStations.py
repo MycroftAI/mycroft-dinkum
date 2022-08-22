@@ -26,7 +26,7 @@ def sort_on_confidence(k):
     return k["confidence"]
 
 
-class RadioStations:
+class RadioStations(CommonPlaySkill):
     def __init__(self):
         self.index = 0
         self.blacklist = [
