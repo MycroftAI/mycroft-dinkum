@@ -169,7 +169,7 @@ class RadioStations:
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
             # weighted by the number of stations in each
-            self.last_search_terms = random.choices(self.genre_tags, weights=self.genre_weights, k=1)
+            self.last_search_terms = random.choices(self.genre_tags, weights=self.genre_weights, k=1)[0]
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
