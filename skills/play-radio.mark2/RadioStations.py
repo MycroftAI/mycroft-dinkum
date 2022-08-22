@@ -167,9 +167,11 @@ class RadioStations:
         return confidence
 
     def search(self, sentence, limit):
+        LOG.debug(f"SEARCH METHOD GOT: {sentence}, {limit}")
         unique_stations = {}
         self.original_utterance = sentence
         search_term_candidate = self.clean_sentence(sentence)
+        LOG.debug(f"SEARCH TERM AFTER CLEANING: {search_term_candidate}")
         if search_term_candidate in self.genre_tags:
             self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
