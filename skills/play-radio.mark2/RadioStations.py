@@ -48,7 +48,7 @@ class RadioStations:
         # only take tags that have 2 or more.
         self.genre_tags = [
             genre.get("name", "") for genre in self.genre_tags_response
-            if genre["stationcount"] and genre["stationcount"] > 1000
+            if genre["stationcount"] and genre["stationcount"] > 1
         ]
 
         self.channel_index = 0
