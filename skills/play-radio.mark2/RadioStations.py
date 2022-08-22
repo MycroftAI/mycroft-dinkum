@@ -46,13 +46,14 @@ class RadioStations:
         # There are many "genre" tags which are actually specific to one station.
         # Since these aren't genres and they clutter things up, we'll
         # only take tags that have 2 or more.
+        # First make a list of lists to simplify.
         self.genre_tags = [
-            genre.get("name", "") for genre in self.genre_tags_response
+            [genre.get("name", ""), genre.get("stationcount", "")] for genre in self.genre_tags_response
             if genre["stationcount"] and genre["stationcount"] > 2
         ]
-        self.genre_weights = [
-            genre.get("stationcount") for genre in self.genre_tags_response
-        ]
+        # Then split the lists. This will make things easier downstream
+        # when we use station count to weight a random choice operation.
+        self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
 
         self.channel_index = 0
         # Default to using the genre tag with the most radio stations.
