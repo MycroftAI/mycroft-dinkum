@@ -131,11 +131,14 @@ class RadioStations:
         return False
 
     def _search(self, srch_term, limit):
+        LOG.debug(f"_SEARCH got {srch_term}, {limit}")
         endpoint = f"stations/search?limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = srch_term.replace(" ", "+")
         endpoint += query
+        LOG.debug(f"ENDPOINT: {endpoint}")
         # print("\n\n%s\n\n" % (uri,)) -- Where are print statements going?
         stations = self.query_server(endpoint)
+        LOG.debug(f"RETURNED: {stations}")
         if stations:
             return stations
         else:
