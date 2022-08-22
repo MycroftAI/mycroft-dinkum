@@ -396,7 +396,7 @@ class ConnectCheck(MycroftSkill):
         # Start authentication
         self.bus.emit(
             self.continue_session(
-                gui=("startup_sequence_mark_ii.qml", {"step": 2}),
+                gui=("startup_sequence_mark_ii.qml", {"step": 3}),
                 gui_clear=GuiClear.NEVER,
                 message=Message("server-connect.authentication.started"),
             )
@@ -647,7 +647,7 @@ class ConnectCheck(MycroftSkill):
             return
 
         response = self.continue_session(
-            gui=("startup_sequence_mark_ii.qml", {"step": 3}),
+            gui=("startup_sequence_mark_ii.qml", {"step": 2}),
             gui_clear=GuiClear.NEVER,
         )
         self.bus.emit(response)
