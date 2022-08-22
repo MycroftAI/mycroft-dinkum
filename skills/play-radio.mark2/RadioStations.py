@@ -189,7 +189,7 @@ class RadioStations:
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
-
+        LOG.debug("RETURNED FROM _SEARCH: {len(stations}")
         # whack dupes, favor match confidence
         for station in stations:
             station_name = station.get("name", "")
@@ -223,7 +223,7 @@ class RadioStations:
 
         # res.sort(key=sort_on_vpc, reverse=True)
         res.sort(key=sort_on_confidence, reverse=True)
-
+        LOG.debug(f"RETURNED FROM SEARCH: {len(res)}")
         return res
 
     def convert_array_to_dict(self, stations):
