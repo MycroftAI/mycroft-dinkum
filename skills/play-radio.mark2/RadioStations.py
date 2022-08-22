@@ -15,7 +15,7 @@
 import random
 import requests
 
-from mycroft.skills.common_play_skill import CommonPlaySkill
+from mycroft.skills import GuiClear, MycroftSkill
 
 from pyradios.base_url import fetch_hosts
 
@@ -28,7 +28,7 @@ def sort_on_confidence(k):
     return k["confidence"]
 
 
-class RadioStations(CommonPlaySkill):
+class RadioStations(MycroftSkill):
     def __init__(self):
         self.index = 0
         self.blacklist = [
