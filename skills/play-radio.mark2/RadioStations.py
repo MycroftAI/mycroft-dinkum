@@ -43,7 +43,13 @@ class RadioStations:
             # TODO: Figure out what to do if we can't get a server at all.
             pass
 
-        self.genre_tags = [genre.get("name", "") for genre in self.genre_tags_response]
+        # There are many "genre" tags which are actually specific to one station.
+        # Since these aren't genres and they clutter things up, we'll
+        # only take tags that have 2 or more.
+        self.genre_tags = [
+            genre.get("name", "") for genre in self.genre_tags_response
+            if genre["stationcount"] and genre["stationcount"] > 1000
+        ]
 
         self.channel_index = 0
         # Default to using the genre tag with the most radio stations.
