@@ -15,7 +15,7 @@
 import random
 import requests
 
-from mycroft.skills import GuiClear, MycroftSkill
+from mycroft.util.log import LOG
 
 from pyradios.base_url import fetch_hosts
 
@@ -28,7 +28,7 @@ def sort_on_confidence(k):
     return k["confidence"]
 
 
-class RadioStations(MycroftSkill):
+class RadioStations:
     def __init__(self):
         self.index = 0
         self.blacklist = [
@@ -40,6 +40,8 @@ class RadioStations(MycroftSkill):
 
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
         self.base_url = random.choice(self.base_urls)
+        LOG.debug(f"BASE URL CHOSEN: {self.base_url}")
+        LOG.debug(f"NUMBER OF BASE URLS FOUND: {len(self.base_urls)}")
         self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
         if not self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
@@ -53,16 +55,23 @@ class RadioStations(MycroftSkill):
             [genre.get("name", ""), genre.get("stationcount", "")] for genre in self.genre_tags_response
             if genre["stationcount"] and genre["stationcount"] > 2
         ]
+        LOG.debug(f"{len(self.genre_tags_response)} genre tags returned.")
+        LOG.debug(f"{len(self.genre_tags)} genre tags after filtering.")
         # Then split the lists. This will make things easier downstream
         # when we use station count to weight a random choice operation.
         self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
+        LOG.debug(f"FIRST GENRE TAG IS {self.genre_tags[0]}")
+        LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
 
         self.channel_index = 0
         # Default to using the genre tag with the most radio stations.
         # As of this comment it is "pop".
         self.last_search_terms = self.genre_tags[self.channel_index]
+        LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
         self.genre_to_play = ""
         self.stations = self.get_stations(self.last_search_terms)
+        LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
+        LOG.debug(f"FIRST STATION RETURNED IS {self.stations[0]}")
         self.original_utterance = ""
 
     def query_server(self, endpoint):
