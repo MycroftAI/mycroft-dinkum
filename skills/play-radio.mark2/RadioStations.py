@@ -30,7 +30,7 @@ def sort_on_confidence(k):
 
 class RadioStations:
     def __init__(self):
-        self.index = 0
+        self.station_index = 0
         self.blacklist = [
             "icecast",
         ]
@@ -252,34 +252,34 @@ class RadioStations:
         LOG.debug(f"SEARCH LIMIT: {self.search_limit}")
         self.stations = self.search(utterance, self.search_limit)
         # LOG.debug(f"STATIONS RECIEVED BY GET_STATIONS: {self.stations}")
-        self.index = 0
+        self.station_index = 0
 
     def get_station_count(self):
         return len(self.stations)
 
     def get_station_index(self):
-        return self.index
+        return self.station_index
 
     def get_current_station(self):
         if len(self.stations) > 0:
-            if self.index > (len(self.stations) - 1):
+            if self.station_index > (len(self.stations) - 1):
                 # this covers up a bug
-                self.index = 0
-            return self.stations[self.index]
+                self.station_index = 0
+            return self.stations[self.station_index]
         return None
 
     def get_next_station(self):
-        if self.index == len(self.stations):
-            self.index = 0
+        if self.station_index == len(self.stations):
+            self.station_index = 0
         else:
-            self.index += 1
+            self.station_index += 1
         return self.get_current_station()
 
     def get_previous_station(self):
-        if self.index == 0:
-            self.index = len(self.stations) - 1
+        if self.station_index == 0:
+            self.station_index = len(self.stations) - 1
         else:
-            self.index -= 1
+            self.station_index -= 1
         return self.get_current_station()
 
     def get_next_channel(self):
@@ -287,7 +287,7 @@ class RadioStations:
             self.channel_index = 0
         else:
             self.channel_index += 1
-        self.index = 0
+        self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
         return self.genre_tags[self.channel_index]
 
@@ -296,6 +296,6 @@ class RadioStations:
             self.channel_index = len(self.genre_tags) - 1
         else:
             self.channel_index -= 1
-        self.index = 0
+        self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
         return self.genre_tags[self.channel_index]
