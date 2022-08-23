@@ -15,6 +15,8 @@
 import random
 import requests
 
+from mycroft.util.log import LOG
+
 from pyradios.base_url import fetch_hosts
 
 
@@ -28,7 +30,7 @@ def sort_on_confidence(k):
 
 class RadioStations:
     def __init__(self):
-        self.index = 0
+        self.station_index = 0
         self.blacklist = [
             "icecast",
         ]
@@ -38,19 +40,38 @@ class RadioStations:
 
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
         self.base_url = random.choice(self.base_urls)
+        LOG.debug(f"BASE URL CHOSEN: {self.base_url}")
+        LOG.debug(f"NUMBER OF BASE URLS FOUND: {len(self.base_urls)}")
         self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
         if not self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
             pass
 
-        self.genre_tags = [genre.get("name", "") for genre in self.genre_tags_response]
+        # There are many "genre" tags which are actually specific to one station.
+        # Since these aren't genres and they clutter things up, we'll
+        # only take tags that have 2 or more.
+        # First make a list of lists to simplify.
+        self.genre_tags = [
+            [genre.get("name", ""), genre.get("stationcount", "")] for genre in self.genre_tags_response
+            if genre["stationcount"] and genre["stationcount"] > 2
+        ]
+        LOG.debug(f"{len(self.genre_tags_response)} genre tags returned.")
+        LOG.debug(f"{len(self.genre_tags)} genre tags after filtering.")
+        # Then split the lists. This will make things easier downstream
+        # when we use station count to weight a random choice operation.
+        self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
+        LOG.debug(f"FIRST GENRE TAG IS {self.genre_tags[0]}")
+        LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
 
         self.channel_index = 0
         # Default to using the genre tag with the most radio stations.
         # As of this comment it is "pop".
         self.last_search_terms = self.genre_tags[self.channel_index]
+        LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
         self.genre_to_play = ""
-        self.stations = self.get_stations(self.last_search_terms)
+        self.get_stations(self.last_search_terms)
+        LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
+        LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
         self.original_utterance = ""
 
     def query_server(self, endpoint):
@@ -110,9 +131,11 @@ class RadioStations:
         return False
 
     def _search(self, srch_term, limit):
+        LOG.debug(f"_SEARCH got {srch_term}, {limit}")
         endpoint = f"stations/search?limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = srch_term.replace(" ", "+")
         endpoint += query
+        LOG.debug(f"ENDPOINT: {endpoint}")
         # print("\n\n%s\n\n" % (uri,)) -- Where are print statements going?
         stations = self.query_server(endpoint)
         if stations:
@@ -146,9 +169,11 @@ class RadioStations:
         return confidence
 
     def search(self, sentence, limit):
+        LOG.debug(f"SEARCH METHOD GOT: {sentence}, {limit}")
         unique_stations = {}
         self.original_utterance = sentence
         search_term_candidate = self.clean_sentence(sentence)
+        LOG.debug(f"SEARCH TERM AFTER CLEANING: {search_term_candidate}")
         if search_term_candidate in self.genre_tags:
             self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
@@ -158,12 +183,13 @@ class RadioStations:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
+            # weighted by the number of stations in each
+            self.last_search_terms = random.choices(self.genre_tags, weights=self.genre_weights, k=1)[0]
             self.channel_index = random.randrange(len(self.genre_tags) - 1)
-            self.last_search_terms = self.genre_tags[self.channel_index]
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
-
+        LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
             station_name = station.get("name", "")
@@ -197,7 +223,7 @@ class RadioStations:
 
         # res.sort(key=sort_on_vpc, reverse=True)
         res.sort(key=sort_on_confidence, reverse=True)
-
+        LOG.debug(f"RETURNED FROM SEARCH: {res[0]}")
         return res
 
     def convert_array_to_dict(self, stations):
@@ -222,44 +248,52 @@ class RadioStations:
         return new_dict
 
     def get_stations(self, utterance):
+        LOG.debug(f"Utterance to get_stations: {utterance}")
+        LOG.debug(f"SEARCH LIMIT: {self.search_limit}")
         self.stations = self.search(utterance, self.search_limit)
-        self.index = 0
+        # LOG.debug(f"STATIONS RECIEVED BY GET_STATIONS: {self.stations}")
+        self.station_index = 0
 
     def get_station_count(self):
         return len(self.stations)
 
     def get_station_index(self):
-        return self.index
+        return self.station_index
 
     def get_current_station(self):
         if len(self.stations) > 0:
-            if self.index > (len(self.stations) - 1):
+            if self.station_index > (len(self.stations) - 1):
                 # this covers up a bug
-                self.index = 0
-            return self.stations[self.index]
+                self.station_index = 0
+            return self.stations[self.station_index]
         return None
 
     def get_next_station(self):
-        if self.index == len(self.stations):
-            self.index = 0
+        if self.station_index == len(self.stations):
+            self.station_index = 0
         else:
-            self.index += 1
+            self.station_index += 1
         return self.get_current_station()
 
     def get_previous_station(self):
-        if self.index == 0:
-            self.index = len(self.stations) - 1
+        if self.station_index == 0:
+            self.station_index = len(self.stations) - 1
         else:
-            self.index -= 1
+            self.station_index -= 1
         return self.get_current_station()
 
     def get_next_channel(self):
+        LOG.debug(f"NEXT CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
         if self.channel_index == len(self.genre_tags) - 1:
             self.channel_index = 0
         else:
             self.channel_index += 1
-        self.index = 0
+        LOG.debug(f"CHANNEL INCREMENTED: {self.channel_index}")
+        LOG.debug(f"CORESPONDING GENRE: {self.genre_tags[self.channel_index]}")
+        self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
+        # This appears to serve no purpose at all.
+        # Only place it is called doesn't take any return.
         return self.genre_tags[self.channel_index]
 
     def get_previous_channel(self):
@@ -267,6 +301,6 @@ class RadioStations:
             self.channel_index = len(self.genre_tags) - 1
         else:
             self.channel_index -= 1
-        self.index = 0
+        self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
         return self.genre_tags[self.channel_index]

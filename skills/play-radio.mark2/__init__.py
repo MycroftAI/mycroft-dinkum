@@ -156,7 +156,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         else:
             self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
-        channel_info = "%s/%s" % (self.rs.index + 1, len(self.rs.stations))
+        channel_info = "%s/%s" % (self.rs.station_index + 1, len(self.rs.stations))
         station_name = self.current_station.get("name", "").replace("\n", "")
         gui_data = {
             "media_image": self.img_pth,
