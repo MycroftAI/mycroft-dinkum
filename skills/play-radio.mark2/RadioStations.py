@@ -70,7 +70,7 @@ class RadioStations:
         LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
         self.genre_to_play = ""
         self.stations = self.get_stations(self.last_search_terms)
-        LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
+        # LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
         LOG.debug(f"FIRST STATION RETURNED IS {self.stations[0]}")
         self.original_utterance = ""
 
