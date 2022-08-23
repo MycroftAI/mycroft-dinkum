@@ -64,7 +64,6 @@ class RadioStations:
         LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
 
         self.channel_index = 0
-        LOG.debug(f"RETURNED: {stations}")
         # Default to using the genre tag with the most radio stations.
         # As of this comment it is "pop".
         self.last_search_terms = self.genre_tags[self.channel_index]
@@ -283,12 +282,17 @@ class RadioStations:
         return self.get_current_station()
 
     def get_next_channel(self):
+        LOG.debug(f"NEXT CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
         if self.channel_index == len(self.genre_tags) - 1:
             self.channel_index = 0
         else:
             self.channel_index += 1
+        LOG.debug(f"CHANNEL INCREMENTED: {self.channel_index}")
+        LOG.debug(f"CORESPONDING GENRE: {self.genre_tags[self.channel_index]}")
         self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
+        # This appears to serve no purpose at all.
+        # Only place it is called doesn't take any return.
         return self.genre_tags[self.channel_index]
 
     def get_previous_channel(self):
