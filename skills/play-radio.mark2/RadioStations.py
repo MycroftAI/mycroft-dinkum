@@ -64,14 +64,15 @@ class RadioStations:
         LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
 
         self.channel_index = 0
+        LOG.debug(f"RETURNED: {stations}")
         # Default to using the genre tag with the most radio stations.
         # As of this comment it is "pop".
         self.last_search_terms = self.genre_tags[self.channel_index]
         LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
         self.genre_to_play = ""
-        self.stations = self.get_stations(self.last_search_terms)
+        self.get_stations(self.last_search_terms)
         LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
-        LOG.debug(f"FIRST STATION RETURNED IS {self.stations[0]}")
+        LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
         self.original_utterance = ""
 
     def query_server(self, endpoint):
@@ -138,7 +139,6 @@ class RadioStations:
         LOG.debug(f"ENDPOINT: {endpoint}")
         # print("\n\n%s\n\n" % (uri,)) -- Where are print statements going?
         stations = self.query_server(endpoint)
-        LOG.debug(f"RETURNED: {stations}")
         if stations:
             return stations
         else:
@@ -189,7 +189,7 @@ class RadioStations:
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)
-        LOG.debug("RETURNED FROM _SEARCH: {len(stations}")
+        LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
             station_name = station.get("name", "")
@@ -223,7 +223,7 @@ class RadioStations:
 
         # res.sort(key=sort_on_vpc, reverse=True)
         res.sort(key=sort_on_confidence, reverse=True)
-        LOG.debug(f"RETURNED FROM SEARCH: {len(res)}")
+        LOG.debug(f"RETURNED FROM SEARCH: {res[0]}")
         return res
 
     def convert_array_to_dict(self, stations):
@@ -248,7 +248,10 @@ class RadioStations:
         return new_dict
 
     def get_stations(self, utterance):
+        LOG.debug(f"Utterance to get_stations: {utterance}")
+        LOG.debug(f"SEARCH LIMIT: {self.search_limit}")
         self.stations = self.search(utterance, self.search_limit)
+        # LOG.debug(f"STATIONS RECIEVED BY GET_STATIONS: {self.stations}")
         self.index = 0
 
     def get_station_count(self):
