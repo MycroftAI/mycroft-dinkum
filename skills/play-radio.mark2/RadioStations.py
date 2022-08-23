@@ -88,9 +88,12 @@ class RadioStations:
         retries = 0
         while retries < 10:
             if 200 <= response.status_code < 300:
+                LOG.debug(f"Successful response from RadioBrowser server: {uri}")
                 return response.json()
             else:
+                LOG.debug(f"Unsuccessful response from RadioBrowser server: {uri}")
                 self.base_url = random.choice(self.base_urls)
+                LOG.debug(f"Retrying request from next RadioBrowser server: {self.base_url}")
                 retries += 1
 
     def find_mime_type(self, url: str) -> str:
