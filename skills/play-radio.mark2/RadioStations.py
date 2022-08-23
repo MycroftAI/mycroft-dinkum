@@ -43,36 +43,46 @@ class RadioStations:
         LOG.debug(f"BASE URL CHOSEN: {self.base_url}")
         LOG.debug(f"NUMBER OF BASE URLS FOUND: {len(self.base_urls)}")
         self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
-        if not self.genre_tags_response:
+        if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
-            pass
+            
+            # The way this mess is currently written we can't end the session
+            # with some dialog within this class, instead we must wait for
+            # the RadioFreeMycroftSkill class to find these attributes empty 
+            # (since that class just manhandles all of this
+            # class's attributes without waiting for anything to be
+            # returned).
+            # Once it gets nothing back it will emit a fairly appropriate 
+            # bit of dialog and end the session. I can't think of a better 
+            # way to do this without a major, if not total, code rewrite.
 
-        # There are many "genre" tags which are actually specific to one station.
-        # Since these aren't genres and they clutter things up, we'll
-        # only take tags that have 2 or more.
-        # First make a list of lists to simplify.
-        self.genre_tags = [
-            [genre.get("name", ""), genre.get("stationcount", "")] for genre in self.genre_tags_response
-            if genre["stationcount"] and genre["stationcount"] > 2
-        ]
-        LOG.debug(f"{len(self.genre_tags_response)} genre tags returned.")
-        LOG.debug(f"{len(self.genre_tags)} genre tags after filtering.")
-        # Then split the lists. This will make things easier downstream
-        # when we use station count to weight a random choice operation.
-        self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
-        LOG.debug(f"FIRST GENRE TAG IS {self.genre_tags[0]}")
-        LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
+            # There are many "genre" tags which are actually specific to one station.
+            # Since these aren't genres and they clutter things up, we'll
+            # only take tags that have 2 or more.
+            # First make a list of lists to simplify.
+            self.genre_tags = [
+                [genre.get("name", ""), genre.get("stationcount", "")] 
+                for genre in self.genre_tags_response
+                if genre["stationcount"] and genre["stationcount"] > 2
+            ]
+            LOG.debug(f"{len(self.genre_tags_response)} genre tags returned.")
+            LOG.debug(f"{len(self.genre_tags)} genre tags after filtering.")
+            # Then split the lists. This will make things easier downstream
+            # when we use station count to weight a random choice operation.
+            self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
+            LOG.debug(f"FIRST GENRE TAG IS {self.genre_tags[0]}")
+            LOG.debug(f"FIRST GENRE WEIGHT IS {self.genre_weights[0]}")
 
-        self.channel_index = 0
-        # Default to using the genre tag with the most radio stations.
-        # As of this comment it is "pop".
-        self.last_search_terms = self.genre_tags[self.channel_index]
-        LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
-        self.genre_to_play = ""
-        self.get_stations(self.last_search_terms)
-        LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
-        LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
-        self.original_utterance = ""
+            self.channel_index = 0
+            # Default to using the genre tag with the most radio stations.
+            # As of this comment it is "pop".
+            self.last_search_terms = self.genre_tags[self.channel_index]
+            LOG.debug(f"DEFAULT LAST SEARCH TERM: {self.last_search_terms}")
+            self.genre_to_play = ""
+            self.get_stations(self.last_search_terms)
+            LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
+            LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
+            self.original_utterance = ""
 
     def query_server(self, endpoint):
         """
@@ -83,18 +93,32 @@ class RadioStations:
 
         Returns: a decoded response object.
         """
-        uri = self.base_url + endpoint
-        response = requests.get(uri)
         retries = 0
         while retries < 10:
+            response = self._get_response(endpoint)
             if 200 <= response.status_code < 300:
-                LOG.debug(f"Successful response from RadioBrowser server: {uri}")
+                LOG.debug(f"Successful response from RadioBrowser server: {self.base_url}")
                 return response.json()
             else:
-                LOG.debug(f"Unsuccessful response from RadioBrowser server: {uri}")
+                LOG.debug(f"Unsuccessful response from RadioBrowser server: {self.base_url}")
                 self.base_url = random.choice(self.base_urls)
                 LOG.debug(f"Retrying request from next RadioBrowser server: {self.base_url}")
                 retries += 1
+
+    def _get_response(self, endpoint):
+        retries = 0
+        response = None
+        while retries < 10:
+            uri = self.base_url + endpoint
+            try:
+                response = requests.get(uri, timeout=3)
+                return response
+            except requests.Timeout:
+                LOG.debug(f"Timeout {self.base_url}")
+                self.base_url = random.choice(self.base_urls)
+                LOG.debug(f"Trying with {self.base_url}")
+                retries += 1
+ 
 
     def find_mime_type(self, url: str) -> str:
         """Determine the mime type of a file at the given url.
