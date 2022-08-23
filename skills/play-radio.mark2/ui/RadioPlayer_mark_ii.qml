@@ -153,7 +153,7 @@ Mycroft.CardDelegate {
                         }
                     }
                     
-                    Title {
+                    Marquee {
                         id: genre
                         anchors.top: skillNameLogo.bottom
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -161,13 +161,15 @@ Mycroft.CardDelegate {
                         font.pixelSize: 47
                         // font.styleName: "SemiBold"
                         font.capitalization: Font.Capitalize
-                        heightUnits: 4
-                        widthUnits: 15
+                        // heightUnits: 4
+                        // widthUnits: 15
                         // leftPadding: Mycroft.Units.gridUnit * 1
                         // rightPadding: Mycroft.Units.gridUnit * 1
                         text: media_genre
-                        maxTextLength: 13
+                        // maxTextLength: 13
                         color: "white"
+			width: gridUnit * 15
+			height: gridUnit * 4
                     }
 
                     Controls.Button {
@@ -197,17 +199,20 @@ Mycroft.CardDelegate {
                         }
                     }
 
-                    Title {
+                    Marquee {
                         id: station
                         anchors.top: genre.bottom
                         anchors.topMargin: Mycroft.Units.gridUnit * 1
+			anchors.horizontalCenter: genre.horizontalCenter
                         font.pixelSize: 24
                         font.capitalization: Font.AllUppercase
                         // font.styleName: "SemiBold"
                         // heightUnits: 4
                         text: media_station
-                        maxTextLength: 15
+                        // maxTextLength: 15
                         color: "white"
+			width: gridUnit * 20
+			height: gridUnit * 4
                     }
                 }
 
