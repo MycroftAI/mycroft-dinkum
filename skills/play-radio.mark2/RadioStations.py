@@ -43,6 +43,7 @@ class RadioStations:
         LOG.debug(f"BASE URL CHOSEN: {self.base_url}")
         LOG.debug(f"NUMBER OF BASE URLS FOUND: {len(self.base_urls)}")
         self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
+
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
             
@@ -118,7 +119,6 @@ class RadioStations:
                 self.base_url = random.choice(self.base_urls)
                 LOG.debug(f"Trying with {self.base_url}")
                 retries += 1
- 
 
     def find_mime_type(self, url: str) -> str:
         """Determine the mime type of a file at the given url.
