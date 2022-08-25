@@ -67,17 +67,17 @@ Item {
                 Layout.preferredHeight: Kirigami.Units.largeSpacing
             }
 
-            // Kirigami.Heading {
-            //     id: versionsHeading
-            //     level: 2
-            //     Layout.alignment: Qt.AlignHCenter
-            //     text: "Mycroft-core"
-            // }
+            Kirigami.Heading {
+                id: versionsHeading
+                level: 2
+                Layout.alignment: Qt.AlignHCenter
+                text: "Mycroft-core"
+            }
 
-            // Item {
-            //     Layout.fillWidth: true
-            //     Layout.preferredHeight: Kirigami.Units.smallSpacing
-            // }
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.smallSpacing
+            }
 
             // Label {
             //     id: mycroftCoreVersionLabel
@@ -117,11 +117,11 @@ Item {
             //     Layout.preferredHeight: Kirigami.Units.smallSpacing
             // }
 
-            // Label {
-            //     id: mycroftContainerBuildDateLabel
-            //     Layout.alignment: Qt.AlignHCenter
-            //     text: "Mycroft Container: " + sessionData.mycroftContainerBuildDate
-            // }
+            Label {
+                id: mycroftContainerBuildDateLabel
+                Layout.alignment: Qt.AlignHCenter
+                text: "Mycroft Container: " + sessionData.mycroftContainerBuildDate
+            }
 
             // Label {
             //     id: mycroftSkillsUpdateDateLabel
@@ -129,19 +129,19 @@ Item {
             //     text: "Mycroft Skills: " + sessionData.mycroftSkillsUpdateDate
             // }
 
-            // Item {
-            //     Layout.fillWidth: true
-            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
-            // }
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.largeSpacing
+            }
 
             // Kirigami.Separator {
             //     Layout.fillWidth: true
             // }
 
-            // Item {
-            //     Layout.fillWidth: true
-            //     Layout.preferredHeight: Kirigami.Units.largeSpacing
-            // }
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.largeSpacing
+            }
 
             Kirigami.Heading {
                 id: deviceIdHeading

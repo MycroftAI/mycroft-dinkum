@@ -19,12 +19,7 @@ from mycroft.skills import GuiClear, MycroftSkill
 
 from .skill.device_id import get_device_name
 
-# from .skill.versions import (
-#     get_mycroft_build_datetime,
-#     get_mycroft_core_commit,
-#     get_mycroft_core_version,
-#     get_skill_update_datetime,
-# )
+from .skill.versions import get_mycroft_build_datetime
 
 
 class Mark2(MycroftSkill):
@@ -467,7 +462,6 @@ class Mark2(MycroftSkill):
         """Display device update settings page."""
         # self.gui["mycroftCoreVersion"] = get_mycroft_core_version()
         # self.gui["mycroftCoreCommit"] = get_mycroft_core_commit()
-        # self.gui["mycroftContainerBuildDate"] = get_mycroft_build_datetime()
         # skills_repo_path = f"{self.config_core['data_dir']}/.skills-repo"
         # self.gui["mycroftSkillsUpdateDate"] = get_skill_update_datetime(
         #     skills_repo_path
@@ -495,6 +489,7 @@ class Mark2(MycroftSkill):
                     "state": "settings/about",
                     "deviceName": device_name,
                     # "mycroftUUID": mycroft_uuid,
+                    "mycroftContainerBuildDate": get_mycroft_build_datetime(),
                     "pantacorDeviceId": pantacor_device_id,
                     "networkAddresses": network_addresses_str,
                 },

@@ -16,9 +16,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from git import Git
-from mycroft import MYCROFT_ROOT_PATH
-from mycroft.version import CORE_VERSION_STR
+# from git import Git
+# from mycroft import MYCROFT_ROOT_PATH
+# from mycroft.version import CORE_VERSION_STR
 
 
 def get_mycroft_build_datetime():
@@ -33,17 +33,17 @@ def get_mycroft_build_datetime():
     return build_datetime[:-3]
 
 
-def get_mycroft_core_commit():
-    """Get the latest commit info for Mycroft-Core."""
-    commit_string = ""
-    core_repo = Git(MYCROFT_ROOT_PATH)
-    branch = core_repo.branch("--show-current")
-    if not branch:
-        # It's in a detached head state so is not reporting branch.
-        branch = "feature/mark-2"
-    commit_hash = core_repo.log("-n 1", "--pretty=format:%h")[:7]
-    commit_string = f"{branch}@{commit_hash}"
-    return commit_string
+# def get_mycroft_core_commit():
+#     """Get the latest commit info for Mycroft-Core."""
+#     commit_string = ""
+#     core_repo = Git(MYCROFT_ROOT_PATH)
+#     branch = core_repo.branch("--show-current")
+#     if not branch:
+#         # It's in a detached head state so is not reporting branch.
+#         branch = "feature/mark-2"
+#     commit_hash = core_repo.log("-n 1", "--pretty=format:%h")[:7]
+#     commit_string = f"{branch}@{commit_hash}"
+#     return commit_string
 
 
 def get_mycroft_core_version():
@@ -55,9 +55,9 @@ def get_mycroft_core_version():
     return CORE_VERSION_STR
 
 
-def get_skill_update_datetime(skills_repo_path):
-    """Get the date the Skills Marketplace last updated."""
-    skills_repo = Git(skills_repo_path)
-    last_commit_timestamp = skills_repo.log("-1", "--format=%ct")
-    last_commit_date_time = datetime.utcfromtimestamp(int(last_commit_timestamp))
-    return last_commit_date_time.strftime("%Y-%m-%d %H:%M")
+# def get_skill_update_datetime(skills_repo_path):
+#     """Get the date the Skills Marketplace last updated."""
+#     skills_repo = Git(skills_repo_path)
+#     last_commit_timestamp = skills_repo.log("-1", "--format=%ct")
+#     last_commit_date_time = datetime.utcfromtimestamp(int(last_commit_timestamp))
+#     return last_commit_date_time.strftime("%Y-%m-%d %H:%M")
