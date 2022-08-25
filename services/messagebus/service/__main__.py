@@ -37,7 +37,7 @@ WATCHDOG_DELAY = 0.5
 
 def main():
     """Service entry point"""
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     LOG.info("Starting message bus service...")
 
     try:

@@ -20,7 +20,7 @@ from typing import Optional
 from uuid import uuid4
 
 import requests
-from mycroft.api import DeviceApi
+from mycroft.api import DeviceApi, get_pantacor_device_id
 from mycroft.configuration.remote import (
     download_remote_settings,
     get_remote_settings_path,
@@ -52,6 +52,8 @@ PAIRING_SPEAK_CODE_WAIT_SEC = 25
 CLOCK_SYNC_RETIRES = 10
 CLOCK_SYNC_WAIT_SEC = 1
 
+PANTACOR_WAIT_SEC = 5
+
 
 class Authentication(str, Enum):
     """Result of pairing check with mycroft.ai"""
@@ -79,6 +81,8 @@ class State(Enum):
     PAIRING_SHOW_CODE = auto()
     PAIRING_CHECK_ACTIVATION = auto()
     PAIRING_ACTIVATING = auto()
+    #
+    SYNC_PANTACOR = auto()
     #
     TUTORIAL_START = auto()
     #
@@ -157,6 +161,9 @@ class ConnectCheck(MycroftSkill):
             "pairing_code_mark_ii.qml",
             self._pairing_check_activation,
         )
+
+        # Pantacor sync
+        self.add_event("server-connect.join-fleet.start", self._sync_with_pantacor)
 
         # Tutorial
         self.add_event("server-connect.tutorial.start", self._tutorial_start)
@@ -367,19 +374,9 @@ class ConnectCheck(MycroftSkill):
 
         self._state = State.CHECK_INTERNET
         self.bus.emit(
-            self.continue_session(
-                gui=(
-                    "wifi_success_mark_ii.qml",
-                    {"label": self.translate("connected")},
-                ),
-                gui_clear=GuiClear.NEVER,
-                message=Message(
-                    "internet-connect.detect.start",
-                    data={"mycroft_session_id": self._mycroft_session_id},
-                ),
-                message_send=MessageSend.AT_END,
-                message_delay=5.0,
-                mycroft_session_id=self._mycroft_session_id,
+            Message(
+                "internet-connect.detect.start",
+                data={"mycroft_session_id": self._mycroft_session_id},
             )
         )
 
@@ -520,14 +517,12 @@ class ConnectCheck(MycroftSkill):
             )
             self.bus.emit(Message("mycroft.paired", login))
 
-            # Pairing complete, begin tutorial
-            self._state = State.TUTORIAL_START
+            # Pairing complete, sync pantacor config
+            self._state = State.SYNC_PANTACOR
             self._mycroft_session_id = self.emit_start_session(
-                gui="pairing_success_mark_ii.qml",
+                gui="joining_fleet_mark_ii.qml",
                 gui_clear=GuiClear.NEVER,
-                message=Message("server-connect.tutorial.start"),
-                message_send=MessageSend.AT_END,
-                message_delay=3,
+                message=Message("server-connect.join-fleet.start"),
             )
         except Exception:
             self.log.exception("Error while activating")
@@ -604,6 +599,75 @@ class ConnectCheck(MycroftSkill):
             else:
                 self.log.info("Identity file saved.")
                 break
+
+    def _sync_with_pantacor(self, _message=None):
+        """Calls the Selene endpoint to sync the device with Pantacor.
+
+        Selene interacts with the Pantacor Fleet API to determine if the
+        device registration process is complete.  Upon registration success,
+        Selene stores Pantacor data regarding the device in its database.
+
+        There is no guarantee of when the device's registration with Pantacor will
+        be complete, so call the endpoint once per minute until success.
+        """
+        if self._state != State.SYNC_PANTACOR:
+            return
+
+        self.bus.emit(
+            Message(
+                "server-connect.join-fleet.started",
+                data={"mycroft_session_id": self._mycroft_session_id},
+            )
+        )
+        self.log.info(
+            "Device uses Pantacor for continuous deployment - syncing Pantacor config"
+        )
+
+        while True:
+            try:
+                self.log.debug("Attempting to sync Pantacor config")
+                pantacor_device_id = get_pantacor_device_id()
+                if pantacor_device_id:
+                    try:
+                        self.log.debug(
+                            "Syncing with Pantacor id %s", pantacor_device_id
+                        )
+                        self.api.sync_pantacor_config(pantacor_device_id)
+                    except HTTPError as http_error:
+                        http_status = http_error.response.status_code
+                        if http_status == HTTPStatus.NOT_FOUND:
+                            self.log.warning(
+                                "Device not found on Pantacor - retrying shortly"
+                            )
+                        elif http_status == HTTPStatus.PRECONDITION_REQUIRED:
+                            self.log.warning(
+                                "Device exists on Pantacor servers but Pantacor setup is not"
+                                "complete - retrying shortly"
+                            )
+                    else:
+                        self.log.info("Sync of Pantacor config succeeded")
+                        break
+                else:
+                    self.log.warning(
+                        "Attempt to obtain Pantacor Device ID from file system failed - "
+                        "retrying shortly"
+                    )
+            except Exception:
+                self.log.exception(
+                    "Failed to sync Pantacor config. Will retry shortly."
+                )
+            finally:
+                time.sleep(PANTACOR_WAIT_SEC)
+
+        # Fleet joined, begin tutorial
+        self._state = State.TUTORIAL_START
+        self._mycroft_session_id = self.emit_start_session(
+            gui="pairing_success_mark_ii.qml",
+            gui_clear=GuiClear.NEVER,
+            message=Message("server-connect.tutorial.start"),
+            message_send=MessageSend.AT_END,
+            message_delay=3,
+        )
 
     # -------------------------------------------------------------------------
     # Tutorial
