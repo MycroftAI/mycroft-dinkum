@@ -78,5 +78,4 @@ source "${venv_dir}/bin/activate"
 
 PYTHONPATH="${service_code_dir}:${PYTHONPATH}" \
     python3 -m 'service' \
-    --skill-directory "${skill_dir}" \
-    --skill-id "${skill_id}" "$@"
+    --skill "${skill_dir}" "$@"
