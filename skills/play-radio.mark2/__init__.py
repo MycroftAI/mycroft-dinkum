@@ -154,6 +154,12 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 self.genre_images[self.rs.genre_to_play], "ui/images"
             )
         else:
+            for genre_image_name, genre_image_path in self.genre_images.items():
+                if genre_image_name in self.rs.genre_to_play:
+                    self.img_pth = self.find_resource(
+                        genre_image_path, "ui/images"
+                    )
+        if not self.img_pth:
             self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
         channel_info = "%s/%s" % (self.rs.station_index + 1, len(self.rs.stations))

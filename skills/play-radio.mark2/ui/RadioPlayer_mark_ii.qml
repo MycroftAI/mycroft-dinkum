@@ -41,6 +41,7 @@ Mycroft.CardDelegate {
     property var media_station: sessionData.media_station
     property var media_genre: sessionData.media_genre
     property var media_skill: sessionData.media_skill
+    property var media_info: sessionData.media_current_station_info
 
     // Vars with state info.
     property var playerState: sessionData.media_status
@@ -208,7 +209,7 @@ Mycroft.CardDelegate {
                         font.capitalization: Font.AllUppercase
                         // font.styleName: "SemiBold"
                         // heightUnits: 4
-                        text: media_station
+                        text: media_info + ": " + media_station
                         // maxTextLength: 15
                         color: "white"
 			width: gridUnit * 20
