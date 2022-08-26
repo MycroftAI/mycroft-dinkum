@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import json
 import re
 from pathlib import Path
-from typing import Any, Dict
+from threading import Timer
+from typing import Any, Dict, Union
 
 import xdg.BaseDirectory
+from mycroft_bus_client import Message, MessageBusClient
 from mycroft.util.log import LOG
 from mycroft.util.string_utils import camel_case_split
+
+
+ONE_MINUTE = 60
 
 
 def get_remote_settings_path() -> Path:
@@ -95,3 +101,54 @@ def translate_list(config, values):
             config["module"] = module
         config[module] = config.get(module, {})
         translate_remote(config[module], v)
+
+
+class RemoteSettingsDownloader:
+    def __init__(self):
+        self._config_path = get_remote_settings_path()
+        self._timer: Optional[Timer] = None
+        self._last_settings: Dict[str, Any] = {}
+        self.bus: Optional[MessageBusClient] = None
+
+        from mycroft.api import DeviceApi
+        self.api = DeviceApi()
+
+    def initialize(self, bus: MessageBusClient):
+        self.bus = bus
+
+    def schedule(self):
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer = None
+
+        self._timer = Timer(ONE_MINUTE, self._download)
+        self._timer.daemon = True
+        self._timer.start()
+        LOG.debug("Scheduled download of remote config in %s second(s)", ONE_MINUTE)
+
+    def _download(self):
+        try:
+            # Load remote config if it exists
+            if (not self._last_settings) and (self._config_path.exists()):
+                with open(self._config_path, "r") as config_file:
+                    self._last_settings = json.load(config_file)
+
+            LOG.debug("Downloading remote settings")
+            current_settings = download_remote_settings(self.api)
+
+            if current_settings != self._last_settings:
+                # Save to ~/.config/mycroft/mycroft.remote.conf
+                with open(self._config_path, "w", encoding="utf-8") as settings_file:
+                    json.dump(current_settings, settings_file)
+
+                self._last_settings = current_settings
+                LOG.debug("Wrote remote config: %s", self._config_path)
+
+                assert self.bus is not None
+
+                # Inform services that config may have changed
+                self.bus.emit(Message("configuration.updated"))
+        except Exception:
+            LOG.exception("Error downloading remote config")
+        finally:
+            self.schedule()

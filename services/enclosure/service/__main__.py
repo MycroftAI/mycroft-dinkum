@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 import xdg.BaseDirectory
+from mycroft.configuration.remote import RemoteSettingsDownloader
 from mycroft.service import DinkumService
 from mycroft.skills.settings import SkillSettingsDownloader
 from mycroft_bus_client import Message
@@ -38,8 +39,11 @@ class EnclosureService(DinkumService):
 
         self.led_session_id: Optional[str] = None
         self.mycroft_ready = False
+        self._settings_downloader = RemoteSettingsDownloader()
 
     def start(self):
+        self._settings_downloader.initialize(self.bus)
+
         self.bus.on("mycroft.ready.get", self.handle_ready_get)
         self._wait_for_gui()
 
@@ -104,6 +108,7 @@ class EnclosureService(DinkumService):
         self._connect_check = None
 
         self.log.debug("Completed start up successfully")
+        self._settings_downloader.schedule()
 
     # -------------------------------------------------------------------------
 
