@@ -75,16 +75,16 @@ Mycroft.Delegate {
             width: gridUnit * 3
         }
 
-        // The date and time of the most recent Mark II build.  Only displayed for developers.
+        // The date and time of the most recent Mark II build
         HomeScreenLabel {
             id: homeScreenBuildDateTime
             anchors.bottom: parent.bottom
             anchors.left: parent.left
-            anchors.leftMargin: gridUnit * 5
+            anchors.leftMargin: gridUnit
             fontSize: 22
             fontStyle: "Regular"
             heightUnits: 3
-            text: sessionData.buildDateTime ? "Build: " + sessionData.buildDateTime : ""
+            text: sessionData.mycroftContainerBuildDate
             width: gridUnit * 10
         }
 
@@ -154,7 +154,6 @@ Mycroft.Delegate {
             heightUnits: 3
             imageSource: "icons/mycroft-logo.png"
             widthUnits: 3
-            visible: !sessionData.skillDateTime
         }
     }
 }
