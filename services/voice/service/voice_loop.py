@@ -121,14 +121,27 @@ class VoiceLoop:
         # Directory to cache STT recordings
         self.stt_audio_dir = Path(get_cache_directory("stt_recordings"))
 
+        # Thread recording audio chunks
+        self._audio_input_running = False
+        self._audio_input_thread: Optional[Thread] = None
+
     def start(self):
         # Start arecord in separate thread
         # TODO: Use configurable command
-        Thread(target=_audio_input, args=(self.queue,), daemon=True).start()
+        self._audio_input_running = True
+        self._audio_input_thread = Thread(target=self._audio_input, daemon=True)
+        self._audio_input_thread.start()
 
         self.bus.on("mycroft.mic.mute", self.handle_mute)
         self.bus.on("mycroft.mic.unmute", self.handle_unmute)
         self.bus.on("mycroft.mic.listen", self.handle_listen)
+
+    def stop(self):
+        """Gracefully"""
+        if self._audio_input_thread is not None:
+            self._audio_input_running = False
+            self._audio_input_thread.join()
+            self._audio_input_thread = None
 
     def run(self):
         while True:
@@ -310,26 +323,36 @@ class VoiceLoop:
         except Exception:
             self.log.exception("Error while saving STT audio")
 
+    def _audio_input(self):
+        try:
+            # TODO: Use config
+            with subprocess.Popen(
+                [
+                    "arecord",
+                    "-q",
+                    "-r",
+                    "16000",
+                    "-c",
+                    "1",
+                    "-f",
+                    "S16_LE",
+                    "-t",
+                    "raw",
+                ],
+                stdout=subprocess.PIPE,
+            ) as proc:
+                assert proc.stdout is not None
 
-def _audio_input(queue: "Queue[bytes]"):
-    try:
-        # TODO: Use config
-        with subprocess.Popen(
-            ["arecord", "-q", "-r", "16000", "-c", "1", "-f", "S16_LE", "-t", "raw"],
-            stdout=subprocess.PIPE,
-        ) as proc:
-            assert proc.stdout is not None
+                while self._audio_input_running:
+                    chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
+                    assert chunk, "Empty audio chunk"
 
-            while True:
-                chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
-                assert chunk, "Empty audio chunk"
+                    # Increase loudness of audio
+                    chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
 
-                # Increase loudness of audio
-                chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
-
-                queue.put_nowait(chunk)
-    except Exception:
-        LOG.exception("Unexpected error in audio input thread")
+                    self.queue.put_nowait(chunk)
+        except Exception:
+            LOG.exception("Unexpected error in audio input thread")
 
 
 def load_hotword_module(config: Dict[str, Any]) -> HotWordEngine:

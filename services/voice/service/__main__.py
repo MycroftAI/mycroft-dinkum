@@ -80,7 +80,7 @@ class VoiceService(DinkumService):
         self.voice_loop.run()
 
     def stop(self):
-        pass
+        self.voice_loop.stop()
 
 
 def main():
