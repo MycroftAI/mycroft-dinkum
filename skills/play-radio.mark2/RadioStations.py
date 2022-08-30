@@ -282,8 +282,9 @@ class RadioStations:
         LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
+            if station["name"]:
+                station["name"] = truncate_input_string(clean_string(station["name"]))
             station_name = station.get("name", "")
-            station_name = truncate_input_string(clean_string(station_name))
             stream_uri = station.get("url_resolved", "")
             if stream_uri != "" and not self.blacklisted(stream_uri):
                 if station_name in unique_stations:
