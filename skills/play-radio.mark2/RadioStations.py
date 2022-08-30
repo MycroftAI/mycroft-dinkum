@@ -14,11 +14,18 @@
 
 import random
 import requests
+import re
+from typing import Optional
 
 from mycroft.util.log import LOG
 
 from pyradios.base_url import fetch_hosts
 
+# The maximum length for strings to be displayed in the UI.
+# Strings that are too long will overlap and be unreadable
+# in the marquee field. If strings are distorted, reduce
+# this number.
+CHARACTER_LIMIT = 35
 
 def sort_on_vpc(k):
     return k["votes_plus_clicks"]
@@ -26,6 +33,62 @@ def sort_on_vpc(k):
 
 def sort_on_confidence(k):
     return k["confidence"]
+
+
+# Helper functions.
+
+def clean_string(string: str) -> str:
+    """
+    Cleans up input for display in the GUI.
+
+    Some kind of full sanitization might be preferable,
+    but for now we will just remove anything that is not
+    a word, a space, or a few punctuation marks.
+
+    The punctuation marks it leaves are mostly
+    delimiters that can be used for truncation later.
+    """
+    string = string.replace("'", "").replace('"', "").replace("\n", " ").replace("\t", " ")
+    string = re.sub(r"[^\w,/\-\. ]", " ", string)
+    string = re.sub(r"\s\s+", " ", string)
+    return string.strip()
+
+
+def truncate_input_string(string: str) -> str:
+    """
+    Takes a string (expected to be from the Radio
+    Browser service) and attempts to truncate it
+    (if it is too long) in a smart way.
+    """
+    if len(string) <= CHARACTER_LIMIT:
+        return string
+    chunks = [
+        chunk.strip() for chunk in re.split(r"[/\-]", string)
+    ]
+    truncated_string = _construct_string(chunks)
+    if not truncated_string:
+        subchunks = chunks[0].split(" ")
+        truncated_string = _construct_string(subchunks)
+    if truncated_string:
+        return truncated_string
+    else:
+        return chunks[0][:CHARACTER_LIMIT]
+
+
+def _construct_string(chunks: list) -> Optional[str]:
+    """
+    Rebuilds a string that is too long, up to
+    the value in CHARACTER_LIMIT.
+    """
+    truncated_string = ""
+    for chunk in chunks:
+        if len(truncated_string) + len(chunk) < CHARACTER_LIMIT:
+            truncated_string += " " + chunk
+        else:
+            return truncated_string.strip()
+    return None
+
+
 
 
 class RadioStations:
@@ -46,7 +109,7 @@ class RadioStations:
 
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
-            
+
             # The way this mess is currently written we can't end the session
             # with some dialog within this class, instead we must wait for
             # the RadioFreeMycroftSkill class to find these attributes empty 
@@ -62,7 +125,7 @@ class RadioStations:
             # only take tags that have 2 or more.
             # First make a list of lists to simplify.
             self.genre_tags = [
-                [genre.get("name", ""), genre.get("stationcount", "")] 
+                [genre.get("name", ""), genre.get("stationcount", "")]
                 for genre in self.genre_tags_response
                 if genre["stationcount"] and genre["stationcount"] > 2
             ]
@@ -84,6 +147,7 @@ class RadioStations:
             LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
             LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
             self.original_utterance = ""
+
 
     def query_server(self, endpoint):
         """
@@ -138,7 +202,7 @@ class RadioStations:
         sa = sentence.split(" ")
         vrb = sa[0].lower()
         if vrb in self.media_verbs:
-            sentence = sentence[len(vrb) :]
+            sentence = sentence[len(vrb):]
 
         sa = sentence.split(" ")
         final_sentence = ""
@@ -218,8 +282,9 @@ class RadioStations:
         LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
+            if station["name"]:
+                station["name"] = truncate_input_string(clean_string(station["name"]))
             station_name = station.get("name", "")
-            station_name = station_name.replace("\n", " ")
             stream_uri = station.get("url_resolved", "")
             if stream_uri != "" and not self.blacklisted(stream_uri):
                 if station_name in unique_stations:
@@ -251,27 +316,6 @@ class RadioStations:
         res.sort(key=sort_on_confidence, reverse=True)
         LOG.debug(f"RETURNED FROM SEARCH: {res[0]}")
         return res
-
-    def convert_array_to_dict(self, stations):
-        new_dict = {}
-        for station in stations:
-            uri = station.get("url_resolved", "")
-            if uri != "":
-                votes_plus_clicks = int(station.get("votes", 0)) + int(
-                    station.get("clickcount", 0)
-                )
-                new_dict[uri] = {
-                    "name": station.get("name", "").replace("\n", ""),
-                    "url_resolved": uri,
-                    "home": station.get("homepage", ""),
-                    "tags": station.get("tags", ""),
-                    "country": station.get("country", ""),
-                    "countrycode": station.get("countrycode", ""),
-                    "votes": station.get("votes", ""),
-                    "clickcount": station.get("clickcount", ""),
-                    "votes_plus_clicks": votes_plus_clicks,
-                }
-        return new_dict
 
     def get_stations(self, utterance):
         LOG.debug(f"Utterance to get_stations: {utterance}")
