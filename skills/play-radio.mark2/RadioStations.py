@@ -14,6 +14,8 @@
 
 import random
 import requests
+import re
+from typing import Union
 
 from mycroft.util.log import LOG
 
@@ -26,6 +28,63 @@ def sort_on_vpc(k):
 
 def sort_on_confidence(k):
     return k["confidence"]
+
+## Helper functions.
+
+def clean_string(string: str) -> str:
+    """
+    This does two things. It cleans up input for display in
+    the GUI, and it splits input upon commonly used delimiters
+    used in excessively long station names.
+
+    There are several places currently where input from the
+    server (which is ultimately open data) needs to be cleaned
+    for use in the skill. Some kind of full sanitization is
+    probably preferable, but for now we will just remove anything
+    that is not a word, a space, or a few punctuation marks.
+
+    The punctuation marks it leaves are, among a few others,
+    delimiters used in excessively long names that can be
+    used for truncation later.
+    """
+    string = string.replace("'", "").replace('"', "").replace("\n", " ").replace("\t", " ")
+    string = re.sub(r"[^\w,/\-\. ]", " ", string)
+    string = re.sub(r"\s\s+", " ", string)
+    return string.strip()
+
+
+def truncate_input_string(string: str) -> str:
+    """
+    This helper function takes a string from outside (expected
+    to be from the Radio Browser service) and attempts to
+    truncate it (if it is too long) in a smart way.
+    """
+    character_limit = 35
+    if len(string) <= character_limit:
+        return string
+    chunks = [
+        chunk.strip() for chunk in re.split(r"[/\-]", string)
+    ]
+    truncated_string = _construct_string(chunks, character_limit)
+    if not truncated_string:
+        subchunks = chunks[0].split(" ")
+        truncated_string = _construct_string(subchunks, character_limit)
+    if truncated_string:
+        return truncated_string
+    else:
+        return chunks[0][:character_limit]
+
+
+def _construct_string(chunks, character_limit):
+    truncated_string = ""
+    for chunk in chunks:
+        if len(truncated_string) + len(chunk) < character_limit:
+            truncated_string += " " + chunk
+        else:
+            return truncated_string.strip()
+    return None
+
+
 
 
 class RadioStations:
@@ -46,7 +105,7 @@ class RadioStations:
 
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
-            
+
             # The way this mess is currently written we can't end the session
             # with some dialog within this class, instead we must wait for
             # the RadioFreeMycroftSkill class to find these attributes empty 
@@ -62,7 +121,7 @@ class RadioStations:
             # only take tags that have 2 or more.
             # First make a list of lists to simplify.
             self.genre_tags = [
-                [genre.get("name", ""), genre.get("stationcount", "")] 
+                [genre.get("name", ""), genre.get("stationcount", "")]
                 for genre in self.genre_tags_response
                 if genre["stationcount"] and genre["stationcount"] > 2
             ]
@@ -84,6 +143,7 @@ class RadioStations:
             LOG.debug(f"SEARCH TERM RETURNS {len(self.stations)} stations")
             LOG.debug(f"FIRST STATION RETURNED IS {len(self.stations[0])}")
             self.original_utterance = ""
+
 
     def query_server(self, endpoint):
         """
@@ -138,7 +198,7 @@ class RadioStations:
         sa = sentence.split(" ")
         vrb = sa[0].lower()
         if vrb in self.media_verbs:
-            sentence = sentence[len(vrb) :]
+            sentence = sentence[len(vrb):]
 
         sa = sentence.split(" ")
         final_sentence = ""
