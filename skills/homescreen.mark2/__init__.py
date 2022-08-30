@@ -1,4 +1,4 @@
-# Copyright 2021 Mycroft AI Inc.
+# Copyright 2022 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from mycroft.util.format import nice_date, nice_time
 from mycroft.util.time import now_local
 
 from .skill import Wallpaper, WallpaperError
+from .skill.versions import get_mycroft_build_datetime
 
 FIFTEEN_MINUTES = 900
 ONE_HOUR = 3600
@@ -66,6 +67,7 @@ class HomescreenSkill(MycroftSkill):
             "homeScreenTemperature": None,
             "homeScreenWeatherCondition": None,
             "isMuted": False,
+            "mycroftContainerBuildDate": get_mycroft_build_datetime(),
         }
 
     def _init_wallpaper(self):

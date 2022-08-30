@@ -63,6 +63,10 @@ STT_CHUNKS_TO_BUFFER = 2
 # Number of empty audio chunks to prepend to STT audio.
 AUTO_SILENCE_CHUNKS = 5
 
+SAMPLE_RATE = 16000  # hertz
+SAMPLE_WIDTH = 2  # bytes
+SAMPLE_CHANNELS = 1
+
 
 class VoiceLoop:
     def __init__(
@@ -167,7 +171,10 @@ class VoiceLoop:
                 self.stt.update(chunk)
                 self.stt_audio += chunk
                 seconds = _chunk_seconds(
-                    len(chunk), sample_rate=16000, sample_width=2, channels=1
+                    len(chunk),
+                    sample_rate=SAMPLE_RATE,
+                    sample_width=SAMPLE_WIDTH,
+                    channels=SAMPLE_CHANNELS,
                 )
 
                 # Check for end of voice command
@@ -249,7 +256,10 @@ class VoiceLoop:
         ]
         for buffered_chunk in itertools.chain.from_iterable(buffered_chunks):
             seconds = _chunk_seconds(
-                len(buffered_chunk), sample_rate=16000, sample_width=2, channels=1
+                len(buffered_chunk),
+                sample_rate=SAMPLE_RATE,
+                sample_width=SAMPLE_WIDTH,
+                channels=SAMPLE_CHANNELS,
             )
 
             self.stt.update(buffered_chunk)
@@ -276,9 +286,9 @@ class VoiceLoop:
         try:
             wav_path = self.hotword_audio_dir / f"{time.monotonic_ns()}.wav"
             with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
-                wav_file.setframerate(16000)
-                wav_file.setsampwidth(2)
-                wav_file.setnchannels(1)
+                wav_file.setframerate(SAMPLE_RATE)
+                wav_file.setsampwidth(SAMPLE_WIDTH)
+                wav_file.setnchannels(SAMPLE_CHANNELS)
 
                 for chunk in self.hotword_audio_chunks:
                     wav_file.writeframes(chunk)
@@ -291,9 +301,9 @@ class VoiceLoop:
         try:
             wav_path = self.stt_audio_dir / f"{time.monotonic_ns()}.wav"
             with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
-                wav_file.setframerate(16000)
-                wav_file.setsampwidth(2)
-                wav_file.setnchannels(1)
+                wav_file.setframerate(SAMPLE_RATE)
+                wav_file.setsampwidth(SAMPLE_WIDTH)
+                wav_file.setnchannels(SAMPLE_CHANNELS)
                 wav_file.writeframes(self.stt_audio)
 
             self.log.debug("Wrote %s", wav_path)
@@ -315,7 +325,7 @@ def _audio_input(queue: "Queue[bytes]"):
                 assert chunk, "Empty audio chunk"
 
                 # Increase loudness of audio
-                chunk = audioop.mul(chunk, 2, AUDIO_LOUDNESS_FACTOR)
+                chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
 
                 queue.put_nowait(chunk)
     except Exception:

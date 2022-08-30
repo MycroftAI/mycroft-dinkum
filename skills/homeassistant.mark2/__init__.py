@@ -23,11 +23,12 @@ class HomeAssistantSkill(MycroftSkill):
     def __init__(self, skill_id: str) -> None:
         super().__init__(skill_id=skill_id, name="HomeAssistantSkill")
         self.ha_client = None
+        self._intents_registered = False
         # self.enable_fallback = False
-        self.tracker_file = ""
+        # self.tracker_file = ""
 
     def _setup(self, force: bool = False) -> None:
-        if self.settings is not None and (force or self.ha_client is None):
+        if (self.settings is not None) and (force or (self.ha_client is None)):
             # Check if user filled IP, port and Token in configuration
             ip_address = check_url(str(self.settings.get("host")))
             token = self.settings.get("token")
@@ -60,7 +61,8 @@ class HomeAssistantSkill(MycroftSkill):
             }
 
             self.ha_client = HomeAssistantClient(config)
-            # if self.ha_client.connected():
+            if self.ha_client.connected():
+                self._register_intents()
             #     # Check if conversation component is loaded at HA-server
             #     # and activate fallback accordingly (ha-server/api/components)
             #     # TODO: enable other tools like dialogflow
@@ -111,6 +113,44 @@ class HomeAssistantSkill(MycroftSkill):
         otherwise new settings will not be regarded.
         """
         self._force_setup()
+
+    def _register_intents(self):
+        """
+        Registers Home Assistant (HA) intents.
+        This is done dynamically to avoid intent clash if HA is not configured.
+        """
+        if self._intents_registered:
+            return
+
+        self.log.debug("Registering Home Assistant intents")
+
+        self.register_intent_file("turn.on.intent", self.handle_turn_on_intent)
+        self.register_intent_file("turn.off.intent", self.handle_turn_off_intent)
+        self.register_intent_file("open.intent", self.handle_open)
+        self.register_intent_file("close.intent", self.handle_close)
+        self.register_intent_file("toggle.intent", self.handle_toggle_intent)
+        self.register_intent_file("sensor.intent", self.handle_sensor_intent)
+        self.register_intent_file(
+            "set.light.brightness.intent", self.handle_light_set_intent
+        )
+        self.register_intent_file(
+            "set.light.color.intent", self.handle_light_set_color_intent
+        )
+        self.register_intent_file(
+            "increase.light.brightness.intent", self.handle_light_increase_intent
+        )
+        self.register_intent_file(
+            "decrease.light.brightness.intent", self.handle_light_decrease_intent
+        )
+        self.register_intent_file("automation.intent", self.handle_automation_intent)
+        self.register_intent_file(
+            "set.climate.intent", self.handle_set_thermostat_intent
+        )
+        self.register_intent_file(
+            "add.item.shopping.list.intent", self.handle_shopping_list_intent
+        )
+
+        self._intents_registered = True
 
     # Try to find an entity on the HAServer
     # Creates dialogs for errors and speaks them
@@ -165,7 +205,6 @@ class HomeAssistantSkill(MycroftSkill):
     #     message.data["Entity"] = message.data.get("entity")
     #     self._handle_camera_image_actions(message)
 
-    @intent_handler("turn.on.intent")
     def handle_turn_on_intent(self, message: Message) -> Optional[Message]:
         """Handle turn on intent."""
         self.log.debug("Turn on intent on entity: %s", message.data.get("entity"))
@@ -173,7 +212,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Action"] = "on"
         return self._handle_turn_actions(message)
 
-    @intent_handler("turn.off.intent")
     def handle_turn_off_intent(self, message: Message) -> Optional[Message]:
         """Handle turn off intent."""
         self.log.debug("Turn off intent on entity: %s", message.data.get("entity"))
@@ -181,28 +219,25 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Action"] = "off"
         return self._handle_turn_actions(message)
 
-    @intent_handler("open.intent")
     def handle_open(self, message: Message) -> Optional[Message]:
         """Handle open intent."""
         message.data["Entity"] = message.data.get("entity")
         message.data["Action"] = "open"
         return self._handle_open_close_actions(message)
 
-    @intent_handler("close.intent")
     def handle_close(self, message: Message) -> Optional[Message]:
         """Handle close intent."""
         message.data["Entity"] = message.data.get("entity")
         message.data["Action"] = "close"
         return self._handle_open_close_actions(message)
 
-    @intent_handler("stop.intent")
-    def handle_stop(self, message: Message) -> Optional[Message]:
-        """Handle stop intent."""
-        message.data["Entity"] = message.data.get("entity")
-        message.data["Action"] = "stop"
-        return self._handle_stop_actions(message)
+    # @intent_handler("stop.intent")
+    # def handle_stop(self, message: Message) -> Optional[Message]:
+    #     """Handle stop intent."""
+    #     message.data["Entity"] = message.data.get("entity")
+    #     message.data["Action"] = "stop"
+    #     return self._handle_stop_actions(message)
 
-    @intent_handler("toggle.intent")
     def handle_toggle_intent(self, message: Message) -> Optional[Message]:
         """Handle toggle intent."""
         self.log.debug("Toggle intent on entity: %s", message.data.get("entity"))
@@ -210,14 +245,12 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Action"] = "toggle"
         return self._handle_turn_actions(message)
 
-    @intent_handler("sensor.intent")
     def handle_sensor_intent(self, message: Message) -> Optional[Message]:
         """Handle sensor intent."""
         self.log.debug("Turn on intent on entity: %s", message.data.get("entity"))
         message.data["Entity"] = message.data.get("entity")
         return self._handle_sensor(message)
 
-    @intent_handler("set.light.brightness.intent")
     def handle_light_set_intent(self, message: Message) -> Optional[Message]:
         """Handle set light brightness intent."""
         self.log.debug(
@@ -229,7 +262,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Brightnessvalue"] = message.data.get("brightnessvalue")
         return self._handle_light_set(message)
 
-    @intent_handler("set.light.color.intent")
     def handle_light_set_color_intent(self, message: Message) -> Optional[Message]:
         """Handle set light color intent."""
         self.log.debug(
@@ -240,7 +272,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Entity"] = message.data.get("entity")
         return self._handle_light_set_color(message)
 
-    @intent_handler("increase.light.brightness.intent")
     def handle_light_increase_intent(self, message: Message) -> Optional[Message]:
         """Handle increase light brightness intent."""
         self.log.debug("Increase light intensity: %s", message.data.get("entity"))
@@ -248,7 +279,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Action"] = "up"
         return self._handle_light_adjust(message)
 
-    @intent_handler("decrease.light.brightness.intent")
     def handle_light_decrease_intent(self, message: Message) -> Optional[Message]:
         """Handle decrease light brightness intent."""
         self.log.debug("Decrease light intensity: %s", message.data.get("entity"))
@@ -256,7 +286,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Action"] = "down"
         return self._handle_light_adjust(message)
 
-    @intent_handler("automation.intent")
     def handle_automation_intent(self, message: Message) -> Optional[Message]:
         """Handle automation intent."""
         self.log.debug(
@@ -272,7 +301,6 @@ class HomeAssistantSkill(MycroftSkill):
     #     message.data["Entity"] = message.data.get("tracker")
     #     return self._handle_tracker(message)
 
-    @intent_handler("set.climate.intent")
     def handle_set_thermostat_intent(self, message: Message) -> Optional[Message]:
         """Handle set climate intent."""
         self.log.debug(
@@ -282,7 +310,6 @@ class HomeAssistantSkill(MycroftSkill):
         message.data["Temp"] = message.data.get("temp")
         return self._handle_set_thermostat(message)
 
-    @intent_handler("add.item.shopping.list.intent")
     def handle_shopping_list_intent(self, message: Message) -> Optional[Message]:
         """Handle add item to shopping list intent."""
         self.log.debug("Add %s to the shoping list", message.data.get("entity"))

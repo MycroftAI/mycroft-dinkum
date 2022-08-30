@@ -15,11 +15,13 @@
 import json
 import time
 from enum import Enum, auto
+from pathlib import Path
 from http import HTTPStatus
 from typing import Optional
 from uuid import uuid4
 
 import requests
+import xdg.BaseDirectory
 from mycroft.api import DeviceApi, get_pantacor_device_id
 from mycroft.configuration.remote import (
     download_remote_settings,
@@ -100,7 +102,7 @@ class ConnectCheck(MycroftSkill):
     3. NTP clock sync
     4. Pairing with mycroft.ai
     5. Remote config download
-    6. Short tutorial
+    6. Short tutorial (if paired for the first time)
 
     """
 
@@ -119,6 +121,7 @@ class ConnectCheck(MycroftSkill):
         self.nato_alphabet = None
 
         self._was_greeting_spoken = False
+        self._show_tutorial = False
         self._state: State = State.CHECK_INTERNET
         self._awconnect_client: Optional[AwconnectClient] = None
 
@@ -164,12 +167,11 @@ class ConnectCheck(MycroftSkill):
 
         # Pantacor sync
         self.add_event("server-connect.join-fleet.start", self._sync_with_pantacor)
+        self.add_event("server-connect.authenticated", self._sync_with_pantacor)
 
-        # Tutorial
-        self.add_event("server-connect.tutorial.start", self._tutorial_start)
-
-        # After pairing check or tutorial
-        self.add_event("server-connect.authenticated", self._download_remote_settings)
+        self.add_event(
+            "server-connect.join-fleet.ended", self._download_remote_settings
+        )
 
     def start(self):
         self._state = State.CHECK_INTERNET
@@ -209,6 +211,8 @@ class ConnectCheck(MycroftSkill):
             )
         )
 
+    # -------------------------------------------------------------------------
+    # 1. Internet Detection
     # -------------------------------------------------------------------------
 
     def _check_internet(self, _message: Message):
@@ -278,7 +282,7 @@ class ConnectCheck(MycroftSkill):
                 self._fail_and_restart()
 
     # -------------------------------------------------------------------------
-    # Wi-Fi Setup
+    # 1a. Wi-Fi Setup
     # -------------------------------------------------------------------------
 
     def _wifi_setup_start(self, _message: Message):
@@ -381,7 +385,37 @@ class ConnectCheck(MycroftSkill):
         )
 
     # -------------------------------------------------------------------------
-    # Pairing
+    # 2. NTP clock sync
+    # -------------------------------------------------------------------------
+
+    def _sync_clock(self, _message: Message):
+        """Block until system clock is synced with NTP"""
+        if self._state != State.SYNC_CLOCK:
+            return
+
+        response = self.continue_session(
+            gui=("startup_sequence_mark_ii.qml", {"step": 2}),
+            gui_clear=GuiClear.NEVER,
+        )
+        self.bus.emit(response)
+
+        try:
+            for i in range(CLOCK_SYNC_RETIRES):
+                self.log.debug(
+                    "Checking for clock sync (%s/%s)", i + 1, CLOCK_SYNC_RETIRES
+                )
+                if check_system_clock_sync_status():
+                    break
+
+                time.sleep(CLOCK_SYNC_WAIT_SEC)
+        except Exception:
+            self.log.exception("Error while syncing clock")
+
+        self._state = State.CHECK_PAIRING
+        self.bus.emit(Message("server-connect.pairing.check"))
+
+    # -------------------------------------------------------------------------
+    # 3. Pairing
     # -------------------------------------------------------------------------
 
     def _check_pairing(self, _message: Message):
@@ -430,6 +464,7 @@ class ConnectCheck(MycroftSkill):
         if server_state == Authentication.NOT_AUTHENTICATED:
             # Not paired, start pairing process
             self._state = State.PAIRING_START
+            self._show_tutorial = True
             self.bus.emit(
                 Message(
                     "server-connect.pairing.start",
@@ -440,8 +475,8 @@ class ConnectCheck(MycroftSkill):
             self.log.warning("Server was unavailable. Retrying...")
             self._fail_and_restart()
         else:
-            # Paired already, continue with settings download
-            self._state = State.DOWNLOAD_SETTINGS
+            # Paired already, continue with pantacor sync
+            self._state = State.SYNC_PANTACOR
             self.bus.emit(
                 Message(
                     "server-connect.authenticated",
@@ -517,10 +552,13 @@ class ConnectCheck(MycroftSkill):
             )
             self.bus.emit(Message("mycroft.paired", login))
 
+            # Stop speaking pairing code
+            self.bus.emit(Message("mycroft.tts.stop"))
+
             # Pairing complete, sync pantacor config
             self._state = State.SYNC_PANTACOR
             self._mycroft_session_id = self.emit_start_session(
-                gui="joining_fleet_mark_ii.qml",
+                gui=("startup_sequence_mark_ii.qml", {"step": 3}),
                 gui_clear=GuiClear.NEVER,
                 message=Message("server-connect.join-fleet.start"),
             )
@@ -608,7 +646,7 @@ class ConnectCheck(MycroftSkill):
         Selene stores Pantacor data regarding the device in its database.
 
         There is no guarantee of when the device's registration with Pantacor will
-        be complete, so call the endpoint once per minute until success.
+        be complete, so we will wait here.
         """
         if self._state != State.SYNC_PANTACOR:
             return
@@ -623,116 +661,53 @@ class ConnectCheck(MycroftSkill):
             "Device uses Pantacor for continuous deployment - syncing Pantacor config"
         )
 
-        while True:
-            try:
-                self.log.debug("Attempting to sync Pantacor config")
-                pantacor_device_id = get_pantacor_device_id()
-                if pantacor_device_id:
-                    try:
-                        self.log.debug(
-                            "Syncing with Pantacor id %s", pantacor_device_id
-                        )
-                        self.api.sync_pantacor_config(pantacor_device_id)
-                    except HTTPError as http_error:
-                        http_status = http_error.response.status_code
-                        if http_status == HTTPStatus.NOT_FOUND:
-                            self.log.warning(
-                                "Device not found on Pantacor - retrying shortly"
+        sync_path = (
+            Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / ".pantacor.synced"
+        )
+        if not sync_path.exists():
+            while True:
+                try:
+                    self.log.debug("Attempting to sync Pantacor config")
+                    pantacor_device_id = get_pantacor_device_id()
+                    if pantacor_device_id:
+                        try:
+                            self.log.debug(
+                                "Syncing with Pantacor id %s", pantacor_device_id
                             )
-                        elif http_status == HTTPStatus.PRECONDITION_REQUIRED:
-                            self.log.warning(
-                                "Device exists on Pantacor servers but Pantacor setup is not"
-                                "complete - retrying shortly"
-                            )
+                            self.api.sync_pantacor_config(pantacor_device_id)
+                        except HTTPError as http_error:
+                            http_status = http_error.response.status_code
+                            if http_status == HTTPStatus.NOT_FOUND:
+                                self.log.warning(
+                                    "Device not found on Pantacor - retrying shortly"
+                                )
+                            elif http_status == HTTPStatus.PRECONDITION_REQUIRED:
+                                self.log.warning(
+                                    "Device exists on Pantacor servers but Pantacor setup is not"
+                                    "complete - retrying shortly"
+                                )
+                        else:
+                            self.log.info("sync of pantacor config succeeded")
+                            sync_path.write_text(pantacor_device_id)
+                            break
                     else:
-                        self.log.info("Sync of Pantacor config succeeded")
-                        break
-                else:
-                    self.log.warning(
-                        "Attempt to obtain Pantacor Device ID from file system failed - "
-                        "retrying shortly"
+                        self.log.warning(
+                            "Attempt to obtain Pantacor Device ID from file system failed - "
+                            "retrying shortly"
+                        )
+                except Exception:
+                    self.log.exception(
+                        "Failed to sync Pantacor config. Will retry shortly."
                     )
-            except Exception:
-                self.log.exception(
-                    "Failed to sync Pantacor config. Will retry shortly."
-                )
-            finally:
-                time.sleep(PANTACOR_WAIT_SEC)
+                finally:
+                    time.sleep(PANTACOR_WAIT_SEC)
 
-        # Fleet joined, begin tutorial
-        self._state = State.TUTORIAL_START
-        self._mycroft_session_id = self.emit_start_session(
-            gui="pairing_success_mark_ii.qml",
-            gui_clear=GuiClear.NEVER,
-            message=Message("server-connect.tutorial.start"),
-            message_send=MessageSend.AT_END,
-            message_delay=3,
-        )
-
-    # -------------------------------------------------------------------------
-    # Tutorial
-    # -------------------------------------------------------------------------
-
-    def _tutorial_start(self, _message: Message):
-        """Give user a quick tutorial on how to get started"""
-        if self._state != State.TUTORIAL_START:
-            return
-
-        self.bus.emit(
-            Message(
-                "server-connect.tutorial.started",
-                data={"mycroft_session_id": self._mycroft_session_id},
-            )
-        )
-
-        # Continue with settings download, etc.
+        # Fleet joined, proceed with rest of setup
         self._state = State.DOWNLOAD_SETTINGS
-        self._mycroft_session_id = self.emit_start_session(
-            dialog="pairing.paired",
-            gui="pairing_done_mark_ii.qml",
-            gui_clear=GuiClear.NEVER,
-            message=Message("server-connect.authenticated"),
-            message_send=MessageSend.AT_END,
-            continue_session=True,
-        )
-        self.bus.emit(
-            Message(
-                "server-connect.tutorial.ended",
-            )
-        )
+        self.bus.emit(Message("server-connect.join-fleet.ended"))
 
     # -------------------------------------------------------------------------
-    # NTP clock sync
-    # -------------------------------------------------------------------------
-
-    def _sync_clock(self, _message: Message):
-        """Block until system clock is synced with NTP"""
-        if self._state != State.SYNC_CLOCK:
-            return
-
-        response = self.continue_session(
-            gui=("startup_sequence_mark_ii.qml", {"step": 2}),
-            gui_clear=GuiClear.NEVER,
-        )
-        self.bus.emit(response)
-
-        try:
-            for i in range(CLOCK_SYNC_RETIRES):
-                self.log.debug(
-                    "Checking for clock sync (%s/%s)", i + 1, CLOCK_SYNC_RETIRES
-                )
-                if check_system_clock_sync_status():
-                    break
-
-                time.sleep(CLOCK_SYNC_WAIT_SEC)
-        except Exception:
-            self.log.exception("Error while syncing clock")
-
-        self._state = State.CHECK_PAIRING
-        self.bus.emit(Message("server-connect.pairing.check"))
-
-    # -------------------------------------------------------------------------
-    # Remote settings from mycroft.ai
+    # 4. Remote settings from mycroft.ai
     # -------------------------------------------------------------------------
 
     def _download_remote_settings(self, _message: Message):
@@ -770,6 +745,19 @@ class ConnectCheck(MycroftSkill):
         except Exception:
             self.log.exception("Error downloading remote settings")
 
-        self._state = State.DONE
-        self.bus.emit(Message("server-connect.startup-finished"))
-        self.bus.emit(self.end_session(gui_clear=GuiClear.NEVER))
+        if self._show_tutorial:
+            # Show brief tutorial
+            self._state = State.TUTORIAL_START
+            self._mycroft_session_id = self.emit_start_session(
+                dialog="pairing.paired",
+                gui="pairing_done_mark_ii.qml",
+                gui_clear=GuiClear.NEVER,
+                message=Message("server-connect.startup-finished"),
+                message_send=MessageSend.AT_END,
+                message_delay=3,
+            )
+        else:
+            # Done
+            self._state = State.DONE
+            self.bus.emit(Message("server-connect.startup-finished"))
+            self.bus.emit(self.end_session(gui_clear=GuiClear.NEVER))
