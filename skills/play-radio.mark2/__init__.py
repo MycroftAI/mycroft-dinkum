@@ -181,7 +181,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def handle_play_request(self):
         """play the current station if there is one"""
-        assert self.current_station is not None
+        if not self.current_station:
+            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            return self.end_session(dialog=dialog)
         stream_uri = self.current_station.get("url_resolved", "")
         station_name = self.current_station.get("name", "").replace("\n", "")
 

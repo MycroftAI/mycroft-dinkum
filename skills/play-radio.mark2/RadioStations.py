@@ -267,7 +267,6 @@ class RadioStations:
             self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
         else:
-            self.last_search_terms = ""
             return None
         if self.last_search_terms == "":
             # if search terms after clean are null it was most
