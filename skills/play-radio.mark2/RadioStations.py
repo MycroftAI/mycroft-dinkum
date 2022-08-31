@@ -330,7 +330,7 @@ class RadioStations:
         return self.station_index
 
     def get_current_station(self):
-        if len(self.stations) > 0:
+        if self.stations and len(self.stations) > 0:
             if self.station_index > (len(self.stations) - 1):
                 # this covers up a bug
                 self.station_index = 0
