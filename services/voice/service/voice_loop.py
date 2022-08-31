@@ -43,7 +43,7 @@ AUDIO_TIMEOUT = 2
 # Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 4096
 
-AUDIO_LOUDNESS_FACTOR = 2.0
+AUDIO_LOUDNESS_FACTOR = 1.0
 """Factor to multiply incoming audio by"""
 
 # Onnx model path for Silero VAD
@@ -348,7 +348,8 @@ class VoiceLoop:
                     assert chunk, "Empty audio chunk"
 
                     # Increase loudness of audio
-                    chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
+                    if AUDIO_LOUDNESS_FACTOR != 1.0:
+                        chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
 
                     self.queue.put_nowait(chunk)
         except Exception:
