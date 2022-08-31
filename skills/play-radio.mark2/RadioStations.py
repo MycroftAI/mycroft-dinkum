@@ -222,7 +222,6 @@ class RadioStations:
         return False
 
     def _search(self, srch_term, limit):
-        LOG.debug(f"_SEARCH got {srch_term}, {limit}")
         endpoint = f"stations/search?limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = srch_term.replace(" ", "+")
         endpoint += query
@@ -260,7 +259,6 @@ class RadioStations:
         return confidence
 
     def search(self, sentence, limit):
-        LOG.debug(f"SEARCH METHOD GOT: {sentence}, {limit}")
         unique_stations = {}
         self.original_utterance = sentence
         search_term_candidate = self.clean_sentence(sentence)
@@ -270,6 +268,7 @@ class RadioStations:
             self.genre_to_play = self.last_search_terms
         else:
             self.last_search_terms = ""
+            return None
         if self.last_search_terms == "":
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
