@@ -27,6 +27,7 @@ from pyradios.base_url import fetch_hosts
 # this number.
 CHARACTER_LIMIT = 35
 
+
 def sort_on_vpc(k):
     return k["votes_plus_clicks"]
 
@@ -36,6 +37,7 @@ def sort_on_confidence(k):
 
 
 # Helper functions.
+
 
 def clean_string(string: str) -> str:
     """
@@ -48,7 +50,9 @@ def clean_string(string: str) -> str:
     The punctuation marks it leaves are mostly
     delimiters that can be used for truncation later.
     """
-    string = string.replace("'", "").replace('"', "").replace("\n", " ").replace("\t", " ")
+    string = (
+        string.replace("'", "").replace('"', "").replace("\n", " ").replace("\t", " ")
+    )
     string = re.sub(r"[^\w,/\-\. ]", " ", string)
     string = re.sub(r"\s\s+", " ", string)
     return string.strip()
@@ -62,9 +66,7 @@ def truncate_input_string(string: str) -> str:
     """
     if len(string) <= CHARACTER_LIMIT:
         return string
-    chunks = [
-        chunk.strip() for chunk in re.split(r"[/\-]", string)
-    ]
+    chunks = [chunk.strip() for chunk in re.split(r"[/\-]", string)]
     truncated_string = _construct_string(chunks)
     if not truncated_string:
         subchunks = chunks[0].split(" ")
@@ -101,7 +103,9 @@ class RadioStations:
 
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
         self.base_url = random.choice(self.base_urls)
-        self.genre_tags_response = self.query_server("tags?order=stationcount&reverse=true&hidebroken=true&limit=10000")
+        self.genre_tags_response = self.query_server(
+            "tags?order=stationcount&reverse=true&hidebroken=true&limit=10000"
+        )
         self.stations = []
 
         if self.genre_tags_response:
@@ -109,12 +113,12 @@ class RadioStations:
 
             # The way this mess is currently written we can't end the session
             # with some dialog within this class, instead we must wait for
-            # the RadioFreeMycroftSkill class to find these attributes empty 
+            # the RadioFreeMycroftSkill class to find these attributes empty
             # (since that class just accesses all of this
             # class's attributes without waiting for anything to be
             # returned).
-            # Once it gets nothing back it will emit a fairly appropriate 
-            # bit of dialog and end the session. I can't think of a better 
+            # Once it gets nothing back it will emit a fairly appropriate
+            # bit of dialog and end the session. I can't think of a better
             # way to do this without a major refactoring.
 
             # There are many "genre" tags which are actually specific to one station.
@@ -148,12 +152,18 @@ class RadioStations:
         while retries < 10:
             response = self._get_response(endpoint)
             if 200 <= response.status_code < 300:
-                LOG.debug(f"Successful response from RadioBrowser server: {self.base_url}")
+                LOG.debug(
+                    f"Successful response from RadioBrowser server: {self.base_url}"
+                )
                 return response.json()
             else:
-                LOG.debug(f"Unsuccessful response from RadioBrowser server: {self.base_url}")
+                LOG.debug(
+                    f"Unsuccessful response from RadioBrowser server: {self.base_url}"
+                )
                 self.base_url = random.choice(self.base_urls)
-                LOG.debug(f"Retrying request from next RadioBrowser server: {self.base_url}")
+                LOG.debug(
+                    f"Retrying request from next RadioBrowser server: {self.base_url}"
+                )
                 retries += 1
 
     def _get_response(self, endpoint):
@@ -188,7 +198,7 @@ class RadioStations:
         sa = sentence.split(" ")
         vrb = sa[0].lower()
         if vrb in self.media_verbs:
-            sentence = sentence[len(vrb):]
+            sentence = sentence[len(vrb) :]
 
         sa = sentence.split(" ")
         final_sentence = ""
@@ -256,13 +266,14 @@ class RadioStations:
         # First zip up the weights and genre tags.
         genre_weights = zip(self.genre_tags, self.genre_weights)
         filtered_tags = [
-            genre_weight for genre_weight in genre_weights
-            if genre_weight[1] > 1
+            genre_weight for genre_weight in genre_weights if genre_weight[1] > 1
         ]
         # TODO: Additional weighting fun to go here very soon.
         # Split the lists again.
-        filtered_genre_tags, filtered_genre_weights = map(list, zip(*genre_weights))
-        return random.choices(filtered_genre_tags, weights=filtered_genre_weights, k=1)[0]
+        filtered_genre_tags, filtered_genre_weights = map(list, zip(*filtered_tags))
+        return random.choices(filtered_genre_tags, weights=filtered_genre_weights, k=1)[
+            0
+        ]
 
     def search(self, sentence, limit):
         unique_stations = {}
@@ -273,12 +284,12 @@ class RadioStations:
             self.genre_to_play = self.last_search_terms
         else:
             self.last_search_terms = ""
-        if self.last_search_terms == "":
+        if not self.last_search_terms:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
             # weighted by the number of stations in each
-            self.last_search_terms = self.weighted_random_genre
+            self.last_search_terms = self.weighted_random_genre()
             self.genre_to_play = self.last_search_terms
 
         stations = self._search(self.last_search_terms, limit)

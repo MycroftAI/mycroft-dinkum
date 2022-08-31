@@ -156,9 +156,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         else:
             for genre_image_name, genre_image_path in self.genre_images.items():
                 if genre_image_name in self.rs.genre_to_play:
-                    self.img_pth = self.find_resource(
-                        genre_image_path, "ui/images"
-                    )
+                    self.img_pth = self.find_resource(genre_image_path, "ui/images")
         if not self.img_pth:
             self.img_pth = self.find_resource("genre_generic_radio.svg", "ui/images")
 
