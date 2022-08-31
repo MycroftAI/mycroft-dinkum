@@ -39,7 +39,7 @@ class TFLiteHotWordEngine(HotWordEngine):
         lang="en-us",
         local_model_file: Optional[Union[str, Path]] = None,
         sensitivity: float = 0.5,
-        trigger_level: int = 4,
+        trigger_level: int = 3,
         chunk_size: int = 2048,
     ):
         super().__init__(key_phrase, config, lang)
