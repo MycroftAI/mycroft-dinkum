@@ -20,7 +20,7 @@ from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
 
-from .RadioStations import RadioStations
+from .RadioStations import RadioStations, GenreTagNotFound
 
 # Minimum confidence levels
 CONF_EXACT_MATCH = 0.9
@@ -174,12 +174,25 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         return ("RadioPlayer_mark_ii.qml", gui_data)
 
     def setup_for_play(self, utterance):
-        self.rs.get_stations(utterance)
-        self.current_station = self.rs.get_current_station()
+        try:
+            self.rs.get_stations(utterance)
+            self.current_station = self.rs.get_current_station()
+        except GenreTagNotFound:
+            self.log.debug("Genre not found exception in setup for play.")
+            # Setting to None will cause it to do the right
+            # thing down the line, i.e., tell the user
+            # it doesn't know how to play x.
+            self.current_station = None
+            
 
     def handle_play_request(self):
         """play the current station if there is one"""
-        assert self.current_station is not None
+        if not self.current_station:
+            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            self._mycroft_session_id = self.emit_start_session(
+                dialog=dialog, gui_clear=GuiClear.NEVER
+            )
+            return self.end_session(dialog=dialog)
         stream_uri = self.current_station.get("url_resolved", "")
         station_name = self.current_station.get("name", "").replace("\n", "")
 
@@ -201,29 +214,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     @intent_handler("HelpRadio.intent")
     def handle_radio_help(self, _):
         return self.end_session(dialog="radio.help", gui_clear=GuiClear.NEVER)
-
-    @intent_handler("ChangeRadio.intent")
-    def handle_change_radio(self, _):
-        """change ui theme"""
-        dialog = None
-        gui = None
-
-        if self._is_playing:
-            self.log.info(
-                "change_radio request, now playing = %s" % (self._is_playing,)
-            )
-            if self.fg_color == "white":
-                self.fg_color = "black"
-                self.bg_color = "white"
-            else:
-                self.fg_color = "white"
-                self.bg_color = "black"
-
-            gui = self.update_radio_theme("Playing")
-        else:
-            dialog = "no.radio.playing"
-
-        return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     @intent_handler("ShowRadio.intent")
     def handle_show_radio(self, _):
@@ -348,6 +338,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
             stream_uri = self.current_station.get("url_resolved", "")
+        else:
+            return None
 
         # skill specific alternations
         if len(phrase.split(" ")) < 4:
@@ -371,7 +363,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "confidence": confidence,
             "tags": tags,
         }
-
+        self.log.error(f"Confidence: {confidence}")
         return self.station_name, match_level, skill_data
 
     def CPS_start(self, _, data):
@@ -383,6 +375,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 "Can't find any matching stations for = %s", self.rs.last_search_terms
             )
             dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            self.gui.release()
             return self.end_session(dialog=dialog)
 
     def stop(self) -> Optional[Message]:
