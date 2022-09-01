@@ -83,9 +83,6 @@ GridLayout {
                 print(plasmoid.configuration.rotation)
             }
         }
-        MuteDelegate {
-            visible: plasmoid.configuration.showMuteButton
-        }
         AdditionalSettingsDelegate {}
         RebootDelegate {}
         ShutdownDelegate {}
