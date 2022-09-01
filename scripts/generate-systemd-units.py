@@ -34,7 +34,9 @@ def main():
         help="Services and skills do not share a virtual environment",
     )
     parser.add_argument(
-        "--user", required=True, help="User to run service as",
+        "--user",
+        required=True,
+        help="User to run service as",
     )
     parser.add_argument(
         "--unit-dir",
@@ -107,7 +109,10 @@ def main():
                 print("Type=notify", file=f)
                 print("User=", args.user, sep="", file=f)
                 print(
-                    "Environment=PYTHONPATH=", service_path.absolute(), sep="", file=f,
+                    "Environment=PYTHONPATH=",
+                    service_path.absolute(),
+                    sep="",
+                    file=f,
                 )
 
                 if service_name == SKILLS_TARGET:
@@ -172,7 +177,7 @@ def _write_mycroft_target(service_ids: Set[str], unit_dir: Path):
             sep="",
             file=f,
         )
-        print("After=graphical.target systemd-user-sessions.service", file=f)
+        print("After=graphical.target systemd-user-sessions.service mycroft-xmos.service", file=f)
         print("", file=f)
         print("[Install]", file=f)
         print("WantedBy=mycroft-plasma.service", sep="", file=f)
