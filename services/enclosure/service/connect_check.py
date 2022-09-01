@@ -54,6 +54,7 @@ PAIRING_SPEAK_CODE_WAIT_SEC = 25
 CLOCK_SYNC_RETIRES = 10
 CLOCK_SYNC_WAIT_SEC = 1
 
+PANTACOR_RETRIES = 10
 PANTACOR_WAIT_SEC = 5
 
 
@@ -665,9 +666,13 @@ class ConnectCheck(MycroftSkill):
             Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / ".pantacor.synced"
         )
         if not sync_path.exists():
-            while True:
+            for i in range(PANTACOR_RETRIES):
                 try:
-                    self.log.debug("Attempting to sync Pantacor config")
+                    self.log.debug(
+                        "Attempting to sync Pantacor config (%s/%s)",
+                        i + 1,
+                        PANTACOR_RETRIES,
+                    )
                     pantacor_device_id = get_pantacor_device_id()
                     if pantacor_device_id:
                         try:
