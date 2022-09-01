@@ -91,6 +91,10 @@ def _construct_string(chunks: list) -> Optional[str]:
     return None
 
 
+class GenreTagNotFound(Exception):
+    pass
+
+
 class RadioStations:
     def __init__(self):
         self.station_index = 0
@@ -281,15 +285,15 @@ class RadioStations:
         if search_term_candidate in self.genre_tags:
             self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
-        else:
-            self.last_search_terms = ""
-        if not self.last_search_terms:
+        elif not self.last_search_terms:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
             # weighted by the number of stations in each
             self.last_search_terms = self.weighted_random_genre()
             self.genre_to_play = self.last_search_terms
+        else:
+            raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)
         LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
