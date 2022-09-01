@@ -44,12 +44,12 @@ PlasmaCore.ColorScope {
         closeAnim.restart();
     }
 
-    Rectangle {
-        anchors.fill:parent
-        color: "black"
-        opacity: Math.min(1, root.position) * 0.8
-        visible: root.position > 0
-    }
+    //Rectangle {
+    //    anchors.fill:parent
+    //    color: "black"
+    //    opacity: Math.min(1, root.position) * 0.8
+    //    visible: root.position > 0
+    //}
 
     SequentialAnimation {
         id: openAnim
