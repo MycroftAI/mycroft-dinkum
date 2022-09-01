@@ -38,7 +38,7 @@ class TFLiteHotWordEngine(HotWordEngine):
         config=None,
         lang="en-us",
         local_model_file: Optional[Union[str, Path]] = None,
-        sensitivity: float = 0.5,
+        sensitivity: float = 0.4,
         trigger_level: int = 3,
         chunk_size: int = 2048,
     ):
