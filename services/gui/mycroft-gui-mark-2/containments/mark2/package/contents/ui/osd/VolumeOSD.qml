@@ -17,7 +17,6 @@
 
 import QtQuick 2.9
 import Mycroft 1.0 as Mycroft
-import org.kde.plasma.private.volume 0.1 as PA
 
 SliderControl {
     id: root
@@ -63,19 +62,5 @@ SliderControl {
 	    root.parent.color = Qt.rgba(0, 0, 0, 0)
             root.visible = false
         }
-    }
-
-    PA.SinkModel {
-        id: paSinkModel
-    }
-
-    PA.VolumeFeedback {
-        id: feedbackAudio
-    }
-
-    Timer {
-        id: feedbackAudioTimer
-        interval: 250
-        onTriggered: feedbackAudio.play(paSinkModel.preferredSink.index);
     }
 }
