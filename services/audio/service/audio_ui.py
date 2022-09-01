@@ -140,6 +140,7 @@ class AudioUserInterface:
 
         self._bus_events = {
             "recognizer_loop:record_begin": self.handle_start_listening,
+            "recognizer_loop:record_end": self.handle_end_listening,
             "recognizer_loop:audio_output_start": self.handle_tts_started,
             "recognizer_loop:audio_output_end": self.handle_tts_finished,
             "mycroft.audio.play-sound": self.handle_play_sound,
@@ -221,9 +222,6 @@ class AudioUserInterface:
         # Stop any TTS currently speaking
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
 
-        # Restore background stream volume
-        self._unduck_volume()
-
     def _duck_volume(self):
         """Lower background stream volumes during voice commands"""
         self._ahal.set_background_volume(0.3)
@@ -251,6 +249,9 @@ class AudioUserInterface:
 
         if self._start_listening_uri:
             self._play_effect(self._start_listening_uri)
+
+    def handle_end_listening(self, _message):
+        self._unduck_volume()
 
     def _play_effect(
         self,
