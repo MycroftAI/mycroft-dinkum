@@ -38,7 +38,9 @@ from .vad_command import VadCommand
 LOG = logging.getLogger("voice")
 
 # Seconds to wait for an audio chunk before erroring out
-AUDIO_TIMEOUT = 2
+AUDIO_TIMEOUT = 5
+AUDIO_THREAD_RETRIES = 3
+AUDIO_THREAD_RETRY_SEC = 1
 
 # Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 4096
@@ -324,36 +326,45 @@ class VoiceLoop:
             self.log.exception("Error while saving STT audio")
 
     def _audio_input(self):
-        try:
-            # TODO: Use config
-            with subprocess.Popen(
-                [
-                    "arecord",
-                    "-q",
-                    "-r",
-                    "16000",
-                    "-c",
-                    "1",
-                    "-f",
-                    "S16_LE",
-                    "-t",
-                    "raw",
-                ],
-                stdout=subprocess.PIPE,
-            ) as proc:
-                assert proc.stdout is not None
+        for _ in range(AUDIO_THREAD_RETRIES):
+            try:
+                # TODO: Use config
+                with subprocess.Popen(
+                    [
+                        "arecord",
+                        "-q",
+                        "-r",
+                        "16000",
+                        "-c",
+                        "1",
+                        "-f",
+                        "S16_LE",
+                        "-t",
+                        "raw",
+                    ],
+                    stdout=subprocess.PIPE,
+                ) as proc:
+                    assert proc.stdout is not None
 
-                while self._audio_input_running:
-                    chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
-                    assert chunk, "Empty audio chunk"
+                    while self._audio_input_running:
+                        chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
+                        assert chunk, "Empty audio chunk"
 
-                    # Increase loudness of audio
-                    if AUDIO_LOUDNESS_FACTOR != 1.0:
-                        chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
+                        # Increase loudness of audio
+                        if AUDIO_LOUDNESS_FACTOR != 1.0:
+                            chunk = audioop.mul(
+                                chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR
+                            )
 
-                    self.queue.put_nowait(chunk)
-        except Exception:
-            LOG.exception("Unexpected error in audio input thread")
+                        self.queue.put_nowait(chunk)
+            except Exception:
+                LOG.exception("Unexpected error in audio input thread")
+
+            if not self._audio_input_running:
+                break
+
+            LOG.debug("Retrying audio input in %s second(s)", AUDIO_THREAD_RETRY_SEC)
+            time.sleep(AUDIO_THREAD_RETRY_SEC)
 
 
 def load_hotword_module(config: Dict[str, Any]) -> HotWordEngine:

@@ -134,7 +134,7 @@ class IntentService:
             lang = _get_message_lang(message)
             set_default_lf_lang(lang)
 
-            utterances = message.data.get("utterances", [])
+            utterances = message.data.get("utterances", [""])
             combined = _normalize_all_utterances(utterances)
 
             # Create matchers
