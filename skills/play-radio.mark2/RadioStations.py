@@ -293,6 +293,7 @@ class RadioStations:
             self.last_search_terms = self.weighted_random_genre()
             self.genre_to_play = self.last_search_terms
         else:
+            self.last_search_terms = search_term_candidate
             raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)

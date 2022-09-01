@@ -176,18 +176,22 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def setup_for_play(self, utterance):
         try:
             self.rs.get_stations(utterance)
+            self.current_station = self.rs.get_current_station()
         except GenreTagNotFound:
-            dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
-            self._mycroft_session_id = self.emit_start_session(
-                dialog=dialog, gui_clear=GuiClear.NEVER
-            )
-            return self.end_session()
-        self.current_station = self.rs.get_current_station()
+            self.log.debug("Genre not found exception in setup for play.")
+            # Setting to None will cause it to do the right
+            # thing down the line, i.e., tell the user
+            # it doesn't know how to play x.
+            self.current_station = None
+            
 
     def handle_play_request(self):
         """play the current station if there is one"""
         if not self.current_station:
             dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            self._mycroft_session_id = self.emit_start_session(
+                dialog=dialog, gui_clear=GuiClear.NEVER
+            )
             return self.end_session(dialog=dialog)
         stream_uri = self.current_station.get("url_resolved", "")
         station_name = self.current_station.get("name", "").replace("\n", "")
@@ -334,6 +338,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
             stream_uri = self.current_station.get("url_resolved", "")
+        else:
+            return None
 
         # skill specific alternations
         if len(phrase.split(" ")) < 4:
@@ -357,7 +363,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "confidence": confidence,
             "tags": tags,
         }
-
+        self.log.error(f"Confidence: {confidence}")
         return self.station_name, match_level, skill_data
 
     def CPS_start(self, _, data):
@@ -369,6 +375,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 "Can't find any matching stations for = %s", self.rs.last_search_terms
             )
             dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
+            self.gui.release()
             return self.end_session(dialog=dialog)
 
     def stop(self) -> Optional[Message]:
