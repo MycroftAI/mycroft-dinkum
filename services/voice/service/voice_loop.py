@@ -333,6 +333,8 @@ class VoiceLoop:
                     [
                         "arecord",
                         "-q",
+                        "-D",
+                        "VF_ASR_(L)",
                         "-r",
                         "16000",
                         "-c",
