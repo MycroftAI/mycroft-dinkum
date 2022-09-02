@@ -21,38 +21,15 @@ import Mycroft 1.0 as Mycroft
 import org.kde.plasma.private.volume 0.1 as PA
 
 SliderBase {
-    id: root
-    iconSource: Qt.resolvedUrl("./audio-volume-high.svg")
+    iconSource: "audio-volume-high"
 
-    slider.from: 0
-    slider.to: 1
+    slider.from: PA.PulseAudio.MinimalVolume
+    slider.to: PA.PulseAudio.MaximalVolume
 
     slider.value: paSinkModel.preferredSink ? paSinkModel.preferredSink.volume : PA.PulseAudio.MinimalVolume
     slider.onMoved: {
-        Mycroft.MycroftController.sendRequest("mycroft.volume.set", {"percent": slider.value});
-
+        paSinkModel.preferredSink.volume = slider.value
         feedbackTimer.running = true;
-    }
-
-    Component.onCompleted: {
-        Mycroft.MycroftController.sendRequest("mycroft.mic.get_status", {});
-    }
-
-    Connections {
-        target: Mycroft.MycroftController
-        onSocketStatusChanged: {
-            if (Mycroft.MycroftController.status == Mycroft.MycroftController.Open) {
-                Mycroft.MycroftController.sendRequest("mycroft.volume.get", {});
-            }
-        }
-        onIntentRecevied: {
-            if (type == "mycroft.volume.get.response") {
-                slider.value = data.percent;
-            }
-            if (type == "hardware.volume"){
-                slider.value = data.volume;
-            }
-        }
     }
 
     PA.SinkModel {

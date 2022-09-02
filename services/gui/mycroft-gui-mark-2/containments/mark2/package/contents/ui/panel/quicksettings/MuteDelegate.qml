@@ -1,6 +1,5 @@
 /*
  * Copyright 2018 by Marco Martin <mart@kde.org>
- * Copyright 2018 David Edmundson <davidedmundson@kde.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,55 +15,43 @@
  *
  */
 
-import QtQuick 2.9
+import QtQuick 2.1
+import QtQuick.Layouts 1.1
+import org.kde.kirigami 2.5 as Kirigami
 import Mycroft 1.0 as Mycroft
 import org.kde.plasma.private.volume 0.1 as PA
 
-SliderBase {
-    id: root
-    iconSource: Qt.resolvedUrl("./audio-volume-high.svg")
+Delegate {
+    id: delegate
+    iconSource: toggled ? "audio-volume-high" : "audio-volume-muted"
+    text: toggled ? i18n("Unmute") : i18n("Mute")
 
-    slider.from: 0
-    slider.to: 1
-
-    slider.value: paSinkModel.preferredSink ? paSinkModel.preferredSink.volume : PA.PulseAudio.MinimalVolume
-    slider.onMoved: {
-        Mycroft.MycroftController.sendRequest("mycroft.volume.set", {"percent": slider.value});
-
-        feedbackTimer.running = true;
-    }
-
-    Component.onCompleted: {
-        Mycroft.MycroftController.sendRequest("mycroft.mic.get_status", {});
-    }
-
-    Connections {
-        target: Mycroft.MycroftController
-        onSocketStatusChanged: {
-            if (Mycroft.MycroftController.status == Mycroft.MycroftController.Open) {
-                Mycroft.MycroftController.sendRequest("mycroft.volume.get", {});
-            }
-        }
-        onIntentRecevied: {
-            if (type == "mycroft.volume.get.response") {
-                slider.value = data.percent;
-            }
-            if (type == "hardware.volume"){
-                slider.value = data.volume;
-            }
-        }
-    }
+    onToggledChanged: paSinkModel.preferredSink.muted = toggled
 
     PA.SinkModel {
         id: paSinkModel
     }
-    PA.VolumeFeedback {
-        id: feedback
+    onClicked: {
+        Mycroft.MycroftController.sendRequest(delegate.toggled ? "mycroft.mic.unmute" : "mycroft.mic.mute", {});
     }
+    Component.onCompleted: {
+        Mycroft.MycroftController.sendRequest("mycroft.mic.get_status", {});
+    }
+    Connections {
+        target: Mycroft.MycroftController
+        onSocketStatusChanged: {
+            if (Mycroft.MycroftController.status == Mycroft.MycroftController.Open) {
+                Mycroft.MycroftController.sendRequest("mycroft.mic.get_status", {});
+            }
+        }
+        onSkillDataRecieved: {
+            if (type == "mycroft.mic.get_status.response") {
+                delegate.toggled = data.muted;
 
-    Timer {
-        id: feedbackTimer
-        interval: 250
-        onTriggered: feedback.play(paSinkModel.preferredSink.index);
+            } else if (type =="mycroft.mic.mute" || type =="mycroft.mic.unmute") {
+                Mycroft.MycroftController.sendRequest("mycroft.mic.get_status", {});
+            }
+        }
     }
 }
+
