@@ -45,7 +45,7 @@ AUDIO_THREAD_RETRY_SEC = 1
 # Bytes to read from microphone at a time
 AUDIO_CHUNK_SIZE = 4096
 
-AUDIO_LOUDNESS_FACTOR = 4.0
+AUDIO_LOUDNESS_FACTOR = 1.0
 """Factor to multiply incoming audio by"""
 
 # Onnx model path for Silero VAD
