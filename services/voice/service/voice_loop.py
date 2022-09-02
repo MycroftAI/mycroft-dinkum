@@ -37,6 +37,8 @@ from .vad_command import VadCommand
 
 LOG = logging.getLogger("voice")
 
+AUDIO_DEVICE = "VF_ASR_(L)"
+
 # Seconds to wait for an audio chunk before erroring out
 AUDIO_TIMEOUT = 5
 AUDIO_THREAD_RETRIES = 3
@@ -334,7 +336,7 @@ class VoiceLoop:
                         "arecord",
                         "-q",
                         "-D",
-                        "VF_ASR_(L)",
+                        str(AUDIO_DEVICE),
                         "-r",
                         "16000",
                         "-c",
