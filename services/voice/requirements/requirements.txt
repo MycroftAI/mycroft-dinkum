@@ -1,3 +1,6 @@
+# mic
+pyalsaaudio~=0.9.2
+
 # precise lite
 numpy
 sonopy~=0.1.0

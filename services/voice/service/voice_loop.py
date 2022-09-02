@@ -15,7 +15,6 @@
 import audioop
 import itertools
 import logging
-import subprocess
 import time
 import wave
 from collections import deque
@@ -25,6 +24,7 @@ from threading import Thread
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
+import alsaaudio
 import numpy as np
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import MycroftSTT, StreamingSTT
@@ -331,36 +331,23 @@ class VoiceLoop:
         for _ in range(AUDIO_THREAD_RETRIES):
             try:
                 # TODO: Use config
-                with subprocess.Popen(
-                    [
-                        "arecord",
-                        "-q",
-                        "-D",
-                        str(AUDIO_DEVICE),
-                        "-r",
-                        "16000",
-                        "-c",
-                        "1",
-                        "-f",
-                        "S16_LE",
-                        "-t",
-                        "raw",
-                    ],
-                    stdout=subprocess.PIPE,
-                ) as proc:
-                    assert proc.stdout is not None
+                mic = alsaaudio.PCM(
+                    type=alsaaudio.PCM_CAPTURE,
+                    rate=16000,
+                    channels=1,
+                    format=alsaaudio.PCM_FORMAT_S16_LE,
+                    device=AUDIO_DEVICE,
+                    periodsize=AUDIO_CHUNK_SIZE // 2,
+                )
+                while self._audio_input_running:
+                    chunk_length, chunk = mic.read()
+                    assert chunk_length > 0, "Empty audio chunk"
 
-                    while self._audio_input_running:
-                        chunk = proc.stdout.read(AUDIO_CHUNK_SIZE)
-                        assert chunk, "Empty audio chunk"
+                    # Increase loudness of audio
+                    if AUDIO_LOUDNESS_FACTOR != 1.0:
+                        chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
 
-                        # Increase loudness of audio
-                        if AUDIO_LOUDNESS_FACTOR != 1.0:
-                            chunk = audioop.mul(
-                                chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR
-                            )
-
-                        self.queue.put_nowait(chunk)
+                    self.queue.put_nowait(chunk)
             except Exception:
                 LOG.exception("Unexpected error in audio input thread")
 
