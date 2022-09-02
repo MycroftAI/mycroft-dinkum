@@ -16,6 +16,7 @@
 #   add to favorites and play favorite
 from typing import Optional, Tuple
 
+import requests
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
@@ -183,7 +184,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             # thing down the line, i.e., tell the user
             # it doesn't know how to play x.
             self.current_station = None
-            
 
     def handle_play_request(self):
         """play the current station if there is one"""
@@ -193,10 +193,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 dialog=dialog, gui_clear=GuiClear.NEVER
             )
             return self.end_session(dialog=dialog)
-        stream_uri = self.current_station.get("url_resolved", "")
-        station_name = self.current_station.get("name", "").replace("\n", "")
-
-        mime = self.rs.find_mime_type(stream_uri)
+        stream_uri = None
+        station_name = None
+        mime = None
+        while not mime:
+            try:
+                stream_uri = self.current_station.get("url_resolved", "")
+                station_name = self.current_station.get("name", "").replace("\n", "")
+                mime = self.rs.find_mime_type(stream_uri)
+            except requests.exceptions.RequestException:
+                self.rs.get_next_station()
 
         self.CPS_play((stream_uri, mime))
 
