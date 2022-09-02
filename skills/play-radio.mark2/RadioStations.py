@@ -27,6 +27,71 @@ from pyradios.base_url import fetch_hosts
 # this number.
 CHARACTER_LIMIT = 35
 
+# Genre tag filter. This list is *only* filtered out
+# when performing a weighted random choice, which is only
+# done when the user does not specify what kind of radio
+# they want to listen to. It is based on the idea that
+# most users of an explicitly EN-only (so far) device will
+# prefer english language programming unless otherwise
+# specified. It also removes religious content and regional
+# content. Finally, it removes useless tags like "radio" and
+# "music". Again, all of this can be accessed by request,
+# this only applies when someone asks for generic radio.
+GENRE_FILTER = [
+    "music",
+    "radio",
+    "estación",
+    "méxico",
+    "fm",
+    "música",
+    "mex",
+    "christian",
+    "mx",
+    "mexico",
+    "entretenimiento",
+    "música en español",
+    "moi merino",
+    "norteamérica",
+    "greek",
+    "musica",
+    "regional mexican",
+    "latinoamérica",
+    "español",
+    "regional",
+    "regional radio",
+    "regional mexicana",
+    "música pop",
+    "musica regional mexicana",
+    "grupera",
+    "musica regional",
+    "mexican music",
+    "traditional mexican music",
+    "musica tradicional mexicana",
+    "musica mexicana",
+    "noticias",
+    "musica latina",
+    "grupero",
+    "misc",
+    "juvenil",
+    "local music",
+    "regional music",
+    "banda",
+    "am",
+    "música del recuerdo",
+    "religion",
+    "gospel",
+    "musica latinoamericana",
+    "local radio",
+    "latin pop",
+    "religious",
+    "traffic",
+    "schlager",
+    "música variada",
+    "radiorama",
+    "catholic",
+    "latin music",
+    "musica romantica",
+]
 
 def sort_on_vpc(k):
     return k["votes_plus_clicks"]
@@ -267,11 +332,14 @@ class RadioStations:
         tags with only one station.
         """
         # First zip up the weights and genre tags.
-        genre_weights = zip(self.genre_tags, self.genre_weights)
+        genre_and_weights = zip(self.genre_tags, self.genre_weights)
+        # For general radio we want to remove very obscure tags and also
         filtered_tags = [
-            genre_weight for genre_weight in genre_weights if genre_weight[1] > 1
+            genre_weight for genre_weight in genre_and_weights
+            if genre_weight[0]["name"] not in GENRE_FILTER
         ]
-        # TODO: Additional weighting fun to go here very soon.
+        filtered_tags.sort(key=lambda d: d["stationcount"], reverse=True)
+        filtered_tags = filtered_tags[:125]
         # Split the lists again.
         filtered_genre_tags, filtered_genre_weights = map(list, zip(*filtered_tags))
         return random.choices(filtered_genre_tags, weights=filtered_genre_weights, k=1)[
