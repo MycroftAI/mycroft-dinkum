@@ -347,18 +347,20 @@ class RadioStations:
         ]
 
     def search(self, sentence, limit):
+        LOG.debug(f"Search initiated with: {sentence}")
         unique_stations = {}
         self.original_utterance = sentence
         search_term_candidate = self.clean_sentence(sentence)
-        if search_term_candidate in self.genre_tags:
-            self.last_search_terms = search_term_candidate
-            self.genre_to_play = self.last_search_terms
-        elif not self.last_search_terms:
+        LOG.debug(f"Utterance after cleaning: '{search_term_candidate}'")
+        if not search_term_candidate:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
             # weighted by the number of stations in each
             self.last_search_terms = self.weighted_random_genre()
+            self.genre_to_play = self.last_search_terms
+        elif search_term_candidate in self.genre_tags:
+            self.last_search_terms = search_term_candidate
             self.genre_to_play = self.last_search_terms
         else:
             self.last_search_terms = search_term_candidate
