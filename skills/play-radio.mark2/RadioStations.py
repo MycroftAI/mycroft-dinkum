@@ -336,9 +336,9 @@ class RadioStations:
         # For general radio we want to remove very obscure tags and also
         filtered_tags = [
             genre_weight for genre_weight in genre_and_weights
-            if genre_weight[0]["name"] not in GENRE_FILTER
+            if genre_weight[0] not in GENRE_FILTER
         ]
-        filtered_tags.sort(key=lambda d: d["stationcount"], reverse=True)
+        filtered_tags.sort(key=lambda d: d[1], reverse=True)
         filtered_tags = filtered_tags[:125]
         # Split the lists again.
         filtered_genre_tags, filtered_genre_weights = map(list, zip(*filtered_tags))
