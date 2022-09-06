@@ -356,8 +356,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             Tuple(Name of station, confidence, Station information)
         """
         # Translate match confidence levels to CPSMatchLevels
-        self.log.debug("Calling initialize.")
-        self.initialize() 
         self.log.debug("CPS Match Request")
         self.setup_for_play(phrase)
 
