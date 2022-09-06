@@ -63,13 +63,21 @@ class WeatherSkill(MycroftSkill):
         self.weather_api = OpenWeatherMapApi()
         self.gui_image_directory = Path(self.root_dir).joinpath("ui")
         self.weather_config = None
+        self.settings_change_callback = self.on_websettings_changed
 
     def initialize(self):
         """Do these things after the skill is loaded."""
-        self.weather_config = WeatherConfig(self.config_core, self.settings)
+        self.on_websettings_changed()
         self.add_event(
             "skill.weather.request-local-forecast", self.handle_get_local_forecast
         )
+
+    def on_websettings_changed(self) -> None:
+        """
+        Force a setting refresh after the websettings changed
+        otherwise new settings will not be regarded.
+        """
+        self.weather_config = WeatherConfig(self.config_core, self.settings)
 
     def handle_get_local_forecast(self, _):
         """Handles a message bus command requesting current local weather information.
