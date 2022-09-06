@@ -166,6 +166,7 @@ class RadioStations:
         self.station_index = 0
         self.blacklist = [
             "icecast",
+            "bob.hoerradar.de",
         ]
         self.media_verbs = ["play", "listen", "turn on", "start"]
         self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio"]
@@ -258,7 +259,7 @@ class RadioStations:
             Mime type - defaults to 'audio/mpeg'
         """
         mime = "audio/mpeg"
-        response = requests.Session().head(url, allow_redirects=True)
+        response = requests.Session().head(url, allow_redirects=True, timeout=3)
         if 200 <= response.status_code < 300:
             mime = response.headers["content-type"]
         return mime
