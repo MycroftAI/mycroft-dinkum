@@ -18,7 +18,6 @@
 
 import QtQuick 2.9
 import Mycroft 1.0 as Mycroft
-import org.kde.plasma.private.volume 0.1 as PA
 
 SliderBase {
     id: root
@@ -27,11 +26,9 @@ SliderBase {
     slider.from: 0
     slider.to: 1
 
-    slider.value: paSinkModel.preferredSink ? paSinkModel.preferredSink.volume : PA.PulseAudio.MinimalVolume
+    slider.value: 0.6
     slider.onMoved: {
         Mycroft.MycroftController.sendRequest("mycroft.volume.set", {"percent": slider.value});
-
-        feedbackTimer.running = true;
     }
 
     Component.onCompleted: {
@@ -55,16 +52,4 @@ SliderBase {
         }
     }
 
-    PA.SinkModel {
-        id: paSinkModel
-    }
-    PA.VolumeFeedback {
-        id: feedback
-    }
-
-    Timer {
-        id: feedbackTimer
-        interval: 250
-        onTriggered: feedback.play(paSinkModel.preferredSink.index);
-    }
 }
