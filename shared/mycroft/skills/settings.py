@@ -131,8 +131,9 @@ class SettingsMetaUploader:
 
     _settings_meta_path = None
 
-    def __init__(self, skill_directory: str, skill_name: str):
+    def __init__(self, skill_directory: str, skill_id: str, skill_name: str):
         self.skill_directory = Path(skill_directory)
+        self.skill_id = skill_id
         self.skill_name = skill_name
         self.json_path = self.skill_directory.joinpath("settingsmeta.json")
         self.yaml_path = self.skill_directory.joinpath("settingsmeta.yaml")
@@ -146,7 +147,7 @@ class SettingsMetaUploader:
 
     @property
     def skill_gid(self):
-        return self.skill_name
+        return self.skill_id
 
     @property
     def settings_meta_path(self):

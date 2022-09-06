@@ -14,7 +14,7 @@
 #
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional, List
 
 from lingua_franca import load_languages
 from mycroft.service import DinkumService
@@ -32,7 +32,7 @@ class SkillsService(DinkumService):
     def __init__(self, args: argparse.Namespace):
         super().__init__(service_id="skills")
         self.args = args
-        self._skill_instances: List[MycroftSkill] = []
+        self._skill_instances: Dict[str, MycroftSkill] = {}
         self._meta_uploaders: List[SettingsMetaUploader] = []
 
     def start(self):
@@ -72,11 +72,11 @@ class SkillsService(DinkumService):
             skill_instance = create_skill_instance(skill_module, skill_id, self.bus)
             assert skill_instance is not None, f"Failed to create skill {skill_id}"
 
-            self._skill_instances.append(skill_instance)
+            self._skill_instances[skill_id] = skill_instance
 
     def _unload_skills(self):
         try:
-            for skill_instance in self._skill_instances:
+            for skill_instance in self._skill_instances.values():
                 self.log.debug("Unloading skill %s", skill_instance.skill_id)
                 skill_instance.default_shutdown()
 
@@ -92,7 +92,12 @@ class SkillsService(DinkumService):
         try:
             for skill_directory in self.args.skill:
                 skill_id = Path(skill_directory).name
-                meta_uploader = SettingsMetaUploader(skill_directory, skill_id)
+                skill_instance = self._skill_instances[skill_id]
+                meta_uploader = SettingsMetaUploader(
+                    skill_directory,
+                    skill_id,
+                    skill_instance.name,
+                )
                 meta_uploader.upload()
                 self._meta_uploaders.append(meta_uploader)
         except Exception:
@@ -103,7 +108,10 @@ def main():
     """Service entry point"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--skill", required=True, action="append", help="Path to skill directory",
+        "--skill",
+        required=True,
+        action="append",
+        help="Path to skill directory",
     )
     args, rest = parser.parse_known_args()
 
