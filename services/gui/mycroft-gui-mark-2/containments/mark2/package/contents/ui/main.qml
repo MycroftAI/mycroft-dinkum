@@ -24,8 +24,6 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 
 import org.kde.kirigami 2.5 as Kirigami
 
-import org.kde.plasma.private.volume 0.1 as PA
-
 import "panel" as Panel
 import "osd" as Osd
 
