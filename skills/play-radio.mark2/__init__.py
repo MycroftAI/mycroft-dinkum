@@ -188,6 +188,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_play_request(self):
         """play the current station if there is one"""
         if not self.current_station:
+            # If there isn't a current station, that means we were unable to find
+            # a genre that matches the search term.
             dialog = ("cant.find.stations", {"search": self.rs.last_search_terms})
             self._mycroft_session_id = self.emit_start_session(
                 dialog=dialog, gui_clear=GuiClear.NEVER
@@ -195,6 +197,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             return self.end_session(dialog=dialog)
         stream_uri = None
         station_name = None
+
+        # The first attempt to connect to the station server is to check mime type.
+        # If we have connection problems, most of the time they will happen here.
+        # In that case we will go to the next station and try again up to 10 times
+        # before giving up.
         mime = None
         tries = 0
         while not mime and tries < 10:
@@ -202,7 +209,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             try:
                 stream_uri = self.current_station.get("url_resolved", "")
                 station_name = self.current_station.get("name", "").replace("\n", "")
-                self.log.debug(f"Attempting to check mime type for {station_name} at {station_uri}")
+                self.log.debug(f"Attempting to check mime type: try {tries}")
                 mime = self.rs.find_mime_type(stream_uri)
             except requests.exceptions.RequestException as e:
                 self.log.debug(f"Mime type request failed: {e}")
