@@ -182,7 +182,7 @@ Mycroft.CardDelegate {
                         height: Mycroft.Units.gridUnit * 3
 
                         onClicked: {
-                            triggerGuiEvent("gui.prev_genre", {})
+                            triggerGuiEvent("gui.next_genre", {})
                         }
 
                         background: Rectangle {

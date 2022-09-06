@@ -64,6 +64,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
+        self.log.debug("Registering gui handlers.")
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
@@ -267,6 +268,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("NextChannel.intent")
     def handle_next_channel(self, message):
+        self.log.debug("Trying to get next channel.")
         self.rs.get_next_channel()
         self.handle_next_station(message)
 
@@ -326,6 +328,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             Tuple(Name of station, confidence, Station information)
         """
         # Translate match confidence levels to CPSMatchLevels
+        self.log.debug("Calling initialize.")
+        self.initialize() 
         self.log.debug("CPS Match Request")
         self.setup_for_play(phrase)
 

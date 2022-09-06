@@ -341,6 +341,7 @@ class RadioStations:
             and "musica" not in genre_weight[0]
             and "mexico" not in genre_weight[0]
             and "grupo" not in genre_weight[0]
+            and "radio" not in genre_weight[0]
         ]
         filtered_tags.sort(key=lambda d: d[1], reverse=True)
         filtered_tags = filtered_tags[:125]
@@ -371,7 +372,6 @@ class RadioStations:
             raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)
-        LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
             if station["name"]:
