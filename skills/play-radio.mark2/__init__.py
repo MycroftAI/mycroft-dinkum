@@ -196,13 +196,19 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         stream_uri = None
         station_name = None
         mime = None
-        while not mime:
+        tries = 0
+        while not mime and tries < 10:
+            tries += 1
             try:
                 stream_uri = self.current_station.get("url_resolved", "")
                 station_name = self.current_station.get("name", "").replace("\n", "")
+                self.log.debug(f"Attempting to check mime type for {station_name} at {station_uri}")
                 mime = self.rs.find_mime_type(stream_uri)
-            except requests.exceptions.RequestException:
+            except requests.exceptions.RequestException as e:
+                self.log.debug(f"Mime type request failed: {e}")
                 self.rs.get_next_station()
+        if not mime:
+            self.log.error("Unsuccessful mime type checks for 10 different stations, cannot connect.")
 
         self.CPS_play((stream_uri, mime))
 
