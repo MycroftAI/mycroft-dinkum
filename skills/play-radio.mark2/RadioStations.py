@@ -91,6 +91,7 @@ GENRE_FILTER = [
     "catholic",
     "latin music",
     "musica romantica",
+    "música popular mexican",
 ]
 
 def sort_on_vpc(k):
@@ -337,6 +338,9 @@ class RadioStations:
         filtered_tags = [
             genre_weight for genre_weight in genre_and_weights
             if genre_weight[0] not in GENRE_FILTER
+            and "musica" not in genre_weight[0]
+            and "mexico" not in genre_weight[0]
+            and "grupo" not in genre_weight[0]
         ]
         filtered_tags.sort(key=lambda d: d[1], reverse=True)
         filtered_tags = filtered_tags[:125]
