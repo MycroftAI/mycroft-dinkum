@@ -37,7 +37,7 @@ from .vad_command import VadCommand
 
 LOG = logging.getLogger("voice")
 
-AUDIO_DEVICE = "VF_ASR_(L)"
+AUDIO_DEVICE = "default"
 
 # Seconds to wait for an audio chunk before erroring out
 AUDIO_TIMEOUT = 5
@@ -333,21 +333,30 @@ class VoiceLoop:
                 # TODO: Use config
                 mic = alsaaudio.PCM(
                     type=alsaaudio.PCM_CAPTURE,
-                    rate=16000,
-                    channels=1,
-                    format=alsaaudio.PCM_FORMAT_S16_LE,
+                    rate=SAMPLE_RATE,
+                    channels=SAMPLE_CHANNELS,
+                    format=alsaaudio.PCM_FORMAT_S32_LE
+                    if SAMPLE_WIDTH == 4
+                    else alsaaudio.PCM_FORMAT_S16_LE,
                     device=AUDIO_DEVICE,
-                    periodsize=AUDIO_CHUNK_SIZE // 2,
+                    periodsize=AUDIO_CHUNK_SIZE // SAMPLE_WIDTH,
                 )
-                while self._audio_input_running:
-                    chunk_length, chunk = mic.read()
-                    assert chunk_length > 0, "Empty audio chunk"
+                try:
+                    while self._audio_input_running:
+                        chunk_length, chunk = mic.read()
+                        if chunk_length <= 0:
+                            LOG.warning("Bad chunk length: %s", chunk_length)
+                            continue
 
-                    # Increase loudness of audio
-                    if AUDIO_LOUDNESS_FACTOR != 1.0:
-                        chunk = audioop.mul(chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR)
+                        # Increase loudness of audio
+                        if AUDIO_LOUDNESS_FACTOR != 1.0:
+                            chunk = audioop.mul(
+                                chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR
+                            )
 
-                    self.queue.put_nowait(chunk)
+                        self.queue.put_nowait(chunk)
+                finally:
+                    mic.close()
             except Exception:
                 LOG.exception("Unexpected error in audio input thread")
 
