@@ -303,7 +303,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     @intent_handler("PreviousChannel.intent")
     def handle_previous_channel(self, message):
         self.rs.get_previous_channel()
-        self.handle_previous_station(message)
+        self.handle_next_station(message)
 
     @intent_handler(AdaptIntent("").require("Play").require("Radio"))
     def handle_play_radio(self, message):

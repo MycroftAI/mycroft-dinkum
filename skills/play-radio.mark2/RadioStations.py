@@ -484,10 +484,13 @@ class RadioStations:
         # To get the right genre we need to know which index we are on.
         if self.last_search_terms in self.genre_tags:
             self.channel_index = self.genre_tags.index(self.last_search_terms)
+        LOG.debug(f"PREV CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
         if self.channel_index == 0:
             self.channel_index = len(self.genre_tags) - 1
         else:
             self.channel_index -= 1
+        LOG.debug(f"CHANNEL INCREMENTED: {self.channel_index}")
+        LOG.debug(f"CORESPONDING GENRE: {self.genre_tags[self.channel_index]}")
         self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
         return self.genre_tags[self.channel_index]
