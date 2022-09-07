@@ -81,6 +81,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
+        self.log.debug("Registering gui handlers.")
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
@@ -313,13 +314,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler("NextChannel.intent")
     def handle_next_channel(self, message):
+        self.log.debug("Trying to get next channel.")
         self.rs.get_next_channel()
         self.handle_next_station(message)
 
     @intent_handler("PreviousChannel.intent")
     def handle_previous_channel(self, message):
         self.rs.get_previous_channel()
-        self.handle_previous_station(message)
+        self.handle_next_station(message)
 
     @intent_handler(AdaptIntent("").require("Play").require("Radio"))
     def handle_play_radio(self, message):

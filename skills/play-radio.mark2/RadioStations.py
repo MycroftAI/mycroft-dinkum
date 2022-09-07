@@ -25,7 +25,7 @@ from pyradios.base_url import fetch_hosts
 # Strings that are too long will overlap and be unreadable
 # in the marquee field. If strings are distorted, reduce
 # this number.
-CHARACTER_LIMIT = 35
+CHARACTER_LIMIT = 30
 
 # Genre tag filter. This list is *only* filtered out
 # when performing a weighted random choice, which is only
@@ -91,6 +91,7 @@ GENRE_FILTER = [
     "catholic",
     "latin music",
     "musica romantica",
+    "música popular mexican",
 ]
 
 def sort_on_vpc(k):
@@ -197,6 +198,12 @@ class RadioStations:
                 [genre.get("name", ""), genre.get("stationcount", "")]
                 for genre in self.genre_tags_response
             ]
+
+            # Genre tags which have the "noise words", i.e. stop words like "radio"
+            # and "music" will mess things up and usually aren't proper genres 
+            # anyway so for now we will filter out tags with these words in them.
+            self.genre_tags = filter(self.check_genres, self.genre_tags)
+            
             # Then split the lists. This will make things easier downstream
             # when we use station count to weight a random choice operation.
             self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
@@ -208,6 +215,12 @@ class RadioStations:
             self.genre_to_play = ""
             self.get_stations(self.last_search_terms)
             self.original_utterance = ""
+
+    def check_genres(self, genre_tag):
+        for noise_word in self.noise_words:
+            if noise_word in genre_tag[0]:
+                return False
+        return True
 
     def query_server(self, endpoint):
         """
@@ -338,6 +351,10 @@ class RadioStations:
         filtered_tags = [
             genre_weight for genre_weight in genre_and_weights
             if genre_weight[0] not in GENRE_FILTER
+            and "musica" not in genre_weight[0]
+            and "mexico" not in genre_weight[0]
+            and "grupo" not in genre_weight[0]
+            and "radio" not in genre_weight[0]
         ]
         filtered_tags.sort(key=lambda d: d[1], reverse=True)
         filtered_tags = filtered_tags[:125]
@@ -368,7 +385,6 @@ class RadioStations:
             raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)
-        LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
             if station["name"]:
@@ -437,8 +453,21 @@ class RadioStations:
             self.station_index -= 1
         return self.get_current_station()
 
+    @staticmethod
+    def wraparound(index, total):
+        if index == total - 1:
+            return 0
+        else:
+            index += 1
+            return index
+ 
+
     def get_next_channel(self):
+        # To get the right genre we need to know which index we are on.
+        if self.last_search_terms in self.genre_tags:
+            self.channel_index = self.genre_tags.index(self.last_search_terms)
         LOG.debug(f"NEXT CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
+        # self.channel_index = wraparound(self.channel_index, len(self.genre_tags))
         if self.channel_index == len(self.genre_tags) - 1:
             self.channel_index = 0
         else:
@@ -452,10 +481,16 @@ class RadioStations:
         return self.genre_tags[self.channel_index]
 
     def get_previous_channel(self):
+        # To get the right genre we need to know which index we are on.
+        if self.last_search_terms in self.genre_tags:
+            self.channel_index = self.genre_tags.index(self.last_search_terms)
+        LOG.debug(f"PREV CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
         if self.channel_index == 0:
             self.channel_index = len(self.genre_tags) - 1
         else:
             self.channel_index -= 1
+        LOG.debug(f"CHANNEL INCREMENTED: {self.channel_index}")
+        LOG.debug(f"CORESPONDING GENRE: {self.genre_tags[self.channel_index]}")
         self.station_index = 0
         self.get_stations(self.genre_tags[self.channel_index])
         return self.genre_tags[self.channel_index]
