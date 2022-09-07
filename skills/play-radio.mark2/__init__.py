@@ -167,6 +167,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.CPS_pause()
 
     def update_radio_theme(self, status):
+        self.img_pth = None
         if self.rs.genre_to_play and self.rs.genre_to_play in self.genre_images.keys():
             self.img_pth = self.find_resource(
                 self.genre_images[self.rs.genre_to_play], "ui/images"

@@ -213,7 +213,6 @@ class RadioStations:
             # As of this comment it is "pop".
             self.last_search_terms = self.genre_tags[self.channel_index]
             self.genre_to_play = ""
-            self.get_stations(self.last_search_terms)
             self.original_utterance = ""
 
     def check_genres(self, genre_tag):
