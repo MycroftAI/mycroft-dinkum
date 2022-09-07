@@ -463,6 +463,9 @@ class RadioStations:
  
 
     def get_next_channel(self):
+        # To get the right genre we need to know which index we are on.
+        if self.last_search_terms in self.genre_tags:
+            self.channel_index = self.genre_tags.index(self.last_search_terms)
         LOG.debug(f"NEXT CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
         # self.channel_index = wraparound(self.channel_index, len(self.genre_tags))
         if self.channel_index == len(self.genre_tags) - 1:
@@ -478,6 +481,9 @@ class RadioStations:
         return self.genre_tags[self.channel_index]
 
     def get_previous_channel(self):
+        # To get the right genre we need to know which index we are on.
+        if self.last_search_terms in self.genre_tags:
+            self.channel_index = self.genre_tags.index(self.last_search_terms)
         if self.channel_index == 0:
             self.channel_index = len(self.genre_tags) - 1
         else:
