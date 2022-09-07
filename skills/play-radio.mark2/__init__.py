@@ -38,7 +38,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def __init__(self, skill_id: str):
         super().__init__(skill_id=skill_id, name="Mycroft Radio Skill")
-        self.rs: Optional[RadioStations] = None
+        self._rs: Optional[RadioStations] = None
         self.current_station = None
         self.station_name = "Mycroft Radio"
         self.img_pth = ""
@@ -60,13 +60,24 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self._is_playing = False
         self._stream_session_id: Optional[str] = None
 
+    @property
+    def rs(self) -> RadioStations:
+        """Dynamically load radio stations"""
+        self._load_radio_stations()
+        assert self._rs is not None
+        return self._rs
+
     def initialize(self):
         """Wait for internet connection before accessing radio stations"""
         self.add_event("mycroft.ready", self.handle_ready)
         self.register_gui_handlers()
 
     def handle_ready(self, _):
-        self.rs = RadioStations()
+        self._load_radio_stations()
+
+    def _load_radio_stations(self):
+        if self._rs is None:
+            self._rs = RadioStations()
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
