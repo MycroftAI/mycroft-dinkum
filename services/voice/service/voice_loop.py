@@ -88,7 +88,7 @@ class VoiceLoop:
         self.stt = stt
 
         # TODO: Use config
-        self.command = VadCommand(speech_begin=0.3, silence_end=0.5, timeout=15.0)
+        self.command = VadCommand(speech_begin=0.3, silence_end=0.8, timeout=10.0)
 
         self.log = logging.getLogger("voice.loop")
 

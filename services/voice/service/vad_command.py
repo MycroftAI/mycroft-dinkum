@@ -26,7 +26,7 @@ class VadCommand:
         self._silence_seconds_left = self.silence_end
         self._timeout_seconds_left = self.timeout
 
-    def process(self, is_speech: bool, seconds: int) -> bool:
+    def process(self, is_speech: bool, seconds: float) -> bool:
         self._timeout_seconds_left -= seconds
         if self._timeout_seconds_left <= 0:
             LOG.warning("Timeout")
