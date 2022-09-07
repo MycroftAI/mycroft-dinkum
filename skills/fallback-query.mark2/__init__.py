@@ -21,7 +21,7 @@ from mycroft.skills.fallback_skill import FallbackSkill
 
 class QuestionsAnswersSkill(FallbackSkill):
     def __init__(self, skill_id: str):
-        super().__init__(skill_id=skill_id)
+        super().__init__(skill_id=skill_id, name="Query Skill")
         self.lock = threading.Lock()
         self.is_searching = False
         self.searching_event = threading.Event()

@@ -45,7 +45,7 @@ class WikipediaSkill(CommonQuerySkill):
             translated_question_verbs (list[str]): used in cleaning queries
             translated_articles (list[str]): used in cleaning queries
         """
-        super(WikipediaSkill, self).__init__(skill_id=skill_id, name="WikipediaSkill")
+        super(WikipediaSkill, self).__init__(skill_id=skill_id, name="Wikipedia Skill")
         self.platform = self.config_core["enclosure"].get("platform", "unknown")
         self.max_image_width = 416 if self.platform == "mycroft_mark_ii" else 1920
         self.translated_question_words = self.translate_list("question_words")
@@ -55,9 +55,9 @@ class WikipediaSkill(CommonQuerySkill):
 
     def initialize(self):
         """Wait for internet connection before connecting to Wikipedia"""
-        self.add_event("mycroft.internet-ready", self.handle_internet_ready)
+        self.add_event("mycroft.ready", self.handle_ready)
 
-    def handle_internet_ready(self, _):
+    def handle_ready(self, _):
         """Attempt connection to Wikipedia"""
         self._connect_to_wikipedia()
 

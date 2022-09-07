@@ -36,7 +36,7 @@ Query.__new__.__defaults__ = (None,) * len(Query._fields)
 
 class WolframAlphaSkill(CommonQuerySkill):
     def __init__(self, skill_id: str):
-        super().__init__(skill_id=skill_id)
+        super().__init__(skill_id=skill_id, name="WolframAlpha Skill")
         self._last_query = self._cqs_match = Query()
         self.question_parser = EnglishQuestionParser()
         self.autotranslate = False
