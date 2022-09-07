@@ -38,7 +38,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def __init__(self, skill_id: str):
         super().__init__(skill_id=skill_id, name="Mycroft Radio Skill")
-        self.rs = RadioStations()
+        self.rs: Optional[RadioStations] = None
         self.current_station = None
         self.station_name = "Mycroft Radio"
         self.img_pth = ""
@@ -61,7 +61,12 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self._stream_session_id: Optional[str] = None
 
     def initialize(self):
+        """Wait for internet connection before accessing radio stations"""
+        self.add_event("mycroft.ready", self.handle_ready)
         self.register_gui_handlers()
+
+    def handle_ready(self, _):
+        self.rs = RadioStations()
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
@@ -224,7 +229,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 self.rs.get_next_station()
                 self.current_station = self.rs.get_current_station()
         if not mime:
-            self.log.error("Unsuccessful mime type checks for 10 different stations, cannot connect.")
+            self.log.error(
+                "Unsuccessful mime type checks for 10 different stations, cannot connect."
+            )
 
         self.CPS_play((stream_uri, mime))
 
