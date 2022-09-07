@@ -198,6 +198,12 @@ class RadioStations:
                 [genre.get("name", ""), genre.get("stationcount", "")]
                 for genre in self.genre_tags_response
             ]
+
+            # Genre tags which have the "noise words", i.e. stop words like "radio"
+            # and "music" will mess things up and usually aren't proper genres 
+            # anyway so for now we will filter out tags with these words in them.
+            self.genre_tags = filter(self.check_genres, self.genre_tags)
+            
             # Then split the lists. This will make things easier downstream
             # when we use station count to weight a random choice operation.
             self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
@@ -209,6 +215,12 @@ class RadioStations:
             self.genre_to_play = ""
             self.get_stations(self.last_search_terms)
             self.original_utterance = ""
+
+    def check_genres(self, genre_tag):
+        for noise_word in self.noise_words:
+            if noise_word in genre_tag[0]:
+                return False
+        return True
 
     def query_server(self, endpoint):
         """
@@ -441,8 +453,18 @@ class RadioStations:
             self.station_index -= 1
         return self.get_current_station()
 
+    @staticmethod
+    def wraparound(index, total):
+        if index == total - 1:
+            return 0
+        else:
+            index += 1
+            return index
+ 
+
     def get_next_channel(self):
         LOG.debug(f"NEXT CHANNEL CALLED: CHANNEL INDEX IS {self.channel_index}")
+        # self.channel_index = wraparound(self.channel_index, len(self.genre_tags))
         if self.channel_index == len(self.genre_tags) - 1:
             self.channel_index = 0
         else:
