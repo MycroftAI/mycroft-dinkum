@@ -1190,6 +1190,7 @@ class WeatherSkill(MycroftSkill):
         """
         weather = None
         dialog = None
+        self.log.debug(f"'System unit': {self.config_core.system_unit}")
         self.log.debug(f"Temperature unit: {self.weather_config.temperature_unit}")
         if intent_data is not None:
             try:
