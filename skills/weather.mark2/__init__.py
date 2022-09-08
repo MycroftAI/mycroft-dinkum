@@ -1190,12 +1190,14 @@ class WeatherSkill(MycroftSkill):
         """
         weather = None
         dialog = None
+        self.log.debug(f"Temperature unit: {self.weather_config.temperature_unit}")
         if intent_data is not None:
             try:
                 latitude, longitude = self._determine_weather_location(intent_data)
                 weather = self.weather_api.get_weather_for_coordinates(
                     self.weather_config.temperature_unit, latitude, longitude, self.lang
                 )
+                self.log.debug(f"Data returned: {weather}")
             except HTTPError as api_error:
                 self.log.exception("Weather API failure")
                 dialog = self._handle_api_error(api_error)
