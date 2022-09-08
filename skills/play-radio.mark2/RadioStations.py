@@ -206,7 +206,6 @@ class RadioStations:
             # As of this comment it is "pop".
             self.last_search_terms = self.genre_tags[self.channel_index]
             self.genre_to_play = ""
-            self.get_stations(self.last_search_terms)
             self.original_utterance = ""
 
     def query_server(self, endpoint):
@@ -368,7 +367,6 @@ class RadioStations:
             raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)
-        LOG.debug("RETURNED FROM _SEARCH: {len(stations})")
         # whack dupes, favor match confidence
         for station in stations:
             if station["name"]:
