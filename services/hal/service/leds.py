@@ -73,7 +73,7 @@ class Mark2LedClient:
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
         self.bus.on("mycroft.screen.brightness", self._handle_brightness_change)
 
-    def _set_state(self, state: str):
+    def _set_state(self, state: Optional[str]):
         self._state = state
 
         if state == "asleep":
@@ -150,7 +150,7 @@ class Mark2LedClient:
                 for c in itertools.chain.from_iterable(self._pixels)
             )
             led_cmd = ["mark2-leds", rgb_str, str(self._brightness)]
-            self.log.debug(led_cmd)
+            # self.log.debug(led_cmd)
             subprocess.check_call(led_cmd)
         except Exception:
             self.log.exception("Error setting LEDs")
