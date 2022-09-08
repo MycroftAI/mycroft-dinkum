@@ -23,6 +23,7 @@ provided, precluding us from having to do the conversions.
 
 """
 from mycroft.api import Api
+from mycroft.util.log import LOG
 
 from .weather import WeatherReport
 
@@ -123,8 +124,11 @@ class OpenWeatherMapApi(Api):
             lon=longitude,
             units=measurement_system,
         )
+        LOG.debug(f"Parameters: {query_parameters}")
         api_request = dict(path="/onecall", query=query_parameters)
         response = self.request(api_request)
+        LOG.debug(f"Response: {response}")
         local_weather = WeatherReport(response)
+        LOG.debug(f"Weather: {local_weather}")
 
         return local_weather
