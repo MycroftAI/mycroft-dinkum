@@ -54,10 +54,10 @@ Item {
             Mycroft.MycroftController.start();
         }
     }
-    
+
     Connections {
         target: Mycroft.MycroftController
-        
+
         onIntentRecevied: {
             if (type == "mycroft.display.screenshot.get") {
                 var filepath = "/tmp/" + "screen-" +  Qt.formatDateTime(new Date(), "hhmmss-ddMMyy") + ".png"
@@ -65,11 +65,14 @@ Item {
                     result.saveToFile(filepath);
                 });
                 Mycroft.MycroftController.sendRequest("mycroft.display.screenshot.result", {"result": filepath});
+            } else if (type == "mycroft.ready") {
+                // Don't enable pull-down menu until ready
+                panel.enabled = true;
             }
         }
     }
 
-    
+
 //END slots
 
     Rectangle {
@@ -216,6 +219,7 @@ Item {
             clip: panel.position <= 0.2
             Panel.SlidingPanel {
                 id: panel
+                enabled: false
                 width: parent.width
                 height: parent.height
             }
