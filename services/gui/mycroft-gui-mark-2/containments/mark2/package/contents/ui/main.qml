@@ -215,7 +215,7 @@ Item {
                 right: parent.right
                 top: parent.top
             }
-            height: Kirigami.Units.gridUnit * 2
+            height: Kirigami.Units.gridUnit * 3
             clip: panel.position <= 0.2
             Panel.SlidingPanel {
                 id: panel
