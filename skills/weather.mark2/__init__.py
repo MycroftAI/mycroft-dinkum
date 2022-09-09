@@ -87,9 +87,17 @@ class WeatherSkill(MycroftSkill):
         to get it.
         """
         system_unit = self.config_core.get("system_unit")
+        temperature_unit_type = None
+        if self.weather_config.temperature_unit == "fahrenheit":
+            temperature_unit_type = "imperial"
+        elif self.weather_config.temperature_unit == "celsius":
+            temperature_unit_type = "metric"
+        else:
+            temperature_unit_type = self.config_core["system_unit"]
+
         try:
             weather = self.weather_api.get_weather_for_coordinates(
-                self.weather_config.temperature_unit,
+                temperature_unit_type,
                 self.weather_config.latitude,
                 self.weather_config.longitude,
                 self.lang,
@@ -1190,13 +1198,20 @@ class WeatherSkill(MycroftSkill):
         """
         weather = None
         dialog = None
-        self.log.debug(f"'System unit': {self.config_core.system_unit}")
+        self.log.debug(f'System unit: {self.config_core["system_unit"]}')
         self.log.debug(f"Temperature unit: {self.weather_config.temperature_unit}")
+        temperature_unit_type = None
+        if self.weather_config.temperature_unit == "fahrenheit":
+            temperature_unit_type = "imperial"
+        elif self.weather_config.temperature_unit == "celsius":
+            temperature_unit_type = "metric"
+        else:
+            temperature_unit_type = self.config_core["system_unit"]
         if intent_data is not None:
             try:
                 latitude, longitude = self._determine_weather_location(intent_data)
                 weather = self.weather_api.get_weather_for_coordinates(
-                    self.weather_config.temperature_unit, latitude, longitude, self.lang
+                    temperature_unit_type, latitude, longitude, self.lang
                 )
                 self.log.debug(f"Data returned: {weather}")
             except HTTPError as api_error:
