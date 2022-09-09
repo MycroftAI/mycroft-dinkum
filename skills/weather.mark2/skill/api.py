@@ -108,7 +108,7 @@ class OpenWeatherMapApi(Api):
         super().__init__(path="owm")
 
     def get_weather_for_coordinates(
-        self, measurement_system: str, latitude: float, longitude: float, lang: str
+        self, temperature_units: str, latitude: float, longitude: float, lang: str
     ) -> WeatherReport:
         """Issue an API call and map the return value into a weather report
 
@@ -117,6 +117,17 @@ class OpenWeatherMapApi(Api):
             latitude: the geologic latitude of the weather location
             longitude: the geologic longitude of the weather location
         """
+        # The api uses 'imperial' and 'metric' for units, but we want
+        # to use 'fahrenheit' and 'celsius' when the unit names are spoken.
+        # To avoid confusion with two attributes having two different
+        # semantically identical (for our purposes) values, the attr
+        # we use outside of this method is 'fahrenheit'/'celsius'. Here
+        # we will translate that to conform with the api.
+        if temperature_units == "fahrenheit":
+            measurement_system = "imperial"
+        else:
+            measurement_system = "metric"
+
         query_parameters = dict(
             exclude="minutely",
             lang=owm_language(lang),
@@ -127,8 +138,6 @@ class OpenWeatherMapApi(Api):
         LOG.debug(f"Parameters: {query_parameters}")
         api_request = dict(path="/onecall", query=query_parameters)
         response = self.request(api_request)
-        LOG.debug(f"Response: {response}")
         local_weather = WeatherReport(response)
-        LOG.debug(f"Weather: {local_weather}")
 
         return local_weather
