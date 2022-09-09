@@ -99,6 +99,9 @@ class NewsSkill(CommonPlaySkill):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             self.now_playing = None
+            dialog = None
+            gui_clear = GuiClear.AT_END
+            return self.end_session(dialog=dialog, gui_clear=gui_clear)
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
