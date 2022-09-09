@@ -86,10 +86,11 @@ class WeatherSkill(MycroftSkill):
         requires weather information but should not go through the intent system
         to get it.
         """
-        system_unit = self.config_core.get("system_unit")
+        temperature_unit = self.weather_config.temperature_unit
+
         try:
             weather = self.weather_api.get_weather_for_coordinates(
-                system_unit,
+                temperature_unit,
                 self.weather_config.latitude,
                 self.weather_config.longitude,
                 self.lang,
@@ -1190,12 +1191,14 @@ class WeatherSkill(MycroftSkill):
         """
         weather = None
         dialog = None
+        temperature_unit = self.weather_config.temperature_unit
         if intent_data is not None:
             try:
                 latitude, longitude = self._determine_weather_location(intent_data)
                 weather = self.weather_api.get_weather_for_coordinates(
-                    self.config_core.get("system_unit"), latitude, longitude, self.lang
+                    temperature_unit, latitude, longitude, self.lang
                 )
+                self.log.debug(f"Data returned: {weather}")
             except HTTPError as api_error:
                 self.log.exception("Weather API failure")
                 dialog = self._handle_api_error(api_error)
