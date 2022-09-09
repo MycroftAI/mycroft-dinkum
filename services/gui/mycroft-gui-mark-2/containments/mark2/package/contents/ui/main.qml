@@ -32,8 +32,8 @@ import Mycroft.Private.Mark2SystemAccess 1.0
 
 Item {
     id: root
-    width: 480
-    height: 640
+    width: 800
+    height: 480
 
 //BEGIN properties
     property Item toolBox
@@ -217,12 +217,22 @@ Item {
             }
             height: Kirigami.Units.gridUnit * 3
             clip: panel.position <= 0.2
+
+            Rectangle {
+               width: root.width
+               height: root.height
+               color: "black"
+               opacity: Math.min(1, panel.position) * 0.8
+               visible: panel.position > 0.2
+            }
+
             Panel.SlidingPanel {
                 id: panel
                 enabled: false
                 width: parent.width
                 height: parent.height
             }
+
         }
     }
 }
