@@ -96,13 +96,8 @@ class NewsSkill(CommonPlaySkill):
 
     def handle_media_finished(self, message):
         """Handle media playback finishing."""
-        self.log.debug(f"Entered handle_media_finished.")
         mycroft_session_id = message.data.get("mycroft_session_id")
-        self.log.debug(f"Message session id: {mycroft_session_id}")
-        self.log.debug(f"Self session id: {self._stream_session_id}")
         if mycroft_session_id == self._stream_session_id:
-            dialog = None
-
             self.bus.emit(
                 Message(
                     "mycroft.audio.service.stop",
