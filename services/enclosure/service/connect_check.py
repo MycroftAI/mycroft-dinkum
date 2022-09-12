@@ -195,7 +195,9 @@ class ConnectCheck(MycroftSkill):
     def _connect_to_awconnect(self):
         """Connect to Pantacor awconnect container socket"""
         self._disconnect_from_awconnect()
-        self._awconnect_client = AwconnectClient(self.bus)
+        self._awconnect_client = AwconnectClient(
+            self.bus, self.config["enclosure"]["awconnect_socket_path"]
+        )
         self._awconnect_client.start()
 
     def _disconnect_from_awconnect(self):

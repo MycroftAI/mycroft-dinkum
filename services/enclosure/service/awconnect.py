@@ -5,8 +5,6 @@ from typing import Optional
 from mycroft.util.log import LOG
 from mycroft_bus_client import Message, MessageBusClient
 
-SOCKET_PATH = "/awconnect/tmp/mycroft_socket"
-
 EVENT_CREATE = "create-ap"
 EVENT_CREATED = "ap-created"
 EVENT_VISITED_PORTAL = "user-visited-portal"
@@ -20,14 +18,15 @@ class AwconnectClient:
     Messages are sent and received as lines of text over the socket.
     """
 
-    def __init__(self, bus: MessageBusClient):
+    def __init__(self, bus: MessageBusClient, socket_path: str):
         self.bus = bus
+        self.socket_path = socket_path
         self._socket: Optional[socket.socket] = None
 
     def start(self):
         # Connect to file-based socket
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._socket.connect(SOCKET_PATH)
+        self._socket.connect(self.socket_path)
 
         Thread(target=self._run, daemon=True).start()
 
