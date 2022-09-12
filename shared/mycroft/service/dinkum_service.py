@@ -83,9 +83,15 @@ class DinkumService(ABC):
         """Initialization logic called before start()"""
         self.config = Configuration.get()
 
-        level_str = self.config.get("log_level", "debug").upper()
+        level_str = self.config.get("log_level", "DEBUG").upper()
         level = logging.getLevelName(level_str)
-        logging.basicConfig(level=level)
+
+        log_format = self.config.get("log_format")
+        if log_format:
+            logging.basicConfig(level=level, format=log_format)
+        else:
+            logging.basicConfig(level=level)
+
         self.log.info("Starting service...")
 
         self._connect_to_bus()

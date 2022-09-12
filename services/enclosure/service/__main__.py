@@ -23,15 +23,6 @@ from mycroft_bus_client import Message
 
 from .connect_check import ConnectCheck
 
-IDLE_SKILL_ID = "homescreen.mark2"
-IDLE_OVERRIDE_SKILL_IDS = [
-    "timer.mark2",
-    "news.mark2",
-    "play-music.mark2",
-    "play-radio.mark2",
-    IDLE_SKILL_ID,
-]
-
 
 class EnclosureService(DinkumService):
     def __init__(self):
@@ -42,6 +33,11 @@ class EnclosureService(DinkumService):
         self._settings_downloader = RemoteSettingsDownloader()
 
     def start(self):
+        enclosure = self.config["enclosure"]
+        self._idle_display_skill = enclosure["idle_display_skill"]
+        self._idle_skill_overrides = enclosure["idle_skill_overrides"]
+        self._idle_skill_overrides.append(self._idle_display_skill)
+
         self._settings_downloader.initialize(self.bus)
 
         self.bus.on("mycroft.ready.get", self.handle_ready_get)
@@ -129,7 +125,7 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "thinking"}))
 
     def handle_session_started(self, message):
-        if message.data.get("skill_id") != IDLE_SKILL_ID:
+        if message.data.get("skill_id") != self._idle_display_skill:
             self.led_session_id = message.data.get("mycroft_session_id")
             self.bus.emit(
                 Message("mycroft.feedback.set-state", data={"state": "thinking"})
@@ -146,7 +142,7 @@ class EnclosureService(DinkumService):
         self.led_session_id = None
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
 
-        for skill_id in IDLE_OVERRIDE_SKILL_IDS:
+        for skill_id in self._idle_skill_overrides:
             response = self.bus.wait_for_response(
                 Message("mycroft.gui.handle-idle", data={"skill_id": skill_id})
             )
