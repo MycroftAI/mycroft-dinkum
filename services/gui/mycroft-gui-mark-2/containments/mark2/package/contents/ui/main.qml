@@ -148,8 +148,8 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            visible: panel.position < 0.05
-            enabled: panel.position < 0.05
+            visible: panel.position < 0.2
+            enabled: panel.position < 0.2
             color: Qt.rgba(0, 0, 0, 0)
             z: 10
 
