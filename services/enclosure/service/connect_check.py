@@ -23,6 +23,7 @@ from uuid import uuid4
 import requests
 import xdg.BaseDirectory
 from mycroft.api import DeviceApi, get_pantacor_device_id
+from mycroft.configuration import Configuration
 from mycroft.configuration.remote import (
     download_remote_settings,
     get_remote_settings_path,
@@ -108,9 +109,13 @@ class ConnectCheck(MycroftSkill):
     """
 
     def __init__(
-        self, bus: MessageBusClient, skill_settings_downloader: SkillSettingsDownloader
+        self,
+        bus: MessageBusClient,
+        config: Configuration,
+        skill_settings_downloader: SkillSettingsDownloader,
     ):
         super().__init__(skill_id="connect-check.mark2", name="ConnectCheck", bus=bus)
+        self.config = config
         self.skill_id = "connect-check.mark2"
         self.api = DeviceApi()
         self._skill_settings_downloader = skill_settings_downloader
@@ -237,7 +242,7 @@ class ConnectCheck(MycroftSkill):
             )
             try:
                 is_connected = requests.get(
-                    "http://start.mycroft.ai/portal-check.html",
+                    self.config["network_tests"]["internet_check_url"]
                 ).ok
                 if is_connected:
                     break
@@ -739,10 +744,11 @@ class ConnectCheck(MycroftSkill):
                 json.dump(remote_config, settings_file)
             self.log.debug("Wrote remote config: %s", settings_path)
 
-            # skills.json with installed skills
-            self.log.debug("Uploading skills manifest")
-            skills_manifest = get_skills_manifest()
-            api.upload_skills_data(skills_manifest)
+            if self.config["skills"]["upload_skill_manifest"]:
+                # skills.json with installed skills
+                self.log.debug("Uploading skills manifest")
+                skills_manifest = get_skills_manifest()
+                api.upload_skills_data(skills_manifest)
 
             # Individual skill settings
             self.log.debug("Downloading remote skill settings")

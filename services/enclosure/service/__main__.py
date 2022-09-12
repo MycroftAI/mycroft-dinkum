@@ -72,7 +72,9 @@ class EnclosureService(DinkumService):
         self._skill_settings_downloader = SkillSettingsDownloader(
             self.bus, remote_settings_path
         )
-        self._connect_check = ConnectCheck(self.bus, self._skill_settings_downloader)
+        self._connect_check = ConnectCheck(
+            self.bus, self.config, self._skill_settings_downloader
+        )
         self._connect_check.load_data_files()
         self._connect_check.initialize()
         self._connect_check.start()

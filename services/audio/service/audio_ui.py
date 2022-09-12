@@ -129,12 +129,6 @@ class AudioUserInterface:
                 start_listening
             )
 
-        end_listening = self.config["sounds"]["end_listening"]
-        self._end_listening_uri: Optional[str] = None
-
-        if end_listening:
-            self._end_listening_uri = "file://" + resolve_resource_file(end_listening)
-
         self._bg_position_timer = RepeatingTimer(1.0, self.send_stream_position)
         self._stream_session_id: Optional[str] = None
 
@@ -230,7 +224,9 @@ class AudioUserInterface:
 
     def _duck_volume(self):
         """Lower background stream volumes during voice commands"""
-        self._ahal.set_background_volume(0.3)
+        self._ahal.set_background_volume(
+            1.0 - self.config["listener"]["duck_while_listening"]
+        )
         LOG.info("Ducked volume")
 
     def _unduck_volume(self):
@@ -253,14 +249,11 @@ class AudioUserInterface:
         self._duck_volume()
         self._stop_tts()
 
-        if self._start_listening_uri:
+        if self._start_listening_uri and (self.config.get("confirm_listening", False)):
             self._play_effect(self._start_listening_uri)
 
     def handle_end_listening(self, _message):
         self._unduck_volume()
-
-        if self._end_listening_uri:
-            self._play_effect(self._end_listening_uri)
 
     def _play_effect(
         self,

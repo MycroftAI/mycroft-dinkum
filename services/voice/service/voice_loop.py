@@ -37,40 +37,6 @@ from .vad_command import VadCommand
 
 LOG = logging.getLogger("voice")
 
-AUDIO_DEVICE = "default"
-
-# Seconds to wait for an audio chunk before erroring out
-AUDIO_TIMEOUT = 5
-AUDIO_THREAD_RETRIES = 3
-AUDIO_THREAD_RETRY_SEC = 1
-
-# Bytes to read from microphone at a time
-AUDIO_CHUNK_SIZE = 4096
-
-AUDIO_LOUDNESS_FACTOR = 1.0
-"""Factor to multiply incoming audio by"""
-
-# Onnx model path for Silero VAD
-VAD_MODEL = Path(__file__).parent / "models" / "silero_vad.onnx"
-
-# Threshold for silence detection (end of STT voice command)
-VAD_THRESHOLD = 0.2
-
-# Number of audio chunks to store for saving hotword WAV examples
-HOTWORD_CHUNKS_TO_BUFFER = 15
-
-# Number of audio chunks to use before hotword activation for STT.
-# Increasing this number will start to include the end of the hotword in the STT
-# voice command.
-STT_CHUNKS_TO_BUFFER = 2
-
-# Number of empty audio chunks to prepend to STT audio.
-AUTO_SILENCE_CHUNKS = 5
-
-SAMPLE_RATE = 16000  # hertz
-SAMPLE_WIDTH = 2  # bytes
-SAMPLE_CHANNELS = 1
-
 
 class VoiceLoop:
     def __init__(
@@ -87,8 +53,26 @@ class VoiceLoop:
         self.vad = vad
         self.stt = stt
 
-        # TODO: Use config
-        self.command = VadCommand(speech_begin=0.3, silence_end=0.8, timeout=10.0)
+        # Load config values
+        listener = self.config["listener"]
+        self._device_name = listener["device_name"]
+        self._sample_rate = listener["sample_rate"]
+        self._sample_width = listener["sample_width"]
+        self._sample_channels = listener["sample_channels"]
+        self._multiplier = listener["multiplier"]
+        self._vad_threshold = listener["vad_threshold"]
+        self._chunk_size = listener["chunk_size"]
+        self._audio_silence_chunks = listener["audio_silence_chunks"]
+
+        self._audio_timeout = listener["audio_timeout"]
+        self._audio_retries = listener["audio_retries"]
+        self._audio_retry_delay = listener["audio_retry_delay"]
+
+        self.command = VadCommand(
+            speech_begin=listener["speech_begin"],
+            silence_end=listener["silence_end"],
+            timeout=listener["recording_timeout"],
+        )
 
         self.log = logging.getLogger("voice.loop")
 
@@ -111,19 +95,29 @@ class VoiceLoop:
         self.queue: "Queue[bytes]" = Queue()
 
         # Buffered audio that's used to store hotword samples
-        self.hotword_audio_chunks = deque(maxlen=HOTWORD_CHUNKS_TO_BUFFER)
+        self.hotword_audio_chunks = deque(maxlen=listener["wakeword_chunks_to_save"])
+
+        save_path = listener.get("save_path")
 
         # Directory to cache hotword recordings
-        self.hotword_audio_dir = Path(get_cache_directory("hotword_recordings"))
+        if save_path:
+            self.hotword_audio_dir = Path(save_path) / "mycroft_wake_words"
+        else:
+            self.hotword_audio_dir = Path(get_cache_directory("mycroft_wake_words"))
+        self.hotword_audio_dir.mkdir(parents=True, exist_ok=True)
 
         # Buffered audio that's sent to STT after wake
-        self.stt_audio_chunks = deque(maxlen=STT_CHUNKS_TO_BUFFER)
+        self.stt_audio_chunks = deque(maxlen=listener["utterance_chunks_to_rewind"])
 
         # Contains the audio from the last spoken voice command
         self.stt_audio = bytes()
 
         # Directory to cache STT recordings
-        self.stt_audio_dir = Path(get_cache_directory("stt_recordings"))
+        if save_path:
+            self.stt_audio_dir = Path(save_path) / "mycroft_utterances"
+        else:
+            self.stt_audio_dir = Path(get_cache_directory("mycroft_utterances"))
+        self.stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
         # Thread recording audio chunks
         self._audio_input_running = False
@@ -149,7 +143,7 @@ class VoiceLoop:
 
     def run(self):
         while True:
-            chunk = self.queue.get(timeout=AUDIO_TIMEOUT)
+            chunk = self.queue.get(timeout=self._audio_timeout)
             assert chunk, "Empty audio chunk"
 
             if self.muted:
@@ -174,8 +168,10 @@ class VoiceLoop:
                 if hotword_detected:
                     self.log.info("Hotword detected!")
 
-                    # Save audio example
-                    self._save_hotword_audio()
+                    if self.config["listener"]["record_wake_words"]:
+                        # Save audio example
+                        self._save_hotword_audio()
+
                     self.hotword_audio_chunks.clear()
 
                     # Wake up
@@ -189,14 +185,14 @@ class VoiceLoop:
                 self.stt_audio += chunk
                 seconds = _chunk_seconds(
                     len(chunk),
-                    sample_rate=SAMPLE_RATE,
-                    sample_width=SAMPLE_WIDTH,
-                    channels=SAMPLE_CHANNELS,
+                    sample_rate=self._sample_rate,
+                    sample_width=self._sample_width,
+                    channels=self._sample_channels,
                 )
 
                 # Check for end of voice command
                 chunk_array = np.frombuffer(chunk, dtype=np.int16)
-                is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
+                is_speech = self.vad(chunk_array) >= self._vad_threshold
                 if self.command.process(is_speech, seconds):
                     self.is_recording = False
                     text = self.stt.stop() or ""
@@ -226,7 +222,8 @@ class VoiceLoop:
                             Message("recognizer_loop:speech.recognition.unknown")
                         )
 
-                    self._save_stt_audio()
+                    if self.config["listener"]["save_utterances"]:
+                        self._save_stt_audio()
 
     def do_listen(self):
         if self.muted:
@@ -268,21 +265,21 @@ class VoiceLoop:
 
         # Push audio buffer into STT
         buffered_chunks = [
-            [bytes(AUDIO_CHUNK_SIZE)] * AUTO_SILENCE_CHUNKS,
+            [bytes(self._chunk_size)] * self._audio_silence_chunks,
             self.stt_audio_chunks,
         ]
         for buffered_chunk in itertools.chain.from_iterable(buffered_chunks):
             seconds = _chunk_seconds(
                 len(buffered_chunk),
-                sample_rate=SAMPLE_RATE,
-                sample_width=SAMPLE_WIDTH,
-                channels=SAMPLE_CHANNELS,
+                sample_rate=self._sample_rate,
+                sample_width=self._sample_width,
+                channels=self._sample_channels,
             )
 
             self.stt.update(buffered_chunk)
             self.stt_audio += buffered_chunk
             chunk_array = np.frombuffer(buffered_chunk, dtype=np.int16)
-            is_speech = self.vad(chunk_array) >= VAD_THRESHOLD
+            is_speech = self.vad(chunk_array) >= self._vad_threshold
             self.command.process(is_speech, seconds)
 
         self.stt_audio_chunks.clear()
@@ -303,9 +300,9 @@ class VoiceLoop:
         try:
             wav_path = self.hotword_audio_dir / f"{time.monotonic_ns()}.wav"
             with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
-                wav_file.setframerate(SAMPLE_RATE)
-                wav_file.setsampwidth(SAMPLE_WIDTH)
-                wav_file.setnchannels(SAMPLE_CHANNELS)
+                wav_file.setframerate(self._sample_rate)
+                wav_file.setsampwidth(self._sample_width)
+                wav_file.setnchannels(self._sample_channels)
 
                 for chunk in self.hotword_audio_chunks:
                     wav_file.writeframes(chunk)
@@ -318,9 +315,9 @@ class VoiceLoop:
         try:
             wav_path = self.stt_audio_dir / f"{time.monotonic_ns()}.wav"
             with open(wav_path, "wb") as wav_io, wave.open(wav_io, "wb") as wav_file:
-                wav_file.setframerate(SAMPLE_RATE)
-                wav_file.setsampwidth(SAMPLE_WIDTH)
-                wav_file.setnchannels(SAMPLE_CHANNELS)
+                wav_file.setframerate(self._sample_rate)
+                wav_file.setsampwidth(self._sample_width)
+                wav_file.setnchannels(self._sample_channels)
                 wav_file.writeframes(self.stt_audio)
 
             self.log.debug("Wrote %s", wav_path)
@@ -328,18 +325,18 @@ class VoiceLoop:
             self.log.exception("Error while saving STT audio")
 
     def _audio_input(self):
-        for _ in range(AUDIO_THREAD_RETRIES):
+        for _ in range(self._audio_retries):
             try:
                 # TODO: Use config
                 mic = alsaaudio.PCM(
                     type=alsaaudio.PCM_CAPTURE,
-                    rate=SAMPLE_RATE,
-                    channels=SAMPLE_CHANNELS,
+                    rate=self._sample_rate,
+                    channels=self._sample_channels,
                     format=alsaaudio.PCM_FORMAT_S32_LE
-                    if SAMPLE_WIDTH == 4
+                    if self._sample_width == 4
                     else alsaaudio.PCM_FORMAT_S16_LE,
-                    device=AUDIO_DEVICE,
-                    periodsize=AUDIO_CHUNK_SIZE // SAMPLE_WIDTH,
+                    device=self._device_name,
+                    periodsize=self._chunk_size // self._sample_width,
                 )
                 try:
                     while self._audio_input_running:
@@ -349,9 +346,9 @@ class VoiceLoop:
                             continue
 
                         # Increase loudness of audio
-                        if AUDIO_LOUDNESS_FACTOR != 1.0:
+                        if self._multiplier != 1.0:
                             chunk = audioop.mul(
-                                chunk, SAMPLE_WIDTH, AUDIO_LOUDNESS_FACTOR
+                                chunk, self._sample_width, self._multiplier
                             )
 
                         self.queue.put_nowait(chunk)
@@ -363,8 +360,8 @@ class VoiceLoop:
             if not self._audio_input_running:
                 break
 
-            LOG.debug("Retrying audio input in %s second(s)", AUDIO_THREAD_RETRY_SEC)
-            time.sleep(AUDIO_THREAD_RETRY_SEC)
+            LOG.debug("Retrying audio input in %s second(s)", self._audio_retry_delay)
+            time.sleep(self._audio_retry_delay)
 
 
 def load_hotword_module(config: Dict[str, Any]) -> HotWordEngine:
@@ -398,8 +395,8 @@ def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingS
     return stt
 
 
-def load_vad_detector() -> SileroVoiceActivityDetector:
-    return SileroVoiceActivityDetector(str(VAD_MODEL))
+def load_vad_detector(model_path: str) -> SileroVoiceActivityDetector:
+    return SileroVoiceActivityDetector(model_path)
 
 
 def _chunk_seconds(

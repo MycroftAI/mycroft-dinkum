@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 from mycroft.service import DinkumService
+from mycroft.util.file_utils import resolve_resource_file
 
 from .voice_loop import (
     VoiceLoop,
@@ -67,7 +68,9 @@ class VoiceService(DinkumService):
 
     def start(self):
         self.hotword = load_hotword_module(self.config)
-        self.vad = load_vad_detector()
+        self.vad = load_vad_detector(
+            resolve_resource_file(self.config["listener"]["vad_model"])
+        )
         self.stt = load_stt_module(self.config, self.bus)
 
         self.voice_loop = VoiceLoop(
