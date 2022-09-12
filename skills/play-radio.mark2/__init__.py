@@ -134,9 +134,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             # self.gui["status"] = new_status
             self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
 
-    def handle_media_finished(self, _):
+    def handle_media_finished(self, message):
         """Handle media playback finishing."""
-        self.log.warning("RadioMediaFinished! should never get here!")
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self.log.warning("RadioMediaFinished! should never get here!")
 
     def handle_media_playing(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")

@@ -47,6 +47,7 @@ class NewsSkill(CommonPlaySkill):
         )
         self.add_event("mycroft.audio.service.playing", self.handle_media_playing)
         self.add_event("mycroft.audio.service.stopped", self.handle_media_stopped)
+        self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
 
     def load_alternate_station_names(self) -> dict:
         """Load the list of alternate station names from alt.feed.name.value
@@ -92,6 +93,20 @@ class NewsSkill(CommonPlaySkill):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             self.now_playing = None
+
+    def handle_media_finished(self, message):
+        """Handle media playback finishing."""
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id == self._stream_session_id:
+            self.bus.emit(
+                Message(
+                    "mycroft.audio.service.stop",
+                    data={"mycroft_session_id": self._stream_session_id},
+                )
+            )
+            self._stream_session_id = None
+            self.now_playing = None
+            self.bus.emit(Message("mycroft.gui.idle"))
 
     def handle_audioservice_status_change(self, message):
         """Handle changes in playback status from the Audioservice.
