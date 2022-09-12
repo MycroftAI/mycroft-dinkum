@@ -77,11 +77,6 @@ def match_station_from_utterance(skill, utterance):
     match = Match(None, 0.0)
 
     utterance = utterance.lower().strip()
-    # Remove articles like "the" as it matches too well with "other"
-    word_list = utterance.split(" ")
-    if "the" in word_list:
-        word_list.remove("the")
-    utterance = " ".join(word_list)
 
     # If news vocab does exist, provide a minimum default confidence
     default_station = skill.get_default_station()
@@ -92,6 +87,12 @@ def match_station_from_utterance(skill, utterance):
     if utterance in news_phrases:
         LOG.debug("Explicit phrase without specific station detected.")
         return Match(default_station, 1.0)
+
+    # Remove articles like "the" as it matches too well with "other"
+    word_list = utterance.split(" ")
+    if "the" in word_list:
+        word_list.remove("the")
+    utterance = " ".join(word_list)
 
     # Test against each station to find the best match.
     news_keyword = skill.translate("OnlyNews").lower()
