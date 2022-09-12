@@ -25,27 +25,28 @@ If no type of radio station is specified, it returns
 a station based on a random choice weighted by the
 station count of the tags plus some other things.
 """
-from collections import namedtuple
 import random
-import requests
 import re
+from collections import namedtuple
 from typing import Optional, Tuple
 
+import requests
 from mycroft.skills.common_play_skill import CommonPlaySkill
-
 from pyradios.base_url import fetch_hosts
-
 
 EXACT_MATCH_CONFIDENCE = 0.5
 PARTIAL_MATCH_CONFIDENCE = 0.1
 
+
 class GetHostError(Exception):
     """Can't find any hosts from pyradio"""
+
     pass
 
 
 class GetGenreTagsError(Exception):
     """Can't get genre tags from Radio Browser"""
+
     pass
 
 
@@ -94,9 +95,16 @@ class MycroftRadio(CommonPlaySkill):
         # There are many "genre" tags which are actually specific to one station.
         # First make a list of lists to simplify.
         self.genre_tags = [
-            {"name": genre["name"].lower, "stationcount": genre["stationcount"], genre["rank"]: rank}
+            {
+                "name": genre["name"].lower,
+                "stationcount": genre["stationcount"],
+                genre["rank"]: rank,
+            }
             for rank, genre in enumerate(self.genre_tags_response)
-            if genre["name"] and genre["stationcount"] and genre["stationcount"] > 0 and genre["name"] not in self.genre_stop_words
+            if genre["name"]
+            and genre["stationcount"]
+            and genre["stationcount"] > 0
+            and genre["name"] not in self.genre_stop_words
         ]
         if not self.genre_tags:
             raise GetGenreTagsError
@@ -106,10 +114,13 @@ class MycroftRadio(CommonPlaySkill):
 
     def get_confidence(self, utterance: str) -> float:
         utterance = utterance.lower()
-        self.exact_genre_match, self.partial_genre_matches = self.get_genre_matches(utterance)
+        self.exact_genre_match, self.partial_genre_matches = self.get_genre_matches(
+            utterance
+        )
         return min(
-            (self.exact_genre_match * EXACT_MATCH_CONFIDENCE) + (len(self.partial_genre_matches) * PARTIAL_MATCH_CONFIDENCE),
-            1
+            (self.exact_genre_match * EXACT_MATCH_CONFIDENCE)
+            + (len(self.partial_genre_matches) * PARTIAL_MATCH_CONFIDENCE),
+            1,
         )
 
     def get_genre_matches(self, utterance: str) -> Optional[Tuple[dict, list]]:
@@ -150,36 +161,28 @@ class MycroftRadio(CommonPlaySkill):
         self.stations = self.query_server(endpoint)
         self.station_index = 0
         return self.stations[0]
-    
+
     def get_next_station(self):
         self.station_index = wrap_around(
-            self.station_index,
-            self.stations,
-            ascending=True
+            self.station_index, self.stations, ascending=True
         )
         return self.stations[self.station_index]
-    
+
     def get_previous_station(self):
         self.station_index = wrap_around(
-            self.station_index,
-            self.stations,
-            ascending=False
+            self.station_index, self.stations, ascending=False
         )
         return self.stations[self.station_index]
-    
+
     def get_next_genre(self):
         self.genre_index = wrap_around(
-            self.most_recent_genre_match["rank"],
-            self.genre_tags,
-            ascending=True
+            self.most_recent_genre_match["rank"], self.genre_tags, ascending=True
         )
         return self.genre_tags[self.genre_index]
-    
+
     def get_previous_genre(self):
         self.genre_index = wrap_around(
-            self.most_recent_genre_match["rank"],
-            self.genre_tags,
-            ascending=False
+            self.most_recent_genre_match["rank"], self.genre_tags, ascending=False
         )
         return self.genre_tags[self.genre_index]
 
@@ -213,6 +216,7 @@ class MycroftRadio(CommonPlaySkill):
 
 # Helper functions.
 
+
 def wrap_around(index: int, collection: list, ascending: bool):
     if ascending:
         if index >= len(collection):
@@ -225,6 +229,7 @@ def wrap_around(index: int, collection: list, ascending: bool):
         else:
             index -= 1
     return index
+
 
 class RadioGenre:
     """
@@ -270,12 +275,11 @@ RadioStation = namedtuple(
         "geo_lat",
         "geo_long",
         "has_extended_info",
-    ]
+    ],
 )
 
 
 class RadioStation:
-
     def __init__(self):
         changeuuid
         stationuuid
@@ -311,5 +315,3 @@ class RadioStation:
         geo_lat
         geo_long
         has_extended_info
-
-

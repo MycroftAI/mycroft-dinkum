@@ -19,7 +19,6 @@ processes. It implements a websocket server so can also be used by external
 systems to integrate with the Mycroft system.
 """
 import logging
-import sys
 import time
 from threading import Thread
 

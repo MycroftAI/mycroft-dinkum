@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import threading
 import time
 from dataclasses import dataclass
 from enum import IntEnum
@@ -121,6 +120,7 @@ class AudioUserInterface:
             audio_sample_rate=EFFECT_SAMPLE_RATE, audio_channels=EFFECT_CHANNELS
         )
 
+        # Sounds
         start_listening = self.config["sounds"]["start_listening"]
         self._start_listening_uri: Optional[str] = None
 
@@ -128,6 +128,12 @@ class AudioUserInterface:
             self._start_listening_uri = "file://" + resolve_resource_file(
                 start_listening
             )
+
+        end_listening = self.config["sounds"]["end_listening"]
+        self._end_listening_uri: Optional[str] = None
+
+        if end_listening:
+            self._end_listening_uri = "file://" + resolve_resource_file(end_listening)
 
         self._bg_position_timer = RepeatingTimer(1.0, self.send_stream_position)
         self._stream_session_id: Optional[str] = None
@@ -252,6 +258,9 @@ class AudioUserInterface:
 
     def handle_end_listening(self, _message):
         self._unduck_volume()
+
+        if self._end_listening_uri:
+            self._play_effect(self._end_listening_uri)
 
     def _play_effect(
         self,

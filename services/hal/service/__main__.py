@@ -85,7 +85,7 @@ class HalService(DinkumService):
         self._switch_client = Mark2SwitchClient(self.bus)
         self._switch_client.start()
 
-        self._volume_client = Mark2VolumeClient(self.bus)
+        self._volume_client = Mark2VolumeClient(self.bus, self.config)
         self._volume_client.start()
 
     def stop(self):

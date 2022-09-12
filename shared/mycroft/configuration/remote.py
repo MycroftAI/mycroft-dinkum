@@ -16,13 +16,12 @@ import json
 import re
 from pathlib import Path
 from threading import Timer
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 import xdg.BaseDirectory
-from mycroft_bus_client import Message, MessageBusClient
 from mycroft.util.log import LOG
 from mycroft.util.string_utils import camel_case_split
-
+from mycroft_bus_client import Message, MessageBusClient
 
 ONE_MINUTE = 60
 
@@ -111,6 +110,7 @@ class RemoteSettingsDownloader:
         self.bus: Optional[MessageBusClient] = None
 
         from mycroft.api import DeviceApi
+
         self.api = DeviceApi()
 
     def initialize(self, bus: MessageBusClient):

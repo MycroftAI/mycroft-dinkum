@@ -14,7 +14,7 @@
 #
 import argparse
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, List
 
 from lingua_franca import load_languages
 from mycroft.service import DinkumService

@@ -16,6 +16,7 @@ import logging
 import subprocess
 from typing import Optional
 
+from mycroft.configuration import Configuration
 from mycroft.util.file_utils import resolve_resource_file
 from mycroft_bus_client import Message, MessageBusClient
 
@@ -23,14 +24,15 @@ from mycroft_bus_client import Message, MessageBusClient
 class Mark2VolumeClient:
     """Sets/gets the volume"""
 
-    def __init__(self, bus: MessageBusClient):
+    def __init__(self, bus: MessageBusClient, config: Configuration):
         self.bus = bus
+        self.config = config
         self.log = logging.getLogger("hal.volume")
 
         self._beep_uri: Optional[str] = None
-        beep = resolve_resource_file("snd/beep.wav")
+        beep = self.config["sounds"]["volume_change"]
         if beep:
-            self._beep_uri = f"file://{beep}"
+            self._beep_uri = "file://" + resolve_resource_file(beep)
 
         self._volume_min: int = 0
         self._volume_max: int = 100

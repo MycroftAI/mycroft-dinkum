@@ -13,12 +13,11 @@
 # limitations under the License.
 
 import random
-import requests
 import re
 from typing import Optional
 
+import requests
 from mycroft.util.log import LOG
-
 from pyradios.base_url import fetch_hosts
 
 # The maximum length for strings to be displayed in the UI.
@@ -93,6 +92,7 @@ GENRE_FILTER = [
     "musica romantica",
     "música popular mexican",
 ]
+
 
 def sort_on_vpc(k):
     return k["votes_plus_clicks"]
@@ -200,10 +200,10 @@ class RadioStations:
             ]
 
             # Genre tags which have the "noise words", i.e. stop words like "radio"
-            # and "music" will mess things up and usually aren't proper genres 
+            # and "music" will mess things up and usually aren't proper genres
             # anyway so for now we will filter out tags with these words in them.
             self.genre_tags = filter(self.check_genres, self.genre_tags)
-            
+
             # Then split the lists. This will make things easier downstream
             # when we use station count to weight a random choice operation.
             self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
@@ -348,7 +348,8 @@ class RadioStations:
         genre_and_weights = zip(self.genre_tags, self.genre_weights)
         # For general radio we want to remove very obscure tags and also
         filtered_tags = [
-            genre_weight for genre_weight in genre_and_weights
+            genre_weight
+            for genre_weight in genre_and_weights
             if genre_weight[0] not in GENRE_FILTER
             and "musica" not in genre_weight[0]
             and "mexico" not in genre_weight[0]
@@ -459,7 +460,6 @@ class RadioStations:
         else:
             index += 1
             return index
- 
 
     def get_next_channel(self):
         # To get the right genre we need to know which index we are on.

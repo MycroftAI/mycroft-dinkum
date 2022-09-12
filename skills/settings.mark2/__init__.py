@@ -18,7 +18,6 @@ from mycroft.messagebus.message import Message
 from mycroft.skills import GuiClear, MycroftSkill
 
 from .skill.device_id import get_device_name
-
 from .skill.versions import get_mycroft_build_datetime
 
 

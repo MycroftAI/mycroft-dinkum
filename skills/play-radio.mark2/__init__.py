@@ -21,7 +21,7 @@ from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
 
-from .RadioStations import RadioStations, GenreTagNotFound
+from .RadioStations import GenreTagNotFound, RadioStations
 
 # Minimum confidence levels
 CONF_EXACT_MATCH = 0.9

@@ -15,8 +15,8 @@
 import json
 import time
 from enum import Enum, auto
-from pathlib import Path
 from http import HTTPStatus
+from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 

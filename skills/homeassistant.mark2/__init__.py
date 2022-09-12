@@ -4,7 +4,7 @@ Home Assistant skill
 from typing import Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.skills import MycroftSkill, intent_handler
+from mycroft.skills import MycroftSkill
 from mycroft.util.format import nice_number
 from quantulum3 import parser
 
