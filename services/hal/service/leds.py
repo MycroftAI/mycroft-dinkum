@@ -16,7 +16,7 @@ import itertools
 import logging
 import subprocess
 import time
-from threading import Thread
+from threading import Thread, Timer
 from typing import List, Optional, Tuple
 
 from mycroft_bus_client import Message, MessageBusClient
@@ -82,6 +82,9 @@ class Mark2LedClient:
             self.awake()
         elif state == "thinking":
             self.thinking()
+        elif state.startswith("volume_"):
+            volume_10 = int(state.split("_", maxsplit=1)[-1])
+            self.volume(volume_10)
 
     def _handle_set_state(self, message: Message):
         state = message.data.get("state")
@@ -115,14 +118,35 @@ class Mark2LedClient:
         self.fill(color.BLACK)
         self.show()
 
-    def asleep(self, _message=None):
+    def asleep(self):
         self._animation = Solid(self, color=self._asleep_color)
 
-    def awake(self, _message=None):
+    def awake(self):
         self._animation = Pulse(self, speed=0.05, color=MycroftColor.GREEN, period=2)
 
-    def thinking(self, _message=None):
+    def thinking(self):
         self._animation = RainbowComet(self, speed=0.1, ring=True)
+
+    def volume(self, volume_10: int):
+        self._animation = None
+        leds_on = max(0, min(NUM_LEDS, volume_10))
+        for i in range(NUM_LEDS):
+            if i < leds_on:
+                self[i] = MycroftColor.BLUE
+            else:
+                # Black
+                self[i] = color.BLACK
+
+        self.show()
+
+        def go_to_sleep():
+            if self._state == f"volume_{volume_10}":
+                self.bus.emit(
+                    Message("mycroft.feedback.set-state", data={"state": "asleep"})
+                )
+
+        # Go back to sleep after a few seconds
+        Timer(5.0, go_to_sleep).start()
 
     # Pixel object
     def __len__(self):

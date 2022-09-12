@@ -38,6 +38,7 @@ class Mark2VolumeClient:
         self._volume_max: int = 100
         self._volume_step: int = 10
         self._current_volume: int = 60
+        self._norm_volume = 0.6
         self._volume_before_mute: int = self._current_volume
 
     @property
@@ -62,6 +63,16 @@ class Mark2VolumeClient:
                     self.set_volume(self._current_volume + self._volume_step)
                 else:
                     self.set_volume(self._current_volume - self._volume_step)
+
+                volume_10 = int(self._norm_volume * 10)
+                self.bus.emit(
+                    Message(
+                        "mycroft.feedback.set-state",
+                        data={
+                            "state": f"volume_{volume_10}",
+                        },
+                    )
+                )
 
                 if self._beep_uri:
                     # Play short beep
@@ -121,10 +132,11 @@ class Mark2VolumeClient:
             self.log.debug("Volume set to %s", volume)
 
             # Normalize to [0, 1]
-            norm_volume = volume / (self._volume_max - self._volume_min)
+            self._norm_volume = volume / (self._volume_max - self._volume_min)
             self.bus.emit(
                 Message(
-                    "hardware.volume", data={"volume": norm_volume, "no_osd": no_osd}
+                    "hardware.volume",
+                    data={"volume": self._norm_volume, "no_osd": no_osd},
                 )
             )
         except Exception:
