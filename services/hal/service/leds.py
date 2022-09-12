@@ -18,6 +18,7 @@ import subprocess
 import time
 from threading import Thread, Timer
 from typing import List, Optional, Tuple
+from uuid import uuid4
 
 from mycroft_bus_client import Message, MessageBusClient
 
@@ -61,6 +62,7 @@ class Mark2LedClient:
         self._brightness: int = MAX_BRIGHTNESS
 
         self._state: Optional[str] = None
+        self._state_guid: Optional[str] = None
 
     def start(self):
         self._state: str = "asleep"
@@ -75,6 +77,7 @@ class Mark2LedClient:
 
     def _set_state(self, state: Optional[str]):
         self._state = state
+        self._state_guid = str(uuid4())
 
         if state == "asleep":
             self.asleep()
@@ -129,6 +132,7 @@ class Mark2LedClient:
 
     def volume(self, volume_10: int):
         self._animation = None
+        volume_guid = self._state_guid
         leds_on = max(0, min(NUM_LEDS, volume_10))
         for i in range(NUM_LEDS):
             if i < leds_on:
@@ -140,7 +144,7 @@ class Mark2LedClient:
         self.show()
 
         def go_to_sleep():
-            if self._state == f"volume_{volume_10}":
+            if self._state_guid == volume_guid:
                 self.bus.emit(
                     Message("mycroft.feedback.set-state", data={"state": "asleep"})
                 )
