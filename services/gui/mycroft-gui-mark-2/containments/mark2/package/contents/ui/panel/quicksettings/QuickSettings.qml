@@ -62,9 +62,7 @@ GridLayout {
         readonly property int delegateSize: Math.min(maximumDelegateSize, Math.max(minimumDelegateSize, dynamicDelegateSize))
 
         HomeDelegate {}
-        WirelessDelegate {
-	    enabled: false
-	}
+        MicrophoneDelegate {}
         Delegate {
             visible: plasmoid.configuration.showRotationButton
             iconSource: "image-rotate-symbolic"
