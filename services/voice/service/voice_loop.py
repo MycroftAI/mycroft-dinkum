@@ -123,9 +123,11 @@ class VoiceLoop:
         self._audio_input_running = False
         self._audio_input_thread: Optional[Thread] = None
 
+        # True if diagnostic events should be sent out
+        self._diagnostics_enabled = False
+
     def start(self):
-        # Start arecord in separate thread
-        # TODO: Use configurable command
+        # Record audio in a separate thread to avoid overruns
         self._audio_input_running = True
         self._audio_input_thread = Thread(target=self._audio_input, daemon=True)
         self._audio_input_thread.start()
@@ -133,6 +135,7 @@ class VoiceLoop:
         self.bus.on("mycroft.mic.mute", self.handle_mute)
         self.bus.on("mycroft.mic.unmute", self.handle_unmute)
         self.bus.on("mycroft.mic.listen", self.handle_listen)
+        self.bus.on("mycroft.mic.set-diagnostics", self.handle_set_diagnostics)
 
     def stop(self):
         """Gracefully"""
@@ -150,10 +153,24 @@ class VoiceLoop:
                 self.stt_audio_chunks.clear()
                 chunk = bytes(len(chunk))
 
+            is_speech: Optional[bool] = None
+            diagnostics: Optional[Dict[str, Any]] = None
+            if self._diagnostics_enabled:
+                vad_probability = self.vad(np.frombuffer(chunk, dtype=np.int16)).item()
+                is_speech = vad_probability >= self._vad_threshold
+                diagnostics = {
+                    "vad_probability": vad_probability,
+                    "is_speech": is_speech,
+                }
+
             self.stt_audio_chunks.append(chunk)
             if not self.is_recording:
                 self.hotword_audio_chunks.append(chunk)
                 self.hotword.update(chunk)
+
+                if (diagnostics is not None) and hasattr(self.hotword, "probability"):
+                    diagnostics["hotword_probability"] = self.hotword.probability
+
                 if self.listen_once:
                     # Fake detection for get_response
                     self.listen_once = False
@@ -178,7 +195,8 @@ class VoiceLoop:
                     self.do_listen()
 
                     # Reset state of hotword
-                    self.hotword.reset()
+                    if hasattr(self.hotword, "reset"):
+                        self.hotword.reset()
             else:
                 # In voice command
                 self.stt.update(chunk)
@@ -191,8 +209,12 @@ class VoiceLoop:
                 )
 
                 # Check for end of voice command
-                chunk_array = np.frombuffer(chunk, dtype=np.int16)
-                is_speech = self.vad(chunk_array) >= self._vad_threshold
+                if is_speech is None:
+                    is_speech = (
+                        self.vad(np.frombuffer(chunk, dtype=np.int16))
+                        >= self._vad_threshold
+                    )
+
                 if self.command.process(is_speech, seconds):
                     self.is_recording = False
                     text = self.stt.stop() or ""
@@ -224,6 +246,9 @@ class VoiceLoop:
 
                     if self.config["listener"]["save_utterances"]:
                         self._save_stt_audio()
+
+            if diagnostics is not None:
+                self.bus.emit(Message("mycroft.mic.diagnostics", data=diagnostics))
 
     def do_listen(self):
         if self.muted:
@@ -278,8 +303,10 @@ class VoiceLoop:
 
             self.stt.update(buffered_chunk)
             self.stt_audio += buffered_chunk
-            chunk_array = np.frombuffer(buffered_chunk, dtype=np.int16)
-            is_speech = self.vad(chunk_array) >= self._vad_threshold
+            is_speech = (
+                self.vad(np.frombuffer(buffered_chunk, dtype=np.int16))
+                >= self._vad_threshold
+            )
             self.command.process(is_speech, seconds)
 
         self.stt_audio_chunks.clear()
@@ -295,6 +322,10 @@ class VoiceLoop:
     def handle_listen(self, message):
         self.mycroft_session_id = message.data.get("mycroft_session_id")
         self.listen_once = True
+
+    def handle_set_diagnostics(self, message):
+        self._diagnostics_enabled = message.data.get("enabled", True)
+        self.log.debug("Diagnostics: enabled=%s", self._diagnostics_enabled)
 
     def _save_hotword_audio(self):
         try:

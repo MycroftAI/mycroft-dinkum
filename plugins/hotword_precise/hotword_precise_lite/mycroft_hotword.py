@@ -84,6 +84,9 @@ class TFLiteHotWordEngine(HotWordEngine):
         # so we'll load the model here.
         self._load_model()
 
+        # Last probability
+        self._probability: Optional[float] = None
+
     def _load_model(self):
         _log.debug("Loading model from %s", self.model_path)
         self._interpreter = tflite.Interpreter(model_path=str(self.model_path))
@@ -105,6 +108,7 @@ class TFLiteHotWordEngine(HotWordEngine):
     def update(self, chunk):
         self._is_found = False
         self._chunk_buffer += chunk
+        self._probability = None
 
         if len(self._chunk_buffer) < self._window_bytes:
             # Need a full window of audio first
@@ -156,6 +160,8 @@ class TFLiteHotWordEngine(HotWordEngine):
             # Not seeing these currently, so ignoring.
             return False
 
+        self._probability = prob.item()
+
         # Decode
         activated = prob > 1.0 - self.sensitivity
         triggered = False
@@ -174,6 +180,9 @@ class TFLiteHotWordEngine(HotWordEngine):
         if triggered:
             self._is_found = True
             _log.debug("Triggered")
+            return True
+
+        return False
 
     def found_wake_word(self, frame_data):
         return self._is_found
@@ -182,3 +191,7 @@ class TFLiteHotWordEngine(HotWordEngine):
         self._inputs = np.zeros(
             (1, self._params.n_features, self._params.n_mfcc), dtype=np.float32
         )
+
+    @property
+    def probability(self) -> Optional[float]:
+        return self._probability
