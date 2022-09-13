@@ -161,6 +161,7 @@ class VoiceLoop:
                 diagnostics = {
                     "vad_probability": vad_probability,
                     "is_speech": is_speech,
+                    "energy": _debiased_energy(chunk, self._sample_width),
                 }
 
             self.stt_audio_chunks.append(chunk)
@@ -438,3 +439,19 @@ def _chunk_seconds(
     seconds = num_samples / sample_rate
 
     return seconds
+
+
+def _debiased_energy(audio_data: bytes, sample_width: int) -> float:
+    """Compute RMS of debiased audio."""
+    # Thanks to the speech_recognition library!
+    # https://github.com/Uberi/speech_recognition/blob/master/speech_recognition/__init__.py
+    energy = -audioop.rms(audio_data, sample_width)
+    energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
+    debiased_energy = audioop.rms(
+        audioop.add(
+            audio_data, energy_bytes * (len(audio_data) // sample_width), sample_width
+        ),
+        sample_width,
+    )
+
+    return debiased_energy

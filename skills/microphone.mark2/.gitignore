@@ -1,0 +1,5 @@
+*.pyc
+settings.json
+.vscode
+*.qmlc
+.wh.*
