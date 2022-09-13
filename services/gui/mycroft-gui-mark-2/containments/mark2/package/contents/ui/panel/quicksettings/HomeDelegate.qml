@@ -22,7 +22,7 @@ import Mycroft 1.0 as Mycroft
 
 Delegate {
     iconSource: Qt.resolvedUrl("./go-home.svg")
-    text: i18n("Standby Face")
+    text: i18n("Show Homescreen")
     onClicked: {
         Mycroft.MycroftController.sendRequest("mycroft.gui.idle", {});
         for(var i in plasmoid.nativeInterface) {
