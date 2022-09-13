@@ -52,9 +52,9 @@ class BaseStation(ABC):
         Note that this currently traverses the path from this file and may
         break if this is moved in the file hierarchy.
         """
-        if self.image_file is None:
-            return None
         skill_path = Path(__file__).parent.parent.absolute()
+        if self.image_file is None:
+            return Path(skill_path, "images", "generic.png")
         file_path = Path(skill_path, "images", self.image_file)
         if not file_path.exists():
             LOG.warning(f"{self.image_file} could not be found, using default image")
@@ -181,7 +181,7 @@ def create_custom_station(station_url):
 # They can be added to the list of country defaults below.
 
 stations = dict(
-    ABC=FetcherStation("ABC", "ABC News Australia", get_abc_url, "ABC.png", "#4B555C"),
+    # ABC=FetcherStation("ABC", "ABC News Australia", get_abc_url, "ABC.png", "#4B555C"),
     AP=RSSStation(
         "AP",
         "AP Hourly Radio News",
@@ -209,9 +209,9 @@ stations = dict(
         "https://www.deutschlandfunk.de/podcast-nachrichten.1257.de.podcast.xml",
         "DLF.png",
     ),
-    Ekot=RSSStation(
-        "Ekot", "Ekot", "https://api.sr.se/api/rss/pod/3795", "Ekot.png", "#0065BD"
-    ),
+    # Ekot=RSSStation(
+    #     "Ekot", "Ekot", "https://api.sr.se/api/rss/pod/3795", "Ekot.png", "#0065BD"
+    # ),
     FOX=RSSStation(
         "FOX",
         "Fox News",
@@ -220,7 +220,7 @@ stations = dict(
         "#22438D",
     ),
     FT=FetcherStation("FT", "Financial Times", get_ft_url, "FT.png", "#ffcc99"),
-    GPB=FetcherStation("GPB", "Georgia Public Radio", get_gpb_url, None),
+    # GPB=FetcherStation("GPB", "Georgia Public Radio", get_gpb_url, None),
     NPR=RSSStation(
         "NPR",
         "NPR News Now",
@@ -273,14 +273,14 @@ stations = dict(
 
 country_defaults = dict(
     AT="OE3",
-    AU="ABC",
+    # AU="ABC",
     BE="VRT",
     CA="CBC",
     DE="DLF",
     ES="RNE",
     FI="YLE",
     PT="TSF",
-    SE="Ekot",
+    # SE="Ekot",
     UK="BBC",
     US="NPR",
 )
