@@ -85,6 +85,11 @@ class VoiceLoop:
         # True if we should treat the hotword as detected once (for get_response)
         self.listen_once = False
 
+        # Number of audio chunks to skip for next STT.
+        # Used to avoid catching the end of TTS.
+        self.stt_skip_chunks_after_listen = listener["stt_skip_chunks_after_listen"]
+        self._stt_skip_chunks_left = 0
+
         # Current session id
         self.mycroft_session_id: Optional[str] = None
 
@@ -153,6 +158,8 @@ class VoiceLoop:
                 self.stt_audio_chunks.clear()
                 chunk = bytes(len(chunk))
 
+            # Report diagnostic information about every audio chunk if
+            # diagnostics are enabled.
             is_speech: Optional[bool] = None
             diagnostics: Optional[Dict[str, Any]] = None
             if self._diagnostics_enabled:
@@ -166,6 +173,7 @@ class VoiceLoop:
 
             self.stt_audio_chunks.append(chunk)
             if not self.is_recording:
+                # Hotword detection
                 self.hotword_audio_chunks.append(chunk)
                 self.hotword.update(chunk)
 
@@ -176,6 +184,12 @@ class VoiceLoop:
                     # Fake detection for get_response
                     self.listen_once = False
                     hotword_detected = True
+
+                    # Clear the STT audio chunk buffer here so we don't catch
+                    # the end of TTS.
+                    self.stt_audio_chunks.clear()
+
+                    self._stt_skip_chunks_left = self.stt_skip_chunks_after_listen
                 else:
                     # Normal hotword detection
                     self.mycroft_session_id = None
@@ -199,7 +213,11 @@ class VoiceLoop:
                     if hasattr(self.hotword, "reset"):
                         self.hotword.reset()
             else:
-                # In voice command
+                # In voice command (speech to text)
+                if self._stt_skip_chunks_left > 0:
+                    self._stt_skip_chunks_left -= 1
+                    continue
+
                 self.stt.update(chunk)
                 self.stt_audio += chunk
                 seconds = _chunk_seconds(
@@ -230,20 +248,30 @@ class VoiceLoop:
                         )
                     )
 
-                    if text:
+                    if self._diagnostics_enabled:
+                        # Bypass intent service when diagnostics are enabled
                         self.bus.emit(
                             Message(
-                                "recognizer_loop:utterance",
-                                {
-                                    "utterances": [text],
-                                    "mycroft_session_id": self.mycroft_session_id,
-                                },
+                                "mycroft.mic.diagnostics:utterance",
+                                data={"utterance": text},
                             )
                         )
                     else:
-                        self.bus.emit(
-                            Message("recognizer_loop:speech.recognition.unknown")
-                        )
+                        # Report utterance to intent service
+                        if text:
+                            self.bus.emit(
+                                Message(
+                                    "recognizer_loop:utterance",
+                                    {
+                                        "utterances": [text],
+                                        "mycroft_session_id": self.mycroft_session_id,
+                                    },
+                                )
+                            )
+                        else:
+                            self.bus.emit(
+                                Message("recognizer_loop:speech.recognition.unknown")
+                            )
 
                     if self.config["listener"]["save_utterances"]:
                         self._save_stt_audio()

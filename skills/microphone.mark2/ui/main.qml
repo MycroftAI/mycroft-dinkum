@@ -7,92 +7,114 @@ import Mycroft 1.0 as Mycroft
 Mycroft.Delegate {
     id: root
     property int gridUnit: Mycroft.Units.gridUnit
-    property int barWidth: gridUnit * 10
+    property int barWidth: gridUnit * 5
 
-    Item {
-        id: vad
-        width: barWidth
-        height: width * 2
+    RowLayout {
+        anchors.fill: parent
+        anchors.topMargin: gridUnit
+        anchors.leftMargin: gridUnit
 
-        Rectangle {
-            id: vadRect
-            color: "blue"
-            width: parent.width
-            height: parent.height
+        Item {
+            id: vad
+            width: barWidth
+            height: width * 2
+
+            Rectangle {
+                id: vadRect
+                color: sessionData.is_speech ? "blue" : "white"
+                width: parent.width
+                height: parent.height
+            }
+
+            Rectangle {
+                width: parent.width
+                height: (1.0 - sessionData.vad_probability) * parent.height
+                color: "black"
+            }
+
+            Label {
+                anchors.top: vadRect.bottom
+                anchors.topMargin: gridUnit
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "VAD"
+            }
         }
 
-        Rectangle {
-            width: parent.width
-            height: (1.0 - sessionData.vad_probability) * parent.height
-            color: "black"
+        Item {
+            id: hotword
+            // anchors.left: vad.right
+            anchors.leftMargin: gridUnit * 2
+            width: barWidth
+            height: width * 2
+
+            Rectangle {
+                id: hotwordRect
+                width: parent.width
+                height: parent.height
+                color: "green"
+            }
+
+            Rectangle {
+                width: parent.width
+                height: (1.0 - sessionData.hotword_probability) * parent.height
+                color: "black"
+            }
+
+            Label {
+                anchors.top: hotwordRect.bottom
+                anchors.topMargin: gridUnit
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Hotword"
+            }
         }
 
-        Label {
-            anchors.top: vadRect.bottom
-            anchors.topMargin: gridUnit
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "VAD"
+        Item {
+            id: energy
+            // anchors.left: hotword.right
+            anchors.leftMargin: gridUnit * 2
+            width: barWidth
+            height: width * 2
+
+            Rectangle {
+                id: energyRect
+                width: parent.width
+                height: parent.height
+                color: "red"
+            }
+
+            Rectangle {
+                width: parent.width
+                height: (1.0 - sessionData.energy_norm) * parent.height
+                color: "black"
+            }
+
+            Label {
+                anchors.top: energyRect.bottom
+                anchors.topMargin: gridUnit
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Energy"
+            }
         }
     }
 
-    Item {
-        id: hotword
-        anchors.left: vad.right
-        anchors.leftMargin: gridUnit * 2
-        width: barWidth
-        height: width * 2
+    RowLayout {
+        anchors.left: parent.left
+        anchors.right: parent.right
 
-        Rectangle {
-            id: hotwordRect
-            width: parent.width
-            height: parent.height
-            color: "green"
-        }
-
-        Rectangle {
-            width: parent.width
-            height: (1.0 - sessionData.hotword_probability) * parent.height
-            color: "black"
+        Label {
+            text: "[" + sessionData.state + "]"
         }
 
         Label {
-            anchors.top: hotwordRect.bottom
-            anchors.topMargin: gridUnit
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "Hotword"
-        }
-    }
-
-    Item {
-        id: energy
-        anchors.left: hotword.right
-        anchors.leftMargin: gridUnit * 2
-        width: barWidth
-        height: width * 2
-
-        Rectangle {
-            id: energyRect
-            width: parent.width
-            height: parent.height
-            color: "red"
-        }
-
-        Rectangle {
-            width: parent.width
-            height: (1.0 - sessionData.energy_norm) * parent.height
-            color: "black"
+            text: sessionData.utterance
         }
 
         Label {
-            anchors.top: energyRect.bottom
-            anchors.topMargin: gridUnit
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "Energy"
+            text: "Gain: " + sessionData.gain
         }
     }
 
     Kirigami.Separator {
-        id: areaSep
         anchors.bottom: bottomArea.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -135,5 +157,4 @@ Mycroft.Delegate {
             }
         }
     }
-
 }
