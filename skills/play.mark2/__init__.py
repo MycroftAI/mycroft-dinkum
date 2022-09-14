@@ -32,6 +32,7 @@ class PlaybackControlSkill(MycroftSkill):
         self.add_event("mycroft.audio.service.playing", self.handle_stream_playing)
 
     def handle_stream_playing(self, message: Message):
+        self.log.debug("play skill handle_stream_playing invoked.")
         self._stream_session_id = message.data.get("mycroft_session_id")
 
     # Handle common audio intents.  'Audio' skills should listen for the
@@ -59,6 +60,7 @@ class PlaybackControlSkill(MycroftSkill):
 
     @intent_handler(IntentBuilder("").require("Pause").exactly())
     def handle_pause(self, message):
+        self.log.debug("play skill handle_pause invoked.")
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",
@@ -66,9 +68,10 @@ class PlaybackControlSkill(MycroftSkill):
             )
         )
 
-    @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
+    # @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
     def handle_play(self, message):
         """Resume playback if paused"""
+        self.log.debug("play skill misnamed handle_play invoked.")
         self.bus.emit(
             Message(
                 "mycroft.audio.service.resume",

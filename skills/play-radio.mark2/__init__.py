@@ -20,6 +20,7 @@ import requests
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
+from adapt.intent import IntentBuilder
 
 from .RadioStations import GenreTagNotFound, RadioStations
 
@@ -85,10 +86,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
-            "mycroft.audio.service.pause", self.handle_audioservice_status_change
+            "mycroft.audio.service.pause", self.handle_pause
         )
         self.bus.on(
-            "mycroft.audio.service.resume", self.handle_audioservice_status_change
+            "mycroft.audio.service.resume", self.handle_resume
         )
         self.bus.on(
             "mycroft.audio.queue_end",
@@ -118,21 +119,34 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_stop_radio,
         )
 
-    def handle_audioservice_status_change(self, message):
+    def handle_pause(self, message):
         """Handle changes in playback status from the Audioservice.
         Eg when someone verbally asks to pause.
         """
+        self.log.debug("Radio handle_audioservice_status_change invoked.")
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             command = message.msg_type.split(".")[-1]
             if command == "resume":
+                self.log.debug("'resume' detected, setting new status to 'Playing'")
                 new_status = "Playing"
             elif command == "pause":
+                self.log.debug("'pause' detected, setting new status to 'Paused'")
                 new_status = "Paused"
 
             # TODO
             # self.gui["status"] = new_status
             self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+
+    @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
+    def handle_resume(self, _):
+        """Resume playback if paused"""
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.resume",
+                data={"mycroft_session_id": self._stream_session_id},
+            )
+        )
 
     def handle_media_finished(self, message):
         """Handle media playback finishing."""
