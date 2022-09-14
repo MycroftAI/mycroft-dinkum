@@ -58,7 +58,7 @@ class PlaybackControlSkill(MycroftSkill):
     #     with self.activity():
     #         self.audio_service.prev()
 
-    @intent_handler(IntentBuilder("").require("Pause").exactly())
+    # @intent_handler(IntentBuilder("").require("Pause").exactly())
     def handle_pause(self, message):
         self.log.debug("play skill handle_pause invoked.")
         self.bus.emit(

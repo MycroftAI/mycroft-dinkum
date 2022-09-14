@@ -119,18 +119,17 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_stop_radio,
         )
 
+    @intent_handler(IntentBuilder("").require("Pause"))
     def handle_pause(self, message):
-        """Handle changes in playback status from the Audioservice.
-        Eg when someone verbally asks to pause.
+        """
+        Pause.
         """
         self.log.debug("Radio handle_audioservice_status_change invoked.")
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             command = message.msg_type.split(".")[-1]
-            if command == "resume":
-                self.log.debug("'resume' detected, setting new status to 'Playing'")
-                new_status = "Playing"
-            elif command == "pause":
+            self.log.debug(f"Radio received command {command}")
+            if command == "pause":
                 self.log.debug("'pause' detected, setting new status to 'Paused'")
                 new_status = "Paused"
 
@@ -140,6 +139,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
     def handle_resume(self, _):
+        self.log.debug("Radio resume triggered.")
         """Resume playback if paused"""
         self.bus.emit(
             Message(
