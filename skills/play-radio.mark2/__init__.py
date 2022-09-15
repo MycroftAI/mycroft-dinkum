@@ -85,10 +85,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
-            "mycroft.audio.service.pause", self.handle_audioservice_status_change
+            "play:pause", self.handle_pause
         )
         self.bus.on(
-            "mycroft.audio.service.resume", self.handle_audioservice_status_change
+            "play:resume", self.handle_resume
         )
         self.bus.on(
             "mycroft.audio.queue_end",
@@ -133,6 +133,22 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             # TODO
             # self.gui["status"] = new_status
             self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+
+    def handle_pause(self, _):
+        self.log.debug("Radio skill handle_pause triggered.")
+        new_status = "Paused"
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+
+    def handle_resume(self, _):
+        self.log.debug("Radio skill handle_resume triggered.")
+        new_status = "Resume"
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.resume",
+                data={"mycroft_session_id": self._stream_session_id},
+            )
+        )
 
     def handle_media_finished(self, message):
         """Handle media playback finishing."""
