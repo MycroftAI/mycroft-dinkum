@@ -118,33 +118,14 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_stop_radio,
         )
 
-    def handle_audioservice_status_change(self, message):
-        """Handle changes in playback status from the Audioservice.
-        Eg when someone verbally asks to pause.
-        """
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id == self._stream_session_id:
-            command = message.msg_type.split(".")[-1]
-            if command == "resume":
-                new_status = "Playing"
-            elif command == "pause":
-                new_status = "Paused"
-
-            # TODO
-            # self.gui["status"] = new_status
-            self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
-
     def handle_pause(self, _):
-        self.log.debug("Radio skill handle_pause triggered.")
-        new_status = "Paused"
-        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Paused"})
 
     def handle_resume(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id != self._stream_session_id:
             return
-        new_status = "Playing"
-        # self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Playing"})
         self.bus.emit(
             Message(
                 "mycroft.audio.service.resume",
@@ -152,7 +133,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             )
         )
         self._is_playing = True
-        # gui = self.update_radio_theme("Now Playing")
         self.handle_play_request()
 
     def handle_media_finished(self, message):
