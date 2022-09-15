@@ -49,10 +49,10 @@ class NewsSkill(CommonPlaySkill):
         self.add_event("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
         self.bus.on(
-            "play:pause", self.handle_audioservice_status_change
+            "play:pause", self.handle_pause
         )
         self.bus.on(
-            "play:resume", self.handle_audioservice_status_change
+            "play:resume", self.handle_resume
         )
 
     def load_alternate_station_names(self) -> dict:
@@ -136,13 +136,15 @@ class NewsSkill(CommonPlaySkill):
             page="AudioPlayer_mark_ii.qml", data={"status": new_status}, overwrite=False
         )
 
-    #def handle_pause(self, _):
-    #    self.update_gui_values(
-    #        page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
-    #    )
+    def handle_pause(self, _):
+        self.update_gui_values(
+            page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
+        )
 
-    #def handle_resume(self, _):
-
+    def handle_resume(self, _):
+        self.update_gui_values(
+            page="AudioPlayer_mark_ii.qml", data={"status": "Playing"}, overwrite=False
+        )
 
     def on_websettings_changed(self):
         """Callback triggered anytime Skill settings are modified on backend."""
