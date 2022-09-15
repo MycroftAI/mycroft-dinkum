@@ -254,6 +254,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         # self._audio_session_id = None
 
     def CPS_pause(self):
+        self.log.debug(f"CPS_pause called with session ID: {self._audio_session_id}")
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",
@@ -262,6 +263,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         )
 
     def CPS_resume(self):
+        self.log.debug(f"CPS_resume called with session ID: {self._audio_session_id}")
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",

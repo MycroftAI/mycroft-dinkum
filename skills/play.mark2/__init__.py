@@ -59,6 +59,7 @@ class PlaybackControlSkill(MycroftSkill):
 
     @intent_handler(IntentBuilder("").require("Pause").exactly())
     def handle_pause(self, message):
+        self.log.debug(f"Pausing with session id: {self._stream_session_id}")
         self.bus.emit(
             Message(
                 "play:pause",
@@ -69,7 +70,8 @@ class PlaybackControlSkill(MycroftSkill):
     @intent_handler(IntentBuilder("").one_of("PlayResume", "Resume").exactly())
     def handle_play(self, message):
         """Resume playback if paused"""
-        self.bus.emit(
+        self.log.debug(f"Resuming with session id: {self._stream_session_id}"
+        )self.bus.emit(
             Message(
                 "play:resume",
                 data={"mycroft_session_id": self._stream_session_id},
