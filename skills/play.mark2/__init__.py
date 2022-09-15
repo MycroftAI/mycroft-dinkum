@@ -61,8 +61,8 @@ class PlaybackControlSkill(MycroftSkill):
     def handle_pause(self, message):
         self.bus.emit(
             Message(
-                "mycroft.audio.service.pause",
-                data={"mycroft_session_id": self._stream_session_id},
+                "play:pause",
+                # data={"mycroft_session_id": self._stream_session_id},
             )
         )
 
@@ -71,8 +71,8 @@ class PlaybackControlSkill(MycroftSkill):
         """Resume playback if paused"""
         self.bus.emit(
             Message(
-                "mycroft.audio.service.resume",
-                data={"mycroft_session_id": self._stream_session_id},
+                "play:resume",
+                # data={"mycroft_session_id": self._stream_session_id},
             )
         )
 
