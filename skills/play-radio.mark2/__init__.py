@@ -139,8 +139,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         new_status = "Paused"
         self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
 
-    def handle_resume(self, _):
-        self.log.debug("Radio skill handle_resume triggered.")
+    def handle_resume(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
         new_status = "Playing"
         # self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
         self.bus.emit(

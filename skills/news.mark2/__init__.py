@@ -137,13 +137,26 @@ class NewsSkill(CommonPlaySkill):
         )
 
     def handle_pause(self, _):
+        self._audio_session_id = self._stream_session_id
+        self.log.debug("News pause triggered.")
         self.update_gui_values(
-            page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
+            page="AudioPlayer_mark_ii.qml", data={"status": "Paused"} #, overwrite=False
         )
+        self.CPS_pause()
 
-    def handle_resume(self, _):
+    def handle_resume(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
+        self._audio_session_id = self._stream_session_id
         self.update_gui_values(
             page="AudioPlayer_mark_ii.qml", data={"status": "Playing"}, overwrite=False
+        )
+        self.bus.emit(
+            Message(
+                "mycroft.audio.service.resume",
+                data={"mycroft_session_id": self._audio_session_id},
+            )
         )
 
     def on_websettings_changed(self):
