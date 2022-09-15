@@ -62,7 +62,7 @@ class PlaybackControlSkill(MycroftSkill):
         self.bus.emit(
             Message(
                 "play:pause",
-                # data={"mycroft_session_id": self._stream_session_id},
+                data={"mycroft_session_id": self._stream_session_id},
             )
         )
 
@@ -72,7 +72,7 @@ class PlaybackControlSkill(MycroftSkill):
         self.bus.emit(
             Message(
                 "play:resume",
-                # data={"mycroft_session_id": self._stream_session_id},
+                data={"mycroft_session_id": self._stream_session_id},
             )
         )
 
