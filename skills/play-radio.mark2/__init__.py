@@ -149,6 +149,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 data={"mycroft_session_id": self._stream_session_id},
             )
         )
+        self._is_playing = True
 
     def handle_media_finished(self, message):
         """Handle media playback finishing."""
@@ -167,6 +168,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             self._is_playing = False
+            self.stop()
 
     def handle_gui_status_change(self, message):
         """Handle play and pause status changes from the GUI.
