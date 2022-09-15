@@ -25,7 +25,7 @@ from mycroft_bus_client import Message, MessageBusClient
 from .led_animation import color
 from .led_animation.animation import Animation
 from .led_animation.animation.pulse import Pulse
-from .led_animation.animation.rainbowcomet import RainbowComet
+from .led_animation.animation.comet import Comet
 from .led_animation.animation.solid import Solid
 
 MAX_COLOR = 255
@@ -37,11 +37,14 @@ NUM_LEDS = 12
 MAX_BRIGHTNESS = 50
 MIN_BRIGHTNESS = 0
 
+VOLUME_START_LED = 4
+
 
 class MycroftColor:
-    RED = (216, 17, 89)
-    GREEN = (64, 219, 176)
-    BLUE = (34, 167, 240)
+    RED = (236, 100, 75)  # EC644B
+    OLD_RED = (235, 87, 87)  # EB5757
+    GREEN = (64, 219, 176)  # 40DBB0
+    BLUE = (34, 167, 240)  # 22A7F0
 
 
 class Mark2LedClient:
@@ -95,7 +98,7 @@ class Mark2LedClient:
             self._set_state(state)
 
     def _handle_mute(self, _message: Message):
-        self._asleep_color = MycroftColor.RED
+        self._asleep_color = MycroftColor.OLD_RED
         if self._state == "asleep":
             self.asleep()
 
@@ -128,18 +131,21 @@ class Mark2LedClient:
         self._animation = Pulse(self, speed=0.05, color=MycroftColor.GREEN, period=2)
 
     def thinking(self):
-        self._animation = RainbowComet(self, speed=0.1, ring=True)
+        self._animation = Comet(
+            self, speed=0.1, color=MycroftColor.BLUE, ring=True, tail_length=10
+        )
 
     def volume(self, volume_10: int):
         self._animation = None
         volume_guid = self._state_guid
         leds_on = max(0, min(NUM_LEDS, volume_10))
         for i in range(NUM_LEDS):
-            if i < leds_on:
-                self[i] = MycroftColor.BLUE
+            led_index = (VOLUME_START_LED + i) % NUM_LEDS
+            if i <= leds_on:
+                self[led_index] = color.WHITE
             else:
                 # Black
-                self[i] = color.BLACK
+                self[led_index] = color.BLACK
 
         self.show()
 
@@ -149,7 +155,8 @@ class Mark2LedClient:
                     Message("mycroft.feedback.set-state", data={"state": "asleep"})
                 )
 
-        # Go back to sleep after a few seconds
+        # Go back to sleep after a few seconds.
+        # Timed to coincide with the on-screen display closing.
         Timer(5.0, go_to_sleep).start()
 
     # Pixel object
