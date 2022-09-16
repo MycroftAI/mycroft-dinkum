@@ -119,19 +119,16 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         )
 
     def handle_pause(self, _):
+        self._audio_session_id = self._stream_session_id
         self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Paused"})
+        self._is_playing = False
+        self.CPS_pause()
 
     def handle_resume(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id != self._stream_session_id:
             return
         self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Playing"})
-        self.bus.emit(
-            Message(
-                "mycroft.audio.service.resume",
-                data={"mycroft_session_id": self._stream_session_id},
-            )
-        )
         self._is_playing = True
         self.handle_play_request()
 
@@ -258,7 +255,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             gui=gui, gui_clear=GuiClear.NEVER
         )
 
-        # cast to str for json serialization
         self.CPS_send_status(image=self.img_pth, artist=station_name)
 
     # Intents

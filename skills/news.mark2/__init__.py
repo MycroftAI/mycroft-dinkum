@@ -119,6 +119,7 @@ class NewsSkill(CommonPlaySkill):
             page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
         )
         self.CPS_pause()
+        self.now_playing = False
 
     def handle_resume(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
@@ -127,12 +128,8 @@ class NewsSkill(CommonPlaySkill):
         self.update_gui_values(
             page="AudioPlayer_mark_ii.qml", data={"status": "Playing"}, overwrite=False
         )
-        self.bus.emit(
-            Message(
-                "mycroft.audio.service.resume",
-                data={"mycroft_session_id": self._stream_session_id},
-            )
-        )
+        self.now_playing = True
+        self.CPS_resume()
 
     def on_websettings_changed(self):
         """Callback triggered anytime Skill settings are modified on backend."""
@@ -184,10 +181,11 @@ class NewsSkill(CommonPlaySkill):
 
     @intent_handler(AdaptIntent("").require("Show").require("News"))
     def handle_show_news(self, _):
+        self.log.debug("show news entered.")
         gui = None
         dialog = None
-
-        if self.now_playing is not None:
+        self.log.debug(f"self.now_playing is {self.now_playing}")
+        if self.now_playing:
             gui = "AudioPlayer_mark_ii.qml"
         else:
             dialog = "no.news.playing"
