@@ -86,6 +86,8 @@ class CommonPlaySkill(MycroftSkill, ABC):
             self.add_event("play:query", self.__handle_play_query)
             self.add_event("play:start", self.__handle_play_start)
             self.add_event("play:stop", self.__handle_play_stop)
+            self.add_event("play:pause", self.CPS_pause)
+            self.add_event("play:resume", self.CPS_resume)
 
     def __handle_play_stop(self, message):
         self.CPS_release_output_focus()
@@ -252,6 +254,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         # self._audio_session_id = None
 
     def CPS_pause(self):
+        self.log.debug(f"CPS_pause called with session ID: {self._audio_session_id}")
         self.bus.emit(
             Message(
                 "mycroft.audio.service.pause",
@@ -260,9 +263,10 @@ class CommonPlaySkill(MycroftSkill, ABC):
         )
 
     def CPS_resume(self):
+        self.log.debug(f"CPS_resume called with session ID: {self._audio_session_id}")
         self.bus.emit(
             Message(
-                "mycroft.audio.service.pause",
+                "mycroft.audio.service.resume",
                 data={"mycroft_session_id": self._audio_session_id},
             )
         )

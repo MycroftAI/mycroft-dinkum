@@ -36,6 +36,9 @@ class NewsSkill(CommonPlaySkill):
         super().__init__(skill_id=skill_id, name="NewsSkill")
         self.now_playing: Optional[BaseStation] = None
         self._stream_session_id: Optional[str] = None
+        self._audio_session_id = None
+        self.alternate_station_names = None
+        self.settings_change_callback = None
 
     def initialize(self):
         # Longer titles or alternative common names of feeds for searching
@@ -48,6 +51,8 @@ class NewsSkill(CommonPlaySkill):
         self.add_event("mycroft.audio.service.playing", self.handle_media_playing)
         self.add_event("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
+        self.bus.on("play:pause", self.handle_pause)
+        self.bus.on("play:resume", self.handle_resume)
 
     def load_alternate_station_names(self) -> dict:
         """Load the list of alternate station names from alt.feed.name.value
@@ -108,27 +113,23 @@ class NewsSkill(CommonPlaySkill):
             self.now_playing = None
             self.bus.emit(Message("mycroft.gui.idle"))
 
-    def handle_audioservice_status_change(self, message):
-        """Handle changes in playback status from the Audioservice.
+    def handle_pause(self, _):
+        self._audio_session_id = self._stream_session_id
+        self.update_gui_values(
+            page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
+        )
+        self.CPS_pause()
+        self.now_playing = False
 
-        Eg when someone verbally asks to pause.
-        """
-        if not self.now_playing:
-            return
-
+    def handle_resume(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id != self._stream_session_id:
             return
-
-        command = message.msg_type.split(".")[-1]
-        if command in {"playing", "resumed"}:
-            new_status = "Playing"
-        elif command in {"paused", "stopped"}:
-            new_status = "Paused"
-
         self.update_gui_values(
-            page="AudioPlayer_mark_ii.qml", data={"status": new_status}, overwrite=False
+            page="AudioPlayer_mark_ii.qml", data={"status": "Playing"}, overwrite=False
         )
+        self.now_playing = True
+        self.CPS_resume()
 
     def on_websettings_changed(self):
         """Callback triggered anytime Skill settings are modified on backend."""
@@ -180,10 +181,11 @@ class NewsSkill(CommonPlaySkill):
 
     @intent_handler(AdaptIntent("").require("Show").require("News"))
     def handle_show_news(self, _):
+        self.log.debug("show news entered.")
         gui = None
         dialog = None
-
-        if self.now_playing is not None:
+        self.log.debug(f"self.now_playing is {self.now_playing}")
+        if self.now_playing:
             gui = "AudioPlayer_mark_ii.qml"
         else:
             dialog = "no.news.playing"
