@@ -85,10 +85,10 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
         self.bus.on(
-            "mycroft.audio.service.pause", self.handle_audioservice_status_change
+            "play:pause", self.handle_pause
         )
         self.bus.on(
-            "mycroft.audio.service.resume", self.handle_audioservice_status_change
+            "play:resume", self.handle_resume
         )
         self.bus.on(
             "mycroft.audio.queue_end",
@@ -118,21 +118,19 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             self.handle_stop_radio,
         )
 
-    def handle_audioservice_status_change(self, message):
-        """Handle changes in playback status from the Audioservice.
-        Eg when someone verbally asks to pause.
-        """
-        mycroft_session_id = message.data.get("mycroft_session_id")
-        if mycroft_session_id == self._stream_session_id:
-            command = message.msg_type.split(".")[-1]
-            if command == "resume":
-                new_status = "Playing"
-            elif command == "pause":
-                new_status = "Paused"
+    def handle_pause(self, _):
+        self._audio_session_id = self._stream_session_id
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Paused"})
+        self._is_playing = False
+        self.CPS_pause()
 
-            # TODO
-            # self.gui["status"] = new_status
-            self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": new_status})
+    def handle_resume(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
+        self.update_gui_values("RadioPlayer_mark_ii.qml", {"status": "Playing"})
+        self._is_playing = True
+        self.handle_play_request()
 
     def handle_media_finished(self, message):
         """Handle media playback finishing."""
@@ -147,7 +145,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         else:
             self._is_playing = False
 
-    def handle_media_stopped(self, message):
+    def handle_media_stopped(self, message=None):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
             self._is_playing = False
@@ -257,7 +255,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             gui=gui, gui_clear=GuiClear.NEVER
         )
 
-        # cast to str for json serialization
         self.CPS_send_status(image=self.img_pth, artist=station_name)
 
     # Intents
