@@ -131,6 +131,8 @@ class AlsaMicrophone(Microphone):
                             while len(full_chunk) >= self.chunk_size:
                                 self._queue.put_nowait(full_chunk[: self.chunk_size])
                                 full_chunk = full_chunk[self.chunk_size :]
+
+                            time.sleep(0.0)
                     finally:
                         mic.close()
                 except Exception:

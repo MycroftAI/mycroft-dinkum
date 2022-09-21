@@ -82,7 +82,7 @@ class VoiceService(DinkumService):
             sample_width=listener["sample_width"],
             sample_channels=listener["sample_channels"],
             chunk_size=listener["chunk_size"],
-            period_size=listener["chunk_size"] // 2,
+            period_size=listener["chunk_size"] // 4,
             #
             multiplier=listener["multiplier"],
             timeout=listener["audio_timeout"],
@@ -112,6 +112,7 @@ class VoiceService(DinkumService):
             silence_seconds=listener["silence_end"],
             timeout_seconds=listener["recording_timeout"],
             num_stt_rewind_chunks=listener["utterance_chunks_to_rewind"],
+            num_hotword_keep_chunks=listener["wakeword_chunks_to_save"],
             #
             wake_callback=self._wake,
             text_callback=self._stt_text,

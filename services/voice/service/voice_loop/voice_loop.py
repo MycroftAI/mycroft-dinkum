@@ -75,6 +75,7 @@ class MycroftVoiceLoop(VoiceLoop):
     silence_seconds: float
     timeout_seconds: float
     num_stt_rewind_chunks: int
+    num_hotword_keep_chunks: int
     skip_next_wake: bool = False
     wake_callback: Optional[WakeCallback] = None
     text_callback: Optional[TextCallback] = None
@@ -96,12 +97,14 @@ class MycroftVoiceLoop(VoiceLoop):
         state = State.DETECT_WAKEWORD
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
-        hotword_audio_bytes = bytes()
+        hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
         stt_audio_bytes = bytes()
 
         # Audio from just before the wake word is detected is kept for STT.
         # This allows you to speak a command immediately after the wake word.
         stt_chunks: Deque[bytes] = deque(maxlen=self.num_stt_rewind_chunks + 1)
+
+        has_probability = hasattr(self.hotword, "probability")
 
         while self._is_running:
             chunk = self.mic.read_chunk()
@@ -121,11 +124,11 @@ class MycroftVoiceLoop(VoiceLoop):
             # AFTER_COMMAND -> DETECT_HOTWORD
             #
             if state == State.DETECT_WAKEWORD:
-                hotword_audio_bytes += chunk
+                hotword_chunks.append(chunk)
                 stt_chunks.append(chunk)
                 self.hotword.update(chunk)
 
-                if hasattr(self.hotword, "probability"):
+                if has_probability:
                     # For diagnostics
                     self._chunk_info.hotword_probability = self.hotword.probability
 
@@ -143,10 +146,14 @@ class MycroftVoiceLoop(VoiceLoop):
                     if (self.hotword_audio_callback is not None) and (
                         not self.skip_next_wake
                     ):
+                        hotword_audio_bytes = bytes()
+                        while hotword_chunks:
+                            hotword_audio_bytes += hotword_chunks.popleft()
+
                         self.hotword_audio_callback(hotword_audio_bytes)
 
                     self.skip_next_wake = False
-                    hotword_audio_bytes = bytes()
+                    hotword_chunks.clear()
 
                     # Callback to handle wake up
                     if self.wake_callback is not None:
