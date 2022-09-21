@@ -29,10 +29,10 @@ Rectangle {
     property bool horizontalMode: parent.width > parent.height ? 1 : 0
     property color primaryBorderColor: {
         if (isMuted) {
-            return "#EB5757";
+            return "#FF0000";
 
         } else {
-            return "#22A7F0";
+            return "#40DBB0";
         }
     }
     readonly property color secondaryBorderColor: Qt.rgba(1, 1, 1, 0.7)

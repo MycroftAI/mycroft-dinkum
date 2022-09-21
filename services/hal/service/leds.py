@@ -98,7 +98,7 @@ class Mark2LedClient:
             self._set_state(state)
 
     def _handle_mute(self, _message: Message):
-        self._asleep_color = MycroftColor.OLD_RED
+        self._asleep_color = color.RED
         if self._state == "asleep":
             self.asleep()
 

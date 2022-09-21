@@ -21,14 +21,6 @@ import org.kde.kirigami 2.5 as Kirigami
 import Mycroft 1.0 as Mycroft
 
 Delegate {
-    iconSource: Qt.resolvedUrl("./go-home.svg")
-    text: i18n("Show Homescreen")
-    onClicked: {
-        Mycroft.MycroftController.sendRequest("mycroft.gui.idle", {});
-        for(var i in plasmoid.nativeInterface) {
-            print(i+" "+plasmoid.nativeInterface[i]);
-        }
-        plasmoid.nativeInterface.requestShowingDesktop();
-    }
+    iconSource: Qt.resolvedUrl("./close.svg")
+    text: i18n("Close Menu")
 }
-
