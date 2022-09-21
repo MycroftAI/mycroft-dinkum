@@ -47,7 +47,7 @@ class MycroftSTT(StreamingSTT):
     def __init__(self, bus: MessageBusClient, config):
         super().__init__(bus, config)
 
-        self._api = STTApi("stt")
+        self._api = STTApi("transcribe")
         self._flac_proc: Optional[subprocess.Popen] = None
         self._flac_file: Optional[BinaryIO] = None
 
@@ -79,7 +79,9 @@ class MycroftSTT(StreamingSTT):
 
             self._flac_proc = None
 
-            return self._api.stt(flac, "en-US", 1)[0]
+            result = self._api.stt(flac, "en-US", 1)
+            LOG.info(result)
+            return result["transcription"]
         except Exception:
             LOG.exception("Error in Mycroft STT")
 
