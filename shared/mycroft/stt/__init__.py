@@ -1,13 +1,26 @@
-import logging
+# Copyright 2022 Mycroft AI Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import subprocess
 import tempfile
-import typing
 from abc import ABCMeta, abstractmethod
+from typing import Any, BinaryIO, Dict, Optional
 
 from mycroft.api import STTApi
+from mycroft.util.log import LOG
+from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import MessageBusClient
-
-LOG = logging.getLogger(__package__)
 
 
 class StreamingSTT(metaclass=ABCMeta):
@@ -23,7 +36,7 @@ class StreamingSTT(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def stop(self) -> typing.Optional[str]:
+    def stop(self) -> Optional[str]:
         pass
 
     def shutdown(self):
@@ -35,8 +48,8 @@ class MycroftSTT(StreamingSTT):
         super().__init__(bus, config)
 
         self._api = STTApi("stt")
-        self._flac_proc: typing.Optional[subprocess.Popen] = None
-        self._flac_file: typing.Optional[typing.BinaryIO] = None
+        self._flac_proc: Optional[subprocess.Popen] = None
+        self._flac_file: Optional[BinaryIO] = None
 
     def start(self):
         self._start_flac()
@@ -48,7 +61,7 @@ class MycroftSTT(StreamingSTT):
 
         self._flac_proc.stdin.write(chunk)
 
-    def stop(self) -> typing.Optional[str]:
+    def stop(self) -> Optional[str]:
         try:
             assert self._flac_proc is not None
             assert self._flac_file is not None
@@ -108,3 +121,20 @@ class MycroftSTT(StreamingSTT):
                 self._flac_proc.kill()
 
             self._flac_proc = None
+
+
+def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingSTT:
+    stt_config = config["stt"]
+    module_name = stt_config["module"]
+    if module_name == "mycroft":
+        LOG.debug("Using Mycroft STT")
+        return MycroftSTT(bus, config)
+
+    LOG.debug("Loading speech to text module: %s", module_name)
+    module = load_plugin("mycroft.plugin.stt", module_name)
+    assert module, f"Failed to load {module_name}"
+    module_config = stt_config.get(module_name, {})
+    stt = module(bus=bus, config=module_config)
+    LOG.info("Loaded speech to text module: %s", module_name)
+
+    return stt
