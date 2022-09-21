@@ -24,8 +24,8 @@ from mycroft_bus_client import Message, MessageBusClient
 
 from .led_animation import color
 from .led_animation.animation import Animation
-from .led_animation.animation.pulse import Pulse
 from .led_animation.animation.comet import Comet
+from .led_animation.animation.pulse import Pulse
 from .led_animation.animation.solid import Solid
 
 MAX_COLOR = 255

@@ -84,12 +84,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.log.debug("Registering gui handlers.")
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
-        self.bus.on(
-            "play:pause", self.handle_pause
-        )
-        self.bus.on(
-            "play:resume", self.handle_resume
-        )
+        self.bus.on("play:pause", self.handle_pause)
+        self.bus.on("play:resume", self.handle_resume)
         self.bus.on(
             "mycroft.audio.queue_end",
             self.handle_media_finished,

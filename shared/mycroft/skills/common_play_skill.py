@@ -350,7 +350,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
         elapsed_time=None,
         playlist_position=None,
         status=CPSTrackStatus.DISAMBIGUATION,
-        **kwargs
+        **kwargs,
     ):
         """Inform system of playback status.
 
