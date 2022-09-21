@@ -82,6 +82,7 @@ class VoiceService(DinkumService):
             sample_width=listener["sample_width"],
             sample_channels=listener["sample_channels"],
             chunk_size=listener["chunk_size"],
+            period_size=listener["chunk_size"] // 2,
             #
             multiplier=listener["multiplier"],
             timeout=listener["audio_timeout"],

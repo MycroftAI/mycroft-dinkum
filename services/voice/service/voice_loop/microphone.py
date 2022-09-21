@@ -57,6 +57,7 @@ class Microphone:
 class AlsaMicrophone(Microphone):
     device: str
     timeout: float
+    period_size: int
     multiplier: float = 1.0
     audio_retries: int = 0
     audio_retry_delay: float = 0.0
@@ -108,23 +109,28 @@ class AlsaMicrophone(Microphone):
                         if self.sample_width == 4
                         else alsaaudio.PCM_FORMAT_S16_LE,
                         device=self.device,
-                        periodsize=self.frames_per_chunk,
+                        periodsize=self.period_size,
                     )
 
                     try:
+                        full_chunk = bytes()
+
                         while self._is_running:
-                            chunk_length, chunk = mic.read()
-                            if chunk_length <= 0:
-                                LOG.warning("Bad chunk length: %s", chunk_length)
+                            mic_chunk_length, mic_chunk = mic.read()
+                            if mic_chunk_length <= 0:
+                                LOG.warning("Bad chunk length: %s", mic_chunk_length)
                                 continue
 
                             # Increase loudness of audio
                             if self.multiplier != 1.0:
-                                chunk = audioop.mul(
-                                    chunk, self.sample_width, self.multiplier
+                                mic_chunk = audioop.mul(
+                                    mic_chunk, self.sample_width, self.multiplier
                                 )
 
-                            self._queue.put_nowait(chunk)
+                            full_chunk += mic_chunk
+                            while len(full_chunk) >= self.chunk_size:
+                                self._queue.put_nowait(full_chunk[: self.chunk_size])
+                                full_chunk = full_chunk[self.chunk_size :]
                     finally:
                         mic.close()
                 except Exception:
