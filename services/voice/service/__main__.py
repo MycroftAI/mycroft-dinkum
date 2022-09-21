@@ -116,7 +116,6 @@ class VoiceService(DinkumService):
             text_callback=self._stt_text,
             hotword_audio_callback=self._hotword_audio,
             stt_audio_callback=self._stt_audio,
-            chunk_callback=self._chunk_diagnostics,
         )
         self.voice_loop.start()
 
@@ -286,9 +285,13 @@ class VoiceService(DinkumService):
 
     def _handle_set_diagnostics(self, message: Message):
         self._is_diagnostics_enabled = message.data.get("enabled", True)
-        self.log.debug(
-            "Diagnostics %s", "enabled" if self._is_diagnostics_enabled else "disabled"
-        )
+
+        if self._is_diagnostics_enabled:
+            self.voice_loop.chunk_callback = self._chunk_diagnostics
+            self.log.debug("Diagnostics enabled")
+        else:
+            self.voice_loop.chunk_callback = None
+            self.log.debug("Diagnostics disabled")
 
 
 def main():
