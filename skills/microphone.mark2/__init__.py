@@ -105,10 +105,6 @@ class Microphone(MycroftSkill):
         self._update_gui()
 
     def _handle_utterance(self, message):
-        self._gui_data["utterance"] = message.data.get("utterance") or "<none>"
-        self._update_gui()
-
-    def _handle_utterance(self, message):
         self._gui_data["state"] = "idle"
         self._gui_data["utterance"] = message.data.get("utterance") or "<none>"
         self._update_gui()

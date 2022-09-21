@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from mycroft.messagebus.message import Message
-from mycroft.skills import intent_handler, MycroftSkill
+from mycroft.skills import MycroftSkill, intent_handler
 
 
 class Privacy(MycroftSkill):

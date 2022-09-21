@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 from threading import RLock
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
 import pysbd
 from mycroft.tts import TTS
