@@ -60,7 +60,6 @@ class TTSSession:
     mycroft_session_id: Optional[str] = None
     chunk_queue: "Queue[TTSRequest]" = field(default_factory=Queue)
     speech_finished: Event = field(default_factory=Event)
-    is_started: bool = False
     is_finished: bool = False
 
 
@@ -217,17 +216,6 @@ class AudioUserInterface:
         # Stop any TTS currently speaking
         self._ahal.stop_foreground(ForegroundChannel.SPEECH)
 
-    # def _stop_tts_session(self, mycroft_session_id: str):
-    #     with self._session_lock:
-    #         mycroft_session_id = self._mycroft_session_id
-    #         self._mycroft_session_id = None
-
-    #         if mycroft_session_id is not None:
-    #             LOG.info("Stopping TTS session: %s", mycroft_session_id)
-    #             self._finish_tts_session(
-    #                 mycroft_session_id=mycroft_session_id,
-    #             )
-
     def _duck_volume(self):
         """Lower background stream volumes during voice commands"""
         self._ahal.set_background_volume(
@@ -358,6 +346,7 @@ class AudioUserInterface:
             # Signal speech thread to play next TTS chunk
             session = self._sessions.get(media_id)
             if session is not None:
+                LOG.debug("TTS chunk finished playing for session %s", media_id)
                 session.speech_finished.set()
         elif background:
             # Signal background stream complete
@@ -400,14 +389,12 @@ class AudioUserInterface:
                     continue
 
                 request = session.chunk_queue.get()
-                if not session.is_started:
-                    session.is_started = True
-                    self.bus.emit(
-                        Message(
-                            "recognizer_loop:audio_output_start",
-                            data={"mycroft_session_id": session.mycroft_session_id},
-                        )
+                self.bus.emit(
+                    Message(
+                        "recognizer_loop:audio_output_start",
+                        data={"mycroft_session_id": session.mycroft_session_id},
                     )
+                )
 
                 # TODO: Support other URI types
                 assert request.uri.startswith("file://")
