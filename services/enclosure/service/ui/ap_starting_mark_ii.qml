@@ -42,7 +42,7 @@ Mycroft.Delegate {
             anchors.topMargin: gridUnit * 8
             center: true
             height: gridUnit * 3
-            text: "Starting Mark II"
+            text: "Starting Mycroft"
             width: parent.width
         }
 
