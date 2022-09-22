@@ -34,6 +34,8 @@ class VoiceActivity:
     def stop(self):
         raise NotImplementedError()
 
+    def reset(self):
+        pass
 
 # -----------------------------------------------------------------------------
 
@@ -77,3 +79,7 @@ class SileroVoiceActivity(VoiceActivity):
         self._session = None
         self._h_array = None
         self._c_array = None
+
+    def reset(self):
+        self._h_array.fill(0)
+        self._c_array.fill(0)

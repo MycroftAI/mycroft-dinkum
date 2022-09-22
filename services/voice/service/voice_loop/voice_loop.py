@@ -166,6 +166,10 @@ class MycroftVoiceLoop(VoiceLoop):
                     stt_audio_bytes = bytes()
                     self.stt.start()
 
+                    # Reset the VAD internal state to avoid the model getting
+                    # into a degenerative state where it always reports silence.
+                    self.vad.reset()
+
                 self._send_diagnostics(chunk)
             elif state == State.BEFORE_COMMAND:
                 # Recording voice command, but user has not spoken yet
