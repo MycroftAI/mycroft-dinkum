@@ -31,20 +31,44 @@ import QtQuick 2.4
 import QtQuick.Layouts 1.1
 import QtQuick.Controls 2.3
 import QtGraphicalEffects 1.0
+import Mycroft 1.0 as Mycroft
 
 Item {
+    property int gridUnit: Mycroft.Units.gridUnit
     property alias text: utteranceLabel.text
     property color textColor: "#FFFFFF"
+    property string hotwordAudio
+    property string sttAudio
 
-    height: gridUnit * 3
+    height: utteranceLabel.height
     width: parent.width
     anchors.left: parent.left
     anchors.top: parent.top
 
+    Button {
+        id: playHotwordAudio
+        text: "Wake"
+        anchors.verticalCenter: utteranceLabel.verticalCenter
+        visible: hotwordAudio
+        onClicked: triggerGuiEvent("play", { "uri": hotwordAudio })
+    }
+
+    Button {
+        id: playSttAudio
+        text: "STT"
+        anchors.left: playHotwordAudio.right
+        anchors.leftMargin: gridUnit
+        anchors.verticalCenter: utteranceLabel.verticalCenter
+        visible: sttAudio
+        onClicked: triggerGuiEvent("play", { "uri": sttAudio })
+    }
+
     Label {
         id: utteranceLabel
+        anchors.left: playSttAudio.visible ? playSttAudio.right : parent.left
+        anchors.leftMargin: gridUnit
         color: textColor
-        font.pixelSize: 47
+        font.pixelSize: 32
         font.styleName: "Bold"
     }
 }

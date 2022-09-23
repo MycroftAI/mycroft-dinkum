@@ -72,6 +72,8 @@ class VoiceService(DinkumService):
         super().__init__(service_id="voice")
         self.mycroft_session_id: Optional[str] = None
         self._is_diagnostics_enabled = False
+        self._last_hotword_audio_uri: Optional[str] = None
+        self._last_stt_audio_uri: Optional[str] = None
 
     def start(self):
         listener = self.config["listener"]
@@ -204,6 +206,7 @@ class VoiceService(DinkumService):
                     wav_file.writeframes(audio_bytes)
 
                 self.log.debug("Wrote %s", wav_path)
+                self._last_hotword_audio_uri = f"file://{wav_path.absolute()}"
         except Exception:
             self.log.exception("Error while saving STT audio")
 
@@ -234,6 +237,8 @@ class VoiceService(DinkumService):
                         {
                             "utterances": [text],
                             "mycroft_session_id": self.mycroft_session_id,
+                            "hotword_audio_uri": self._last_hotword_audio_uri,
+                            "stt_audio_uri": self._last_stt_audio_uri,
                         },
                     )
                 )
@@ -266,6 +271,7 @@ class VoiceService(DinkumService):
                     wav_file.writeframes(audio_bytes)
 
                 self.log.debug("Wrote %s", wav_path)
+                self._last_stt_audio_uri = f"file://{wav_path.absolute()}"
         except Exception:
             self.log.exception("Error while saving STT audio")
 
