@@ -242,7 +242,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 "Unsuccessful mime type checks for 10 different stations, cannot connect."
             )
 
-        self.CPS_play((stream_uri, mime))
+        self.CPS_play([stream_uri])
 
         gui = self.update_radio_theme("Now Playing")
         self._stream_session_id = self._mycroft_session_id
