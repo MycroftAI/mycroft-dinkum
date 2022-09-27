@@ -255,6 +255,10 @@ class MycroftVoiceLoop(VoiceLoop):
                 # Clear any buffered STT chunks
                 stt_chunks.clear()
 
+                # Reset wakeword detector state, if available
+                if hasattr(self.hotword, "reset"):
+                    self.hotword.reset()
+
                 self._send_diagnostics(chunk)
 
     def stop(self):

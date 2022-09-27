@@ -38,8 +38,8 @@ class TFLiteHotWordEngine(HotWordEngine):
         config=None,
         lang="en-us",
         local_model_file: Optional[Union[str, Path]] = None,
-        sensitivity: float = 0.4,
-        trigger_level: int = 3,
+        sensitivity: float = 0.7,
+        trigger_level: int = 4,
         chunk_size: int = 2048,
     ):
         super().__init__(key_phrase, config, lang)
@@ -110,79 +110,77 @@ class TFLiteHotWordEngine(HotWordEngine):
         self._chunk_buffer += chunk
         self._probability = None
 
-        if len(self._chunk_buffer) < self._window_bytes:
-            # Need a full window of audio first
-            return False
+        # Process all available windows
+        while len(self._chunk_buffer) >= self._window_bytes:
+            # Process current audio
+            audio = buffer_to_audio(self._chunk_buffer)
 
-        # Process current audio
-        audio = buffer_to_audio(self._chunk_buffer)
+            # TODO: Implement different MFCC algorithms
+            mfccs = mfcc_spec(
+                audio,
+                self._params.sample_rate,
+                (self._params.window_samples, self._params.hop_samples),
+                num_filt=self._params.n_filt,
+                fft_size=self._params.n_fft,
+                num_coeffs=self._params.n_mfcc,
+            )
 
-        # TODO: Implement different MFCC algorithms
-        mfccs = mfcc_spec(
-            audio,
-            self._params.sample_rate,
-            (self._params.window_samples, self._params.hop_samples),
-            num_filt=self._params.n_filt,
-            fft_size=self._params.n_fft,
-            num_coeffs=self._params.n_mfcc,
-        )
+            num_timesteps = mfccs.shape[0]
 
-        # Number of timesteps processed
-        num_features = mfccs.shape[0]
+            # Remove processed audio from buffer
+            self._chunk_buffer = self._chunk_buffer[num_timesteps * self._hop_bytes :]
 
-        # Remove processed audio
-        self._chunk_buffer = self._chunk_buffer[num_features * self._hop_bytes :]
+            # Check if we have a full set of inputs yet
+            inputs_end_idx = self._inputs_idx + num_timesteps
+            if inputs_end_idx > self._inputs.shape[1]:
+                # Full set, need to roll back existing inputs
+                self._inputs = np.roll(self._inputs, -num_timesteps, axis=1)
+                inputs_end_idx = self._inputs.shape[1]
+                self._inputs_idx = inputs_end_idx - num_timesteps
 
-        inputs_end_idx = self._inputs_idx + num_features
-        if inputs_end_idx > self._inputs.shape[1]:
-            # Roll mfccs array backwards along time dimension
-            self._inputs = np.roll(self._inputs, -num_features, axis=1)
-            self._inputs_idx -= num_features
-            inputs_end_idx -= num_features
+            # Insert new MFCCs at the end
+            self._inputs[0, self._inputs_idx : inputs_end_idx, :] = mfccs
+            self._inputs_idx += num_timesteps
+            if inputs_end_idx < self._inputs.shape[1]:
+                # Don't have a full set of inputs yet
+                continue
 
-        # Append to end of rolling window
-        self._inputs[0, self._inputs_idx : inputs_end_idx, :] = mfccs
-        self._inputs_idx = inputs_end_idx
+            # TODO: Add deltas
 
-        if self._inputs_idx < self._inputs.shape[1]:
-            return False
+            # raw_output
+            self._interpreter.set_tensor(self._input_details[0]["index"], self._inputs)
+            self._interpreter.invoke()
+            raw_output = self._interpreter.get_tensor(self._output_details[0]["index"])
+            prob = raw_output[0][0]
 
-        # TODO: Add deltas
+            if (prob < 0.0) or (prob > 1.0):
+                # TODO: Handle out of range.
+                # Not seeing these currently, so ignoring.
+                continue
 
-        # raw_output
-        self._interpreter.set_tensor(self._input_details[0]["index"], self._inputs)
-        self._interpreter.invoke()
-        raw_output = self._interpreter.get_tensor(self._output_details[0]["index"])
-        prob = raw_output[0][0]
+            self._probability = prob.item()
 
-        if (prob < 0.0) or (prob > 1.0):
-            # TODO: Handle out of range.
-            # Not seeing these currently, so ignoring.
-            return False
+            # Decode
+            activated = prob > 1.0 - self.sensitivity
+            triggered = False
+            if activated or (self._activation < 0):
+                # Increase activation
+                self._activation += 1
 
-        self._probability = prob.item()
+                triggered = self._activation > self.trigger_level
+                if triggered or (activated and (self._activation < 0)):
+                    # Push activation down far to avoid an accidental re-activation
+                    self._activation = -(8 * 2048) // self.chunk_size
+            elif self._activation > 0:
+                # Decrease activation
+                self._activation -= 1
 
-        # Decode
-        activated = prob > 1.0 - self.sensitivity
-        triggered = False
-        if activated or (self._activation < 0):
-            # Increase activation
-            self._activation += 1
+            if triggered:
+                self._is_found = True
+                _log.debug("Triggered")
+                break
 
-            triggered = self._activation > self.trigger_level
-            if triggered or (activated and (self._activation < 0)):
-                # Push activation down far to avoid an accidental re-activation
-                self._activation = -(8 * 2048) // self.chunk_size
-        elif self._activation > 0:
-            # Decrease activation
-            self._activation -= 1
-
-        if triggered:
-            self._is_found = True
-            _log.debug("Triggered")
-            return True
-
-        return False
+        return self._is_found
 
     def found_wake_word(self, frame_data):
         return self._is_found
@@ -191,6 +189,10 @@ class TFLiteHotWordEngine(HotWordEngine):
         self._inputs = np.zeros(
             (1, self._params.n_features, self._params.n_mfcc), dtype=np.float32
         )
+        self._activation = 0
+        self._is_found = False
+        self._inputs_idx = 0
+        self._chunk_buffer = bytes()
 
     @property
     def probability(self) -> Optional[float]:
