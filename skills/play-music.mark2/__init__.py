@@ -38,6 +38,7 @@ class LocalMusicSkill(CommonPlaySkill):
     def __init__(self, skill_id: str):
         super().__init__(skill_id=skill_id, name="LocalMusicSkill")
 
+    def initialize(self):
         self._audio_session_id: Optional[str] = None
         self._stream_session_id: Optional[str] = None
         self._is_playing = False
@@ -52,8 +53,6 @@ class LocalMusicSkill(CommonPlaySkill):
 
         # Selected search result from YouTube
         self._player_position_ms: int = 0
-
-    def initialize(self):
         self.register_handlers()
 
     def register_handlers(self):
