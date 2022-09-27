@@ -113,7 +113,10 @@ class NewsSkill(CommonPlaySkill):
             self.now_playing = None
             self.bus.emit(Message("mycroft.gui.idle"))
 
-    def handle_pause(self, _):
+    def handle_pause(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
         self._audio_session_id = self._stream_session_id
         self.update_gui_values(
             page="AudioPlayer_mark_ii.qml", data={"status": "Paused"}, overwrite=False
