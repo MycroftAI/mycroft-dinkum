@@ -38,7 +38,7 @@ class LocalMusicSkill(CommonPlaySkill):
     def __init__(self, skill_id: str):
         super().__init__(skill_id=skill_id, name="LocalMusicSkill")
 
-    def initialize(self):
+        self._audio_session_id: Optional[str] = None
         self._stream_session_id: Optional[str] = None
         self._is_playing = False
 
@@ -59,8 +59,8 @@ class LocalMusicSkill(CommonPlaySkill):
         """Register handlers for events to or from the GUI."""
         self.bus.on("mycroft.audio.service.playing", self.handle_media_playing)
         self.bus.on("mycroft.audio.service.stopped", self.handle_media_stopped)
-        # self.bus.on("mycroft.audio.service.pause", self.handle_media_pause)
-        # self.bus.on("mycroft.audio.service.resume", self.handle_media_resume)
+        self.bus.on("play:pause", self.handle_pause)
+        self.bus.on("play:resume", self.handle_resume)
         self.add_event("gui.namespace.displayed", self.handle_gui_namespace_displayed)
         self.bus.on("mycroft.audio.service.position", self.handle_media_position)
         self.bus.on("mycroft.audio.queue_end", self.handle_media_finished)
@@ -83,6 +83,25 @@ class LocalMusicSkill(CommonPlaySkill):
             dialog = "no-music"
 
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
+
+    def handle_pause(self, _):
+        # This isn't obviously used, but this attr is checked by CPS_pause().
+        self._audio_session_id = self._stream_session_id
+        self.update_gui_values(
+            page="audio_player_mark_ii.qml", data={"status": "Paused"}, overwrite=False
+        )
+        self.CPS_pause()
+        self._is_playing = False
+
+    def handle_resume(self, message):
+        mycroft_session_id = message.data.get("mycroft_session_id")
+        if mycroft_session_id != self._stream_session_id:
+            return
+        self.update_gui_values(
+            page="audio_player_mark_ii.qml", data={"status": "Playing"}, overwrite=False
+        )
+        self._is_playing = True
+        self.CPS_resume()
 
     def handle_media_position(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
