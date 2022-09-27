@@ -53,6 +53,7 @@ class LocalMusicSkill(CommonPlaySkill):
         # Selected search result from YouTube
         self._player_position_ms: int = 0
 
+    def initialize(self):
         self.register_handlers()
 
     def register_handlers(self):
