@@ -60,7 +60,7 @@ class AudioHAL:
         self,
         audio_sample_rate: int = 48000,
         audio_channels: int = 2,
-        audio_width: int = 2,
+        audio_width: int = 4,
         audio_chunk_size: int = 2048,
     ):
         # Mixer settings
@@ -122,8 +122,8 @@ class AudioHAL:
                     data = self._bg_proc.stdout.read(length)
 
                     if 0 <= self._bg_volume < 1:
-                        array = np.frombuffer(data, dtype=np.int16) * self._bg_volume
-                        data = array.astype(np.int16).tobytes()
+                        array = np.frombuffer(data, dtype=np.int32) * self._bg_volume
+                        data = array.astype(np.int32).tobytes()
 
                     # ctypes.memset(stream, data, length)
                     for i in range(len(data)):
@@ -141,21 +141,6 @@ class AudioHAL:
         """Start audio HAL"""
         self.bus = bus
 
-        # TODO: Parameterize
-        ret = mixer.Mix_OpenAudio(
-            self.audio_sample_rate,
-            sdl2.AUDIO_S16SYS,
-            self.audio_channels,
-            self.audio_chunk_size,
-        )
-        self._check_sdl(ret)
-
-        mixer.Mix_ChannelFinished(self._fg_channel_finished)
-
-        self._reset_caches()
-
-    def _init_mixer(self):
-        """Initializes SDL mixer"""
         LOG.debug("Initializing SDL mixer")
 
         ret = mixer.Mix_Init(
@@ -166,13 +151,18 @@ class AudioHAL:
         )
         self._check_sdl(ret)
 
+        # TODO: Parameterize
         ret = mixer.Mix_OpenAudio(
             self.audio_sample_rate,
-            sdl2.AUDIO_S16SYS,
+            sdl2.AUDIO_S32SYS if self.audio_width == 4 else sdl2.AUDIO_S16SYS,
             self.audio_channels,
             self.audio_chunk_size,
         )
         self._check_sdl(ret)
+
+        mixer.Mix_ChannelFinished(self._fg_channel_finished)
+
+        self._reset_caches()
 
     def shutdown(self):
         """Shut down audio HAL"""
@@ -335,7 +325,7 @@ class AudioHAL:
                 "dummy",
                 "--no-video",
                 "--sout",
-                f"#transcode{{acodec=s16l,samplerate={self.audio_sample_rate},channels={self.audio_channels}}}:std{{access=file,mux=wav,dst=-}}",  # noqa: E501
+                f"#transcode{{acodec=s32l,samplerate={self.audio_sample_rate},channels={self.audio_channels}}}:std{{access=file,mux=wav,dst=-}}",  # noqa: E501
                 self._bg_playlist_file.name,
             ],
             stdout=subprocess.PIPE,
@@ -383,8 +373,8 @@ class AudioHAL:
 
     def get_background_time(self) -> int:
         """Get position of background stream in milliseconds"""
-        # Default: 48Khz, 16-bit stereo
-        bytes_per_sample = 2
+        # Default: 48Khz, 32-bit stereo
+        bytes_per_sample = self.audio_width
         bytes_per_ms = (
             self.audio_sample_rate * self.audio_channels * bytes_per_sample
         ) // 1000
