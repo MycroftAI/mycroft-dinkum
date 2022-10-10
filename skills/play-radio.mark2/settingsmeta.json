@@ -1,0 +1,30 @@
+{
+ "skillMetadata": {
+        "sections": [
+            {
+                "name": "Language Filter",
+                "fields": [
+                    {
+                        "type": "label",
+                        "label": "Please choose the default language for Mycroft Radio. Note that, while the radio skill includes stations from all over the world, certain langauges may have few or no radio stations. Defaults to English."
+                    },
+                    {
+                        "name": "language",
+                        "type": "select",
+                        "label": "Options",
+                        "options": "Other URL (please define below)|not_set;AP Hourly Radio News|AP;[CA] CBC|CBC;[BE] VRT Nieuws|VRT;[DE] DLF|DLF;[DE] WDR|WDR;[ES] RNE National Spanish Radio|RNE;[FI] YLE|YLE;[PT] RDP Africa|RDP;[PT] TSF|TSF;[UK] BBC News|BBC;[US] FOX News|FOX;[US] NPR|NPR;[US] PBS NewsHour Daily|PBS",
+                        "value": "not_set"
+                    },
+                    {
+                        "name": "custom_url",
+                        "type": "text",
+                        "label": "Custom News Feed url:",
+                        "value": ""
+                    }
+
+                ]
+            }
+        ]
+    }
+
+}
