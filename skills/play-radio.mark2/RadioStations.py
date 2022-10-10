@@ -202,7 +202,7 @@ class RadioStations:
             # Genre tags which have the "noise words", i.e. stop words like "radio"
             # and "music" will mess things up and usually aren't proper genres
             # anyway so for now we will filter out tags with these words in them.
-            self.genre_tags = filter(self.check_genres, self.genre_tags)
+            self.genre_tags = [clean_sentence(genre_tag) for genre_tag in self.genre_tags]
 
             # Then split the lists. This will make things easier downstream
             # when we use station count to weight a random choice operation.
@@ -214,12 +214,6 @@ class RadioStations:
             self.last_search_terms = self.genre_tags[self.channel_index]
             self.genre_to_play = ""
             self.original_utterance = ""
-
-    def check_genres(self, genre_tag):
-        for noise_word in self.noise_words:
-            if noise_word in genre_tag[0]:
-                return False
-        return True
 
     def query_server(self, endpoint):
         """
