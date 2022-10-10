@@ -169,7 +169,7 @@ class RadioStations:
             "bob.hoerradar.de",
         ]
         self.media_verbs = ["play", "listen", "turn on", "start"]
-        self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio"]
+        self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio", "some", "a", "bit", "of", "more"]
         self.search_limit = 1000
 
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
@@ -195,14 +195,9 @@ class RadioStations:
             # There are many "genre" tags which are actually specific to one station.
             # First make a list of lists to simplify.
             self.genre_tags = [
-                [genre.get("name", ""), genre.get("stationcount", "")]
+                [self.clean_sentence(genre.get("name", "")), genre.get("stationcount", "")]
                 for genre in self.genre_tags_response
             ]
-
-            # Genre tags which have the "noise words", i.e. stop words like "radio"
-            # and "music" will mess things up and usually aren't proper genres
-            # anyway so for now we will filter out tags with these words in them.
-            self.genre_tags = [clean_sentence(genre_tag) for genre_tag in self.genre_tags]
 
             # Then split the lists. This will make things easier downstream
             # when we use station count to weight a random choice operation.
