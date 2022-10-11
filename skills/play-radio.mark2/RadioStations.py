@@ -162,7 +162,7 @@ class GenreTagNotFound(Exception):
 
 
 class RadioStations:
-    def __init__(self):
+    def __init__(self, language):
         self.station_index = 0
         self.blacklist = [
             "icecast",
@@ -178,6 +178,7 @@ class RadioStations:
             "tags?order=stationcount&reverse=true&hidebroken=true&limit=10000"
         )
         self.stations = []
+        self.language = language
 
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.

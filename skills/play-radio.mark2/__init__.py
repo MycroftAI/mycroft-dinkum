@@ -59,6 +59,21 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         }
         self._is_playing = False
         self._stream_session_id: Optional[str] = None
+        self.language = None
+        self.settings_change_callback = None
+
+    def initialize(self):
+        """Wait for internet connection before accessing radio stations"""
+        self.add_event("mycroft.ready", self.handle_ready)
+        self.register_gui_handlers()
+        self.settings_change_callback = self.on_websettings_changed
+        self.on_websettings_changed()
+
+    def on_websettings_changed(self):
+        """Callback triggered anytime Skill settings are modified on backend."""
+        self.language = self.settings.get("language", "not_set")
+        if self.language == "not_set":
+            self.language = "english"
 
     @property
     def rs(self) -> RadioStations:
@@ -67,17 +82,12 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         assert self._rs is not None
         return self._rs
 
-    def initialize(self):
-        """Wait for internet connection before accessing radio stations"""
-        self.add_event("mycroft.ready", self.handle_ready)
-        self.register_gui_handlers()
-
     def handle_ready(self, _):
         self._load_radio_stations()
 
     def _load_radio_stations(self):
         if self._rs is None:
-            self._rs = RadioStations()
+            self._rs = RadioStations(self.language)
 
     def register_gui_handlers(self):
         """Register handlers for events to or from the GUI."""
