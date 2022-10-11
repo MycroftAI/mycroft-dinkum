@@ -301,7 +301,7 @@ class RadioStations:
         return False
 
     def _search(self, srch_term, limit):
-        endpoint = f"stations/search?limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
+        endpoint = f"stations/search?language={self.language}&limit={limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = srch_term.replace(" ", "+")
         endpoint += query
         LOG.debug(f"ENDPOINT: {endpoint}")
