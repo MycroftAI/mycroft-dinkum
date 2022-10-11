@@ -12,16 +12,9 @@
                         "name": "language",
                         "type": "select",
                         "label": "Options",
-                        "options": "Other URL (please define below)|not_set;AP Hourly Radio News|AP;[CA] CBC|CBC;[BE] VRT Nieuws|VRT;[DE] DLF|DLF;[DE] WDR|WDR;[ES] RNE National Spanish Radio|RNE;[FI] YLE|YLE;[PT] RDP Africa|RDP;[PT] TSF|TSF;[UK] BBC News|BBC;[US] FOX News|FOX;[US] NPR|NPR;[US] PBS NewsHour Daily|PBS",
-                        "value": "not_set"
-                    },
-                    {
-                        "name": "custom_url",
-                        "type": "text",
-                        "label": "Custom News Feed url:",
-                        "value": ""
+                        "options": "English (default)|en;German|de;French|fr;Spanish|es;Russian|ru;Arabic|ar;Italian|it;Polish|pl;Hindi|hi;Portuguese|pt;Persian|fa;Romanian|ro;Greek, Modern (1453-)|el;Turkish|tr;Bengali|bn;Chinese|zh;Czech|cs;Dutch|nl;Hungarian|hu;Ukrainian|uk;Slovak|sk;Serbian|sr;Croatian|hr;Bulgarian|bg;Catalan|ca;Tamil|ta;Indonesian|id;Malay|ms;Slovenian|sl;Lithuanian|lt;Sinhala|si;Swahili|sw;Thai|th;Latvian|lv;Vietnamese|vi;Swedish|sv;Danish|da;Japanese|ja;Hebrew|he;Urdu|ur;Bosnian|bs;Azerbaijani|az;Albanian|sq;Malayalam|ml;Korean|ko;Norwegian|no;Georgian|ka;Nepali|ne;Afrikaans|af;Kurdish|ku;Uzbek|uz;Kinyarwanda|rw;Finnish|fi;Kazakh|kk;Telugu|te;Belarusian|be;Luxembourgish|lb;Burmese|my;Faroese|fo;Estonian|et;Icelandic|is;Maltese|mt;Amharic|am;Mongolian|mn;Malagasy|mg;Fijian|fj;Central Khmer|km;Akan|ak;Macedonian|mk;Armenian|hy;Javanese|jv;Turkmen|tk;Marathi|mr;Kikuyu|ki;Irish|ga;Hausa|ha;Xhosa|xh;Breton|br;Galician|gl;Quechua|qu;Sanskrit|sa;Bashkir|ba;Latin|la;Basque|eu;Tagalog|tl;Tibetan|bo;Tatar|tt;Occitan (post 1500)|oc;Aymara|ay;Welsh|cy;Dzongkha|dz;Gaelic|gd;Gujarati|gu;Romansh|rm;Tajik|tg;Yiddish|yi;Esperanto|eo;Kannada|kn;Ossetian|os;Chuvash|cv;Inuktitut|iu",
+                        "value": "en"
                     }
-
                 ]
             }
         ]
