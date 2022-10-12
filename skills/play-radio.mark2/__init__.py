@@ -72,8 +72,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def on_websettings_changed(self):
         """Callback triggered anytime Skill settings are modified on backend."""
         self.language = self.settings.get("language", "not_set")
+        self.log.debug(f"self.settings = {self.settings}")
+        self.log.debug(f"Langauge changed to: {self.language}")
         if self.language == "not_set":
             self.language = "english"
+            self.log.debug(f"Langauge changed to: {self.language}")
 
     @property
     def rs(self) -> RadioStations:

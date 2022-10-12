@@ -172,13 +172,15 @@ class RadioStations:
         self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio"]
         self.search_limit = 1000
 
+        self.language = language
+
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
         self.base_url = random.choice(self.base_urls)
         self.genre_tags_response = self.query_server(
-            "tags?order=stationcount&reverse=true&hidebroken=true&limit=10000"
+            f"tags?order=stationcount&reverse=true&hidebroken=true&limit=10000&language={self.language}"
         )
         self.stations = []
-        self.language = language
+
 
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
