@@ -181,7 +181,6 @@ class RadioStations:
         )
         self.stations = []
 
-
         if self.genre_tags_response:
             # TODO: Figure out what to do if we can't get a server at all.
 
