@@ -386,7 +386,17 @@ class RadioStations:
             raise GenreTagNotFound
 
         stations = self._search(self.last_search_terms, limit)
-        # whack dupes, favor match confidence
+
+        # In Radio Browser many stations list every langauge presumably just
+        # to get clicks. Such stations will also list English as their first
+        # langauge even though they are not really english stations at all.
+        # So we'll look for stations that only list one language for now.
+        stations = [
+            station for station in stations
+            if station["langauge"] and len(station["language"].split(",")) == 1
+        ]
+
+        # whack dupes, favor match confidence, filter langs
         for station in stations:
             if station["name"]:
                 station["name"] = truncate_input_string(clean_string(station["name"]))
