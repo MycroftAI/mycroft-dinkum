@@ -393,7 +393,7 @@ class RadioStations:
         # So we'll look for stations that only list one language for now.
         stations = [
             station for station in stations
-            if station["langauge"] and len(station["language"].split(",")) == 1
+            if station["language"] and len(station["language"].split(",")) == 1
         ]
 
         # whack dupes, favor match confidence, filter langs
