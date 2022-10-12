@@ -67,7 +67,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.register_gui_handlers()
 
     def get_language_setting(self):
-        """Callback triggered anytime Skill settings are modified on backend."""
         language = self.settings.get("language", "not_set")
         if language == "not_set":
             language = "english"
