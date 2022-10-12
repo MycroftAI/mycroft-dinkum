@@ -169,7 +169,7 @@ class RadioStations:
             "bob.hoerradar.de",
         ]
         self.media_verbs = ["play", "listen", "turn on", "start"]
-        self.noise_words = ["on", "to", "the", "music", "station", "channel", "radio", "some", "a", "bit", "of", "more"]
+        self.noise_words = ["please", "on", "to", "the", "music", "station", "channel", "radio", "some", "a", "bit", "of", "more"]
         self.search_limit = 1000
 
         self.base_urls = ["https://" + host + "/json/" for host in fetch_hosts()]
