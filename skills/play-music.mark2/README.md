@@ -1,25 +1,29 @@
-# skill-music-demo
+# Jukebox Skill 
 
-A simple demo of music on the Mark II
+## Play local music files on the Mark 2.
 
-If you specifiy an artist and song you should get 
-the song. If you just specifiy an artist, sometimes
-you get a playlist which takes a bit to download 
-and convert (an hour and a half Joe Cocker playlist
-takes about a minute or so to download). 
+The Jukebox skill can play any common audio file (mp3, FLAC, Ogg Vorbis, WAV, etc.) 
+which is located on any drive mounted to your Mycroft device. 
 
-If a match is found, the skill initiates a download 
-even if it is not selected to ultimately play the
-media for performance purposes.
+Files do not have to be placed in any particular directory; this skill will find
+them automatically. They need not be organized in any particular way.
 
-Even though you may see comments like 'streaming' or
-'stream', and even though there is actually a text 
-label that says 'Streaming', you should read the code
-and not the comments. This is not a streaming 
-application. It simply downloads the video in its 
-entirety, then uses ffmpeg to strip out the audio and 
-then it plays that. 
+The Jukebox skill searches for audio files to play based on their metadata, not 
+directory structures or file names. Most music files in the wild already have 
+metadata for things like artist, track name, album, etc. Jukebox will search each 
+of these for matches based on your command. For instance, you might say:
 
-Files are deleted after being played. Files are not
-cached by design. This is an example of a simple single 
-file music player, not a true playlist type application. 
+* Hey Mycroft, play The Beatles
+* Hey Mycroft, play Here Comes the Sun
+
+Currently, it is not recommended to use Jukebox with local STT turned on. 
+
+If you have problems playing files which you know are on a connected drive, try
+the following:
+
+1) Reboot Mycroft. Sometimes when drives are inserted they are not immediately read.
+2) Check your metadata. 
+3) Say: "Hey Mycroft, show speech to text". This will show you how Mycroft 
+    interpreted your last few utterances.
+
+Mycroft Jukebox is an interface to the [Music Player Daemon (MPD)](https://www.musicpd.org/).
