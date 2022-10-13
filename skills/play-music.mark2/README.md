@@ -6,7 +6,7 @@ The Jukebox skill can play any common audio file (mp3, FLAC, Ogg Vorbis, WAV, et
 which is located on any drive mounted to your Mycroft device. 
 
 Files do not have to be placed in any particular directory; this skill will find
-them automatically. They need not be organized in any particular way.
+them automatically. Nor do they need not be organized in any particular way.
 
 The Jukebox skill searches for audio files to play based on their metadata, not 
 directory structures or file names. Most music files in the wild already have 
