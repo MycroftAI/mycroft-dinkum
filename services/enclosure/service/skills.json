@@ -10,7 +10,7 @@
         { "name": "Microphone Skill", "skill_gid": "microphone.mark2" },
         { "name": "News Skill", "skill_gid": "news.mark2" },
         { "name": "Playback Control Skill", "skill_gid": "play.mark2" },
-        { "name": "Local Music Skill", "skill_gid": "play-jukebox.mark2" },
+        { "name": "Local Music Skill", "skill_gid": "play-music.mark2" },
         { "name": "Mycroft Radio Skill", "skill_gid": "play-radio.mark2" },
         { "name": "Privacy Skill", "skill_gid": "privacy.mark2" },
         { "name": "DuckDuckGo Skill", "skill_gid": "query-duck-duck-go.mark2" },
