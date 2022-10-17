@@ -86,7 +86,6 @@ class MpdClient:
         command_type = "search"
         for query_type in ["artist", "album", "title"]:
             results = self._search(command_type, query_type, query)
-            self._feed_songs(results)
             for artist, album, title, time_str, relative_path in results:
                 song_path = self.music_dir / relative_path
                 if song_path.is_file():
