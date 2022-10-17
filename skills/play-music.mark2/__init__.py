@@ -84,10 +84,10 @@ class LocalMusicSkill(CommonPlaySkill):
             self._mpd_playlist = []
             self.mpd_client.update()
 
-            self._mpd_playlist = list( )
+            self._mpd_playlist = list(self.mpd_client.random_play())
             self.log.debug("Result: %s", self._mpd_playlist)
             if self._mpd_playlist:
-                result = (phrase, CPSMatchLevel.EXACT, {})
+                self._play_next_song()
         except Exception:
             self.log.exception("Error searching local music with MPD")
 
