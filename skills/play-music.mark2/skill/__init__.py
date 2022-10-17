@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import subprocess
-import typing
+from typing import Union, Optional, List, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+import random
 
 from mycroft.util.log import LOG
 
@@ -37,7 +38,7 @@ class MpdClient:
 
     def __init__(
         self,
-        music_dir: typing.Optional[typing.Union[str, Path]] = None,
+        music_dir: Optional[Union[str, Path]] = None,
         host="127.0.0.1",
     ):
         self.host = host
@@ -55,39 +56,56 @@ class MpdClient:
         LOG.info(cmd)
         subprocess.check_call(cmd)
 
-    def search(self, query: str) -> typing.Iterable[Song]:
+    def random_play(self):
+        """
+        This finds all files and plays them in random order.
+        This only gets triggered by the 'Play jukebox' case.
+        """
+        command_type = "listall"
+        results = self._search(command_type)
+        random.shuffle(results)
+        self._feed_songs(results)
+
+    def search(self, query: str):
         """Searches by artist, album, then song title.
 
         Returns:
             playlist
         """
+        command_type = "search"
         for query_type in ["artist", "album", "title"]:
-            results = self._search(query_type, query)
-            for artist, album, title, time_str, relative_path in results:
-                song_path = self.music_dir / relative_path
-                if song_path.is_file():
-                    yield Song(
-                        artist=artist,
-                        album=album,
-                        title=title,
-                        duration_sec=self._time_to_seconds(time_str),
-                        file_path=song_path,
-                    )
-                else:
-                    LOG.warning("Missing file: %s", song_path)
+            results = self._search(command_type, query_type, query)
+            self._feed_songs(results)
 
-    def _search(self, query_type: str, query: str) -> typing.List[typing.List[str]]:
+    def _feed_songs(self, results: List[List[str]]) -> Iterable[Song]:
+        for artist, album, title, time_str, relative_path in results:
+            song_path = self.music_dir / relative_path
+            if song_path.is_file():
+                yield Song(
+                    artist=artist,
+                    album=album,
+                    title=title,
+                    duration_sec=self._time_to_seconds(time_str),
+                    file_path=song_path,
+                )
+            else:
+                LOG.warning("Missing file: %s", song_path)
+
+    def _search(self, command_type: str, query_type: Optional[str] = None, query: Optional[str] = None) -> List[List[str]]:
+        """
+        This handles two cases. One: a search for a particular song, artist, etc.
+        Two: a 'listall' command to return all music.
+        """
         cmd = [
             "mpc",
             "-h",
             self.host,
-            "search",
+            command_type,
             "--format",  # https://www.musicpd.org/doc/mpc/html/#cmdoption-f
             "%artist%\t%album%\t%title%\t%time%\t%file%",  # tab-separated
-            query_type,
-            query,
         ]
-
+        if query_type:
+            cmd.extend([query_type, query])
         LOG.debug(cmd)
         return [
             line.split("\t")

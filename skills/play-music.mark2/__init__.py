@@ -73,6 +73,24 @@ class LocalMusicSkill(CommonPlaySkill):
         # for now just handles one phrase 'stop music'
         return self.stop()
 
+    @intent_handler(AdaptIntent("").require("Play").require("Music"))
+    def handle_play_jukebox(self, message):
+        """
+        This only triggers when someone says 'Play Jukebox" or
+        'Play music'. It plays something at random if something
+        is available, comparable to the radio skill.
+        """
+        try:
+            self._mpd_playlist = []
+            self.mpd_client.update()
+
+            self._mpd_playlist = list( )
+            self.log.debug("Result: %s", self._mpd_playlist)
+            if self._mpd_playlist:
+                result = (phrase, CPSMatchLevel.EXACT, {})
+        except Exception:
+            self.log.exception("Error searching local music with MPD")
+
     @intent_handler(AdaptIntent("").require("Show").require("Music"))
     def handle_show_music(self, message):
         dialog = None
