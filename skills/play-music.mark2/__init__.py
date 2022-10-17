@@ -89,7 +89,7 @@ class LocalMusicSkill(CommonPlaySkill):
             if self._mpd_playlist:
                 self._play_next_song()
         except Exception:
-            self.log.exception("Error searching local music with MPD")
+            self.log.exception("Can't find local music with MPD")
 
     @intent_handler(AdaptIntent("").require("Show").require("Music"))
     def handle_show_music(self, message):

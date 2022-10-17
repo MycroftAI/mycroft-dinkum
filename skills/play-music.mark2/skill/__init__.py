@@ -64,7 +64,18 @@ class MpdClient:
         command_type = "listall"
         results = self._search(command_type)
         random.shuffle(results)
-        self._feed_songs(results)
+        for artist, album, title, time_str, relative_path in results:
+            song_path = self.music_dir / relative_path
+            if song_path.is_file():
+                yield Song(
+                    artist=artist,
+                    album=album,
+                    title=title,
+                    duration_sec=self._time_to_seconds(time_str),
+                    file_path=song_path,
+                )
+            else:
+                LOG.warning("Missing file: %s", song_path)
 
     def search(self, query: str):
         """Searches by artist, album, then song title.
@@ -88,9 +99,6 @@ class MpdClient:
                     )
                 else:
                     LOG.warning("Missing file: %s", song_path)
-
-    def _feed_songs(self, results: List[List[str]]) -> Iterable[Song]:
-        pass
 
     def _search(self, command_type: str, query_type: Optional[str] = None, query: Optional[str] = None) -> List[List[str]]:
         """
