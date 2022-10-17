@@ -67,7 +67,9 @@ class HomescreenSkill(MycroftSkill):
             "homeScreenTemperature": None,
             "homeScreenWeatherCondition": None,
             "isMuted": False,
-            "mycroftContainerBuildDate": get_mycroft_build_datetime(),
+            "mycroftContainerBuildDate": "",
+            # TODO: Show if test image
+            # "mycroftContainerBuildDate": get_mycroft_build_datetime(),
         }
 
     def _init_wallpaper(self):

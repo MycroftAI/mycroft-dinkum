@@ -108,9 +108,19 @@ class MycroftRadio(CommonPlaySkill):
         ]
         if not self.genre_tags:
             raise GetGenreTagsError
-        # Then split the lists. This will make things easier downstream
-        # when we use station count to weight a random choice operation.
-        # self.genre_tags, self.genre_weights = map(list, zip(*self.genre_tags))
+
+        self.language_code = None
+        self.settings_change_callback = None
+
+    def initialize(self):
+        self.settings_change_callback = self.on_websettings_changed
+        self.on_websettings_changed()
+
+    def on_websettings_changed(self):
+        """Callback triggered anytime Skill settings are modified on backend."""
+        self.language_code = self.settings.get("language", "not_set")
+        if self.language_code == "not_set":
+            self.language_code = "en"
 
     def get_confidence(self, utterance: str) -> float:
         utterance = utterance.lower()
@@ -147,8 +157,18 @@ class MycroftRadio(CommonPlaySkill):
                 genre_term += " " + word
         return genre_term
 
+    def get_language(self) -> str:
+        if self.language_code:
+            return self.language_code
+        else:
+            self.language_code = self.settings.get("language", "not_set")
+        if self.language_code == "not_set":
+            self.language_code = 'en'
+        return self.language_code
+
     def get_radio_stations(self):
-        endpoint = f"stations/search?limit={self.search_limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
+        language = self.get_language()
+        endpoint = f"stations/search?language={language}&limit={self.search_limit}&hidebroken=true&order=clickcount&reverse=true&tagList="
         query = ""
         if self.exact_genre_match:
             self.most_recent_genre_match = self.exact_genre_match
