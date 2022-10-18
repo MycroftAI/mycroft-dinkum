@@ -15,7 +15,7 @@ from typing import Optional
 
 from adapt.intent import IntentBuilder
 from mycroft.messagebus.message import Message
-from mycroft.skills import GuiClear, MycroftSkill, intent_handler
+from mycroft.skills import GuiClear, MycroftSkill, intent_handler, AdaptIntent
 
 STATUS_KEYS = ["track", "artist", "album", "image"]
 
@@ -78,18 +78,16 @@ class PlaybackControlSkill(MycroftSkill):
             )
         )
 
-    # def stop(self, message=None):
-    #     self.clear_gui_info()
+    @intent_handler(AdaptIntent("").require("StopMusic"))
+    def handle_stop_music(self, message):
+        # for now just handles one phrase 'stop music'
+        return self.stop()
 
-    #     self.log.info(
-    #         "Audio service status: " "{}".format(self.audio_service.track_info())
-    #     )
-    #     if self.audio_service.is_playing:
-    #         self.audio_service.stop()
-    #         self.has_played = False
-    #         return True
-    #     else:
-    #         return False
+    def stop(self, message=None):
+        self.log.debug("Play Skill Stopping")
+        if self.audio_service.is_playing:
+            self.CPS_release_output_focus()
+            self.gui.release()
 
     @intent_handler("play.rx")
     def play(self, message):
