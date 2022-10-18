@@ -1,46 +1,52 @@
-# <img src='https://raw.githack.com/FortAwesome/Font-Awesome/master/svgs/solid/robot.svg' card_color='#A1DC1A' width='50' height='50' style='vertical-align:bottom'/> Mycroft Radio
-Play radio stations from around the world.
+# <img src='https://raw.githack.com/FortAwesome/Font-Awesome/master/svgs/solid/music.svg' card_color='#DBAC40' width='50' height='50' style='vertical-align:bottom'/> Mycroft Radio
+Play internet radio stations from around the world.
 
 ## About
-Initial version which needs some clean up. 
+Mycroft Radio plays internet radio stations from a free, 
+user-curated index. It includes radio stations from all
+over the world, in more than 100 languages. It includes hundreds
+of genres of music as well as talk and news stations.
 
-Currently the vocab and dialog trees are copied from the npr news skill
-and only the ones necessary to get the skill working have been modified
-so these will need to be cleaned up, but for now the skill should play
-music which was the goal. 
+Mycroft Radio can play stations for any genre, such as 'pop' or 
+'jazz'. Once playing, you can skip between stations within a genre (or "channel") 
+or you can move between genres. Streaming can also be paused and
+resumed.
 
-Uses a free user contributed radio station index (see code for endpoint)
-to stream radio channels using standard audio service.
-
-radio help or help radio will speak options.
-
-basically play music, or play radio will select a random genre.
-
-play jazz or play soft rock will play that genre.
-
-next station or previous station will change the station in the current channel.
-
-next channel or previous channel will change the current channel.
-
-there is limited artist support, so for example play pink floyd or play 
-dean martin will work, but play the turtles or play louie louie typically
-do not. 
+Mycroft Radio can be configured to play stations in any language. 
+By default it plays English stations, but this can be changed 
+in the Radio skill settings on the Mycroft website.
 
 
 ## Examples
-* "Play radio"
-* "Play jazz"
-* "Play Houston radio"
-* "Play sports radio"
+* "Hey Mycroft, play radio."
+* "Hey Mycroft, play jazz."
+* "Hey Mycroft, play classic rock radio."
+* "Hey Mycroft, next station."
+* "Hey Mycroft, pause."
+* "Hey Mycroft, resume."
 
 ## Credits
-Mycroft.AI
+Mycroft AI
+
+## Supported Devices 
+platform_mark2 
 
 ## Category
-**Music**
+**Entertainment**
+Music
+Media
 
 ## Tags
 #radio
-#streaming
-#audio
 #music
+#media
+
+
+## Troubleshooting
+
+If you have problems playing a station, try:
+
+1) "Hey Mycroft, play radio". If this works, then you may be asking for a genre which isn't available 
+or which Mycroft is having trouble interpreting correctly.
+2) Say: "Hey Mycroft, show speech to text". This will show you how Mycroft 
+interpreted your last few utterances. Certain genre names are difficult to get right.
