@@ -75,11 +75,17 @@ Mycroft.Delegate {
             }
 
             WifiLabel {
-                id: fourthline
+                id: fourthLine
                 anchors.top: thirdLine.bottom
-                text: "and visit start.mycroft.ai"
-                textColor: "#22a7f0"
+                text: "and visit"
             }
+
+            WifiLabel {
+                id: fifthLine
+                anchors.top: fourthLine.bottom
+                text: "start.mycroft.ai"
+            }
+
         }
     }
 }
