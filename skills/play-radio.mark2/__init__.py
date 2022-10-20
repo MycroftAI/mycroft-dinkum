@@ -146,7 +146,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 )
                 station_name = resp.get("name", "")
                 if station_name:
-                    self.log.info(f"Registered click for {station_name}")
+                    self.log.info(f"Registered click for {resp}")
 
     def handle_pause(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
