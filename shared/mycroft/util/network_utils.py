@@ -17,11 +17,13 @@ import subprocess
 
 import requests
 
-from .log import LOG
+from .log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 def check_system_clock_sync_status() -> bool:
-    """Return True if the system clock has been synchronized with NTP"""
+    """Returns True if the system clock has been synchronized with NTP."""
     clock_synchronized = False
 
     try:
@@ -35,13 +37,13 @@ def check_system_clock_sync_status() -> bool:
                 clock_synchronized = True
                 break
     except subprocess.CalledProcessError as error:
-        LOG.exception("error while checking system clock sync: %s", error.output)
+        _log.exception("error while checking system clock sync: %s", error.output)
 
     return clock_synchronized
 
 
 def check_captive_portal() -> bool:
-    """Returns True if a captive portal page is detected"""
+    """Returns True if a captive portal page is detected."""
     from bs4 import BeautifulSoup
 
     captive_portal = False
@@ -52,13 +54,13 @@ def check_captive_portal() -> bool:
         soup = BeautifulSoup(html_doc)
         title = soup.title.string if soup.title else ""
 
-        LOG.info(title)
+        _log.info(title)
 
         # If something different is in the title, we likely were redirected
         # to the portal page.
         if title.lower().strip() != "portal check":
             captive_portal = True
     except Exception:
-        LOG.exception("Error checking for captive portal")
+        _log.exception("Error checking for captive portal")
 
     return captive_portal

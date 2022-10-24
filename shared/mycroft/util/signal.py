@@ -18,21 +18,21 @@ import tempfile
 import time
 
 from mycroft.configuration import Configuration
-from mycroft.util.file_utils import create_file, ensure_directory_exists
+from .file_utils import create_file, ensure_directory_exists
 
 
-def get_ipc_directory(domain=None):
+def get_ipc_directory(domain: str = None) -> str:
     """Get the directory used for Inter Process Communication
 
     Files in this folder can be accessed by different processes on the
     machine.  Useful for communication.  This is often a small RAM disk.
 
     Args:
-        domain (str): The IPC domain.  Basically a subdirectory to prevent
+        domain: The IPC domain.  Basically a subdirectory to prevent
             overlapping signal filenames.
 
     Returns:
-        str: a path to the IPC directory
+        a path to the IPC directory
     """
     config = Configuration.get()
     ipc_path = config.get("ipc_path")
@@ -42,12 +42,15 @@ def get_ipc_directory(domain=None):
     return ensure_directory_exists(ipc_path, domain)
 
 
-def create_signal(signal_name):
+def create_signal(signal_name: str) -> bool:
     """Create a named signal
 
     Args:
-        signal_name (str): The signal's name.  Must only contain characters
+        signal_name: The signal's name.  Must only contain characters
             valid in filenames.
+
+    Returns:
+        True if the signal file is a file otherwise false
     """
     try:
         path = os.path.join(get_ipc_directory(), "signal", signal_name)
@@ -57,18 +60,18 @@ def create_signal(signal_name):
         return False
 
 
-def check_for_signal(signal_name, sec_lifetime=0):
+def check_for_signal(signal_name: str, sec_lifetime: int = 0) -> bool:
     """See if a named signal exists
 
     Args:
-        signal_name (str): The signal's name.  Must only contain characters
+        signal_name: The signal's name.  Must only contain characters
             valid in filenames.
-        sec_lifetime (int, optional): How many seconds the signal should
+        sec_lifetime: How many seconds the signal should
             remain valid.  If 0 or not specified, it is a single-use signal.
             If -1, it never expires.
 
     Returns:
-        bool: True if the signal is defined, False otherwise
+        True if the signal is defined, False otherwise
     """
     path = os.path.join(get_ipc_directory(), "signal", signal_name)
     if os.path.isfile(path):

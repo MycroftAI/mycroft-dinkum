@@ -13,9 +13,7 @@
 # limitations under the License.
 #
 
-"""
-The mycroft.util.format module provides various formatting functions for
-things like numbers, times, etc.
+"""Provides various formatting functions for things like numbers, times, etc.
 
 The focus of these formatting functions is to create human digestible content
 either as speech or in display form. It is also enables localization.
@@ -31,6 +29,7 @@ from enum import Enum
 
 # These are the main functions we are using lingua franca to provide
 from lingua_franca import get_default_loc
+
 # TODO 21.08 - remove import of private method _translate_word
 # Consider whether the remaining items here are necessary.
 # TODO 21.08 - move nice_duration methods to Lingua Franca.

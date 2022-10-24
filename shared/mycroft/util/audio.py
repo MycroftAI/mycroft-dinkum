@@ -16,16 +16,24 @@ import audioop
 
 
 def debiased_energy(audio_data: bytes, sample_width: int) -> float:
-    """Compute RMS of debiased audio."""
+    """Compute RMS (Root Mean Square) of debiased audio.
+
+    Args:
+        audio_data: audio stream from input source
+        sample_width: number of bytes in one block of audio data
+
+    Returns:
+        energy of debiased audio data
+    """
     # Thanks to the speech_recognition library!
     # https://github.com/Uberi/speech_recognition/blob/master/speech_recognition/__init__.py
     energy = -audioop.rms(audio_data, sample_width)
     energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
-    debiased_energy = audioop.rms(
+    energy_rms = audioop.rms(
         audioop.add(
             audio_data, energy_bytes * (len(audio_data) // sample_width), sample_width
         ),
         sample_width,
     )
 
-    return debiased_energy
+    return energy_rms
