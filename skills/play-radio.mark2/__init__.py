@@ -15,9 +15,9 @@
 #   play <station name> should find if provided
 #   add to favorites and play favorite
 from typing import Optional, Tuple
-import time
-
+import threading
 import requests
+
 from mycroft.skills import AdaptIntent, GuiClear, intent_handler
 from mycroft.skills.common_play_skill import CommonPlaySkill, CPSMatchLevel
 from mycroft_bus_client import Message
@@ -62,7 +62,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self._stream_session_id: Optional[str] = None
         self.settings_change_callback = None
         # The following is for tracking how long a station has been played.
-        self.current_station_uuid = None
+        self.current_station_uuid: Optional[str] = None
 
     def initialize(self):
         """Wait for internet connection before accessing radio stations"""
@@ -124,7 +124,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "RadioPlayer_mark_ii.qml",
             self.handle_stop_radio,
         )
-
+ 
     def handle_station_click(self, message):
         """
         Radio Browser tracks 'clicks', meaning the number of times
@@ -138,16 +138,18 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """
         played_station_uuid = message.data.get("station_uuid", "")
         if played_station_uuid:
-            time.sleep(60)
-            if played_station_uuid == self.current_station_uuid:
-                # Send 'click' feedback to Radio Browser.
-                resp = self.rs.query_server(
-                    f"url/{played_station_uuid}"
-                )
-                station_name = resp.get("name", "")
-                if station_name:
-                    self.log.info(f"Registered click for {resp}")
-
+            threading.Timer(60.0, self._register_station_click, args=(played_station_uuid,)).start()
+    
+    def _register_station_click(self, played_station_uuid):
+        if played_station_uuid == self.current_station_uuid:
+            # Send 'click' feedback to Radio Browser.
+            resp = self.rs.query_server(
+                f"url/{played_station_uuid}"
+            )
+            station_name = resp.get("name", "")
+            if station_name:
+                self.log.info(f"Registered click for {resp}")
+        
     def handle_pause(self, message):
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id != self._stream_session_id:
@@ -399,6 +401,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.stream_uri = self.current_station.get("url_resolved", "")
         self.station_name = self.current_station.get("name", "")
         self.station_name = self.station_name.replace("\n", " ")
+        self.station_name = " ".join(self.station_name.splitlines())
         self.current_station_uuid = self.current_station.get("stationuuid", "")
 
     @intent_handler("TurnOnRadio.intent")
