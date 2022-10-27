@@ -1,3 +1,4 @@
+mycroft-messagebus-client==0.9.4
 numpy
 pysdl2==0.9.11
 sdnotify~=0.3.0

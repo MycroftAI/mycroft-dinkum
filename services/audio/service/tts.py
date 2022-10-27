@@ -1,20 +1,38 @@
+# Copyright 2022 Mycroft AI Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""Logic to load a configured TTS plugin and manage speech playback."""
 import hashlib
-import logging
 from pathlib import Path
 from threading import RLock
 from typing import Any, Dict, List, Optional
 
 import pysbd
+from mycroft_bus_client import Message, MessageBusClient
+
 from mycroft.tts import TTS
 from mycroft.tts.dummy_tts import DummyTTS
 from mycroft.util.file_utils import get_cache_directory
+from mycroft.util.log import get_mycroft_logger
 from mycroft.util.plugins import load_plugin
-from mycroft_bus_client import Message, MessageBusClient
 
-LOG = logging.getLogger("audio")
+_log = get_mycroft_logger(__name__)
 
 
 class SpeakHandler:
+    """Synthesizes text into speech using the configured TTS engine."""
+
     def __init__(self, config: Dict[str, Any], bus: MessageBusClient, tts: TTS):
         self.config = config
         self.bus = bus
@@ -32,25 +50,32 @@ class SpeakHandler:
         self._load_segmenter()
 
     def start(self):
+        """Defines the event handlers, effectively starting the ability to speak."""
         self.bus.on("speak", self._handle_speak)
         self.bus.on("speak.cache", self._handle_speak)
         self.bus.on("mycroft.tts.stop", self._handle_tts_stop)
 
     def stop(self):
+        """Defines the logic needed to shut down the speech handler."""
         pass
 
     def _handle_speak(self, message: Message):
+        """Synthesize speech for the text in the event message.
+
+        Args:
+            message: a "speak" or "speach.cache" event message.
+        """
         try:
             cache_only = message.msg_type == "speak.cache"
             utterance = message.data["utterance"]
             mycroft_session_id = message.data.get("mycroft_session_id")
 
-            LOG.debug(
-                "Speak for session '%s': %s (cache=%s)",
-                mycroft_session_id,
-                utterance,
-                cache_only,
-            )
+            if mycroft_session_id is not None:
+                _log.info("Starting TTS for session %s", mycroft_session_id)
+            if cache_only:
+                _log.info("Caching speech synthesis for text '%s'", utterance)
+            else:
+                _log.info("Speaking text '%s'", utterance)
 
             with self._speak_lock:
                 # Begin TTS session
@@ -60,9 +85,7 @@ class SpeakHandler:
                     self.bus.emit(
                         Message(
                             "mycroft.tts.session.start",
-                            data={
-                                "mycroft_session_id": mycroft_session_id,
-                            },
+                            data={"mycroft_session_id": mycroft_session_id},
                         )
                     )
 
@@ -78,8 +101,6 @@ class SpeakHandler:
 
                     cache_path = self._synthesize(sentence)
                     if cache_only:
-                        # Don't speak, just cache the chunk
-                        LOG.debug("Not speaking (cache only): %s", sentence)
                         continue
 
                     # Ask audio service to play the chunk
@@ -96,22 +117,34 @@ class SpeakHandler:
                             },
                         )
                     )
-                    LOG.debug(
-                        "Submitted TTS chunk %s/%s for session %s: %s",
+                    _log.debug(
+                        "Submitted TTS chunk %s/%s: %s",
                         i + 1,
                         len(segments),
-                        mycroft_session_id,
                         sentence,
                     )
+            if mycroft_session_id is not None:
+                _log.info("Completed TTS for session %s", mycroft_session_id)
         except Exception:
-            LOG.exception("Unexpected error handling speak")
+            _log.exception("Unexpected error handling speak")
 
-    def _handle_tts_stop(self, message: Message):
-        # Cancel any active TTS session
+    def _handle_tts_stop(self, _: Message):
+        """Cancels any active TTS session."""
+        _log.info("Speech synthesis stopped for session %s", self._mycroft_session_id)
         self._mycroft_session_id = None
 
     def _synthesize(self, text: str) -> Path:
-        """Synthesize audio from text or use cached WAV if available"""
+        """Synthesizes audio from text.
+
+        Before submitting text for synthesis, the TTS cache is searched.  If the
+        text is found in the cache, use cached .wav file.
+
+        Args:
+            text: the text to synthesize
+
+        Returns:
+            the path to the cache file
+        """
         text_hash = hash_sentence(text)
 
         # Check preloaded static cache
@@ -123,10 +156,11 @@ class SpeakHandler:
         for cache_dir in self._cache_dirs:
             cache_path = Path.joinpath(cache_dir, f"{text_hash}.wav")
             if cache_path.is_file():
+                _log.info("Using cached synthesis")
                 return cache_path
 
         # Not in cache, need to synthesize
-        LOG.debug("Synthesizing: %s", text)
+        _log.info("Synthesizing speech")
         self.tts.get_tts(text, str(cache_path))
         return cache_path
 
@@ -135,7 +169,7 @@ class SpeakHandler:
         if self._segmenter is not None:
             # Split into sentences intelligently
             segments = self._segmenter.segment(utterance)
-            LOG.debug("Segments: %s", segments)
+            _log.info("Segmentation results: %s", segments)
         else:
             # No segmenter available, synthesize entire utterance as one chunk
             segments = [utterance]
@@ -153,34 +187,44 @@ class SpeakHandler:
         seg_lang = tts_lang[:2]
         if seg_lang in pysbd.languages.LANGUAGE_CODES:
             self._segmenter = pysbd.Segmenter(language=seg_lang, clean=False)
-            LOG.debug("Loaded sentence segmenter for language %s", seg_lang)
+            _log.info("Loaded sentence segmenter for language %s", seg_lang)
 
 
 def load_tts_module(config: Dict[str, Any]) -> TTS:
-    """Load text to speech module as a plugin"""
+    """Load text to speech module as a plugin.
+
+    Args:
+        config: full Mycroft configuration
+
+    Returns:
+        Instance of a speech synthesis plugin.
+    """
     module_name = config["tts"]["module"]
     if module_name == "dummy":
-        LOG.debug("Using dummy TTS")
+        _log.info("Using dummy TTS")
         return DummyTTS("", {})
 
     tts_config = config["tts"].get(module_name, {})
     lang = config.get("lang", "en-us")
     tts_lang = tts_config.get("lang", lang)
 
-    LOG.debug("Loading text to speech module: %s", module_name)
+    _log.info("Loading text to speech module: %s", module_name)
     module = load_plugin("mycroft.plugin.tts", module_name)
     assert module, f"Failed to load {module_name}"
     tts = module(tts_lang, tts_config)
-    LOG.info("Loaded text to speech module: %s", module_name)
+    _log.info("Text to speech module loaded")
 
     return tts
 
 
 def hash_sentence(sentence: str):
-    """Convert the sentence into a hash value used for the file name
+    """Converts the sentence into a hash value used for the cache file name.
 
     Args:
         sentence: The sentence to be cached
+
+    Returns:
+        Hash value to be used as cache file name
     """
     encoded_sentence = sentence.encode("utf-8", "ignore")
     sentence_hash = hashlib.md5(encoded_sentence).hexdigest()

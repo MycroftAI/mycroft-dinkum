@@ -72,7 +72,7 @@ def _generate_log_config(log_file_name: str) -> dict:
         "version": 1,
         "formatters": {"default": default_formatter},
         "handlers": {"console": console_handler, "file": file_handler},
-        "root": {"level": "DEBUG", "handlers": ["file", "console"]},
+        "root": {"level": "DEBUG", "handlers": ["file"]},
     }
 
 
@@ -84,7 +84,7 @@ def configure_mycroft_logger(log_file_name: str):
     """
     log_config = _generate_log_config(log_file_name)
     mycroft_logger = {
-        "mycroft": {"level": "DEBUG", "handlers": ["console", "file"], "propagate": 0}
+        "mycroft": {"level": "DEBUG", "handlers": ["file"], "propagate": 0}
     }
     log_config["loggers"] = mycroft_logger
     logging.config.dictConfig(log_config)
