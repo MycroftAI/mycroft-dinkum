@@ -33,7 +33,14 @@ class BackendDown(RequestException):
 
 
 def _read_pantavisor_file(file_path: str) -> str:
-    """Quick hack to read a file owned by root on a pantacor device."""
+    """Quick hack to read a file owned by root on a pantacor device.
+
+    Args:
+        file_path: the absolute path to the file being read
+
+    Returns:
+        contents of file
+    """
     try:
         # TODO: replace this with reading a file accessible by the mycroft user
         cmd = ["sudo", "cat", file_path]
@@ -46,9 +53,11 @@ def _read_pantavisor_file(file_path: str) -> str:
     return file_content
 
 def get_pantacor_device_id() -> str:
+    """Reads the Pantacor device ID from the /pantavisor directory."""
     return _read_pantavisor_file("/pantavisor/device-id")
 
 def get_pantacor_channel() -> str:
+    """Reads the Pantacor channel name from the /pantavisor directory."""
     return _read_pantavisor_file("/pantavisor/user-meta/fleet_channel")
 
 class Api:

@@ -531,6 +531,7 @@ class ConnectCheck(MycroftSkill):
         )
 
     def _wait_for_pantacor_connect(self):
+        """Ensures the Pantacor device ID and channel are assigned before pairing."""
         pantacor_device_id = None
         pantacor_channel = None
         retries = 0
