@@ -32,19 +32,24 @@ class BackendDown(RequestException):
     pass
 
 
-def get_pantacor_device_id() -> str:
+def _read_pantavisor_file(file_path: str) -> str:
     """Quick hack to read a file owned by root on a pantacor device."""
     try:
         # TODO: replace this with reading a file accessible by the mycroft user
-        cmd = ["sudo", "cat", "/pantavisor/device-id"]
+        cmd = ["sudo", "cat", file_path]
         result = subprocess.check_output(cmd)
-        pantacor_device_id = result.decode().strip()
+        file_content = result.decode().strip()
     except Exception:
         LOG.exception("Error reading pantacor id")
-        pantacor_device_id = "unknown"
+        file_content = None
 
-    return pantacor_device_id
+    return file_content
 
+def get_pantacor_device_id() -> str:
+    return _read_pantavisor_file("/pantavisor/device-id")
+
+def get_pantacor_channel() -> str:
+    return _read_pantavisor_file("/pantavisor/user-meta/fleet_channel")
 
 class Api:
     """Generic class to wrap web APIs"""
