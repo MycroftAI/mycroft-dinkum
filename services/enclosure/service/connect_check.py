@@ -22,7 +22,7 @@ from uuid import uuid4
 
 import requests
 import xdg.BaseDirectory
-from mycroft.api import DeviceApi, get_pantacor_device_id
+from mycroft.api import DeviceApi, get_pantacor_device_id, get_pantacor_channel
 from mycroft.configuration import Configuration
 from mycroft.configuration.remote import (
     download_remote_settings,
@@ -130,6 +130,8 @@ class ConnectCheck(MycroftSkill):
         self._show_tutorial = False
         self._state: State = State.CHECK_INTERNET
         self._awconnect_client: Optional[AwconnectClient] = None
+        self.deployment_manager = self.config_core["enclosure"].get("deployment_manager")
+
 
     def initialize(self):
         self.nato_alphabet = self.translate_namedvalues("codes")
@@ -507,6 +509,8 @@ class ConnectCheck(MycroftSkill):
         )
 
         self.log.info("Initiating device pairing sequence...")
+        if self.deployment_manager == "pantacor":
+            self._wait_for_pantacor_connect()
         self._get_pairing_data()
         if self.pairing_code is None:
             # Too many errors while obtaining pairing code
@@ -525,6 +529,25 @@ class ConnectCheck(MycroftSkill):
             gui="pairing_start_mark_ii.qml",
             gui_clear=GuiClear.NEVER,
         )
+
+    def _wait_for_pantacor_connect(self):
+        """Ensures the Pantacor device ID and channel are assigned before pairing."""
+        pantacor_device_id = get_pantacor_device_id()
+        pantacor_channel = get_pantacor_channel()
+        retries = 0
+        self.log.info("Deployments managed by Pantacor.")
+        self.log.info("Waiting for device to connect and sync with Pantacor...")
+        while pantacor_device_id is None or pantacor_channel is None:
+            pantacor_device_id = get_pantacor_device_id()
+            pantacor_channel = get_pantacor_channel()
+            time.sleep(1)
+            retries += 1
+            if retries > 20:
+                break
+        if retries > 20:
+            self.log.error("Attempt to connect to Pantacor timed out.")
+        else:
+            self.log.info("Connection to Pantacor successful")
 
     def _pairing_show_code(self, _message: Message):
         """Speak pairing code to user"""
@@ -597,12 +620,12 @@ class ConnectCheck(MycroftSkill):
                 self.pairing_code_expiration = (
                     time.monotonic() + pairing_data["expiration"]
                 )
-                break
             except Exception:
                 self.log.exception("API call to retrieve pairing data failed")
                 time.sleep(PAIRING_WAIT_SEC)
             else:
-                self.log.info("Pairing code obtained: %s")
+                self.log.info("Pairing code obtained: %s", self.pairing_code)
+                break
 
     def _display_pairing_code(self):
         """Show the pairing code on the display, if one is available"""
