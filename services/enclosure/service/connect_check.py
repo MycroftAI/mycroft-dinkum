@@ -532,8 +532,8 @@ class ConnectCheck(MycroftSkill):
 
     def _wait_for_pantacor_connect(self):
         """Ensures the Pantacor device ID and channel are assigned before pairing."""
-        pantacor_device_id = None
-        pantacor_channel = None
+        pantacor_device_id = get_pantacor_device_id()
+        pantacor_channel = get_pantacor_channel()
         retries = 0
         self.log.info("Deployments managed by Pantacor.")
         self.log.info("Waiting for device to connect and sync with Pantacor...")
