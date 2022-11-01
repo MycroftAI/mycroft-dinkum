@@ -27,14 +27,16 @@ import asyncio
 import json
 from threading import Lock, Thread
 
-from mycroft.configuration import Configuration
-from mycroft.messagebus import Message
-from mycroft.util.log import LOG
 from tornado import ioloop
 from tornado.options import parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketHandler
 
+from mycroft.configuration import Configuration
+from mycroft.messagebus import Message
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 write_lock = Lock()
 
 
@@ -48,7 +50,7 @@ def get_gui_websocket_config():
 
 def create_gui_service(enclosure) -> Application:
     """Initiate a websocket for communicating with the GUI service."""
-    LOG.info("Starting message bus for GUI...")
+    _log.info("Starting message bus for GUI...")
     websocket_config = get_gui_websocket_config()
     # Disable all tornado logging so mycroft loglevel isn't overridden
     parse_command_line(["--logging=None"])
@@ -59,17 +61,21 @@ def create_gui_service(enclosure) -> Application:
     application.listen(websocket_config["base_port"], websocket_config["host"])
 
     Thread(target=ioloop.IOLoop.instance().start, daemon=True).start()
-    LOG.info("GUI Message bus started!")
+    _log.info("GUI Message bus started!")
     return application
 
 
-def send_message_to_gui(message):
-    """Sends the supplied message to all connected GUI clients."""
+def send_message_to_gui(message: Message):
+    """Sends the supplied message to all connected GUI clients.
+
+    Args:
+        message: an event message to send to the GUI
+    """
     for connection in GUIWebsocketHandler.clients:
         try:
             connection.send(message)
         except Exception as e:
-            LOG.exception(repr(e))
+            _log.exception("Unexpected error sending message to GUI clients")
 
 
 def determine_if_gui_connected():
@@ -84,11 +90,11 @@ class GUIWebsocketHandler(WebSocketHandler):
 
     def open(self):
         GUIWebsocketHandler.clients.append(self)
-        LOG.info("New Connection opened!")
+        _log.info("New Connection opened!")
         self.application.enclosure.synchronize()
 
     def on_close(self):
-        LOG.info("Closing {}".format(id(self)))
+        _log.info("Closing %s", id(self))
         GUIWebsocketHandler.clients.remove(self)
 
     # def synchronize(self):
@@ -97,7 +103,7 @@ class GUIWebsocketHandler(WebSocketHandler):
     #     enclosure = self.application.enclosure
 
     #     for namespace in enclosure.active_namespaces:
-    #         LOG.info("Sync {}".format(namespace.name))
+    #         _log.info("Sync {}".format(namespace.name))
     #         # Insert namespace
     #         self.send(
     #             {
@@ -128,7 +134,7 @@ class GUIWebsocketHandler(WebSocketHandler):
     #         namespace_pos += 1
 
     def on_message(self, message):
-        LOG.info("Received: {}".format(message))
+        _log.info("Received: %s", message)
         msg = json.loads(message)
         if msg.get("type") == "mycroft.events.triggered" and (
             msg.get("event_name") == "page_gained_focus"
@@ -152,9 +158,9 @@ class GUIWebsocketHandler(WebSocketHandler):
             msg_data = msg["data"]
 
         message = Message(msg_type, msg_data)
-        LOG.info("Forwarding to bus...")
+        _log.info("Forwarding to bus...")
         self.application.enclosure.core_bus.emit(message)
-        LOG.info("Done!")
+        _log.info("Done!")
 
     def write_message(self, *arg, **kwarg):
         """Wraps WebSocketHandler.write_message() with a lock."""
@@ -173,7 +179,7 @@ class GUIWebsocketHandler(WebSocketHandler):
             data (dict): Data to transmit
         """
         s = json.dumps(data)
-        # LOG.info('Sending {}'.format(s))
+        # _log.info('Sending {}'.format(s))
         self.write_message(s)
 
     def check_origin(self, origin):

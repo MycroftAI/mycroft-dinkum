@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus import Message, MessageBusClient
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
 
 from .bus import (
     create_gui_service,
@@ -52,6 +52,7 @@ from .bus import (
     send_message_to_gui,
 )
 
+_log = get_mycroft_logger(__name__)
 
 @dataclass
 class Namespace:
@@ -149,14 +150,14 @@ class NamespaceManager:
                 self._update_namespace_data(namespace)
 
             self._emit_namespace_displayed_event(namespace)
-            LOG.debug(
+            _log.info(
                 "Showing page %s on namespace %s with data %s",
                 namespace.pages,
                 namespace.name,
                 namespace.data,
             )
         except Exception:
-            LOG.exception("Unexpected error showing GUI page")
+            _log.exception("Unexpected error showing GUI page")
 
     def _emit_namespace_displayed_event(self, namespace: Namespace):
         message_data = dict(namespace=namespace.name, skill_id=namespace.skill_id)
@@ -179,11 +180,11 @@ class NamespaceManager:
                     "data": namespace.data,
                 }
             )
-            LOG.debug(
+            _log.debug(
                 "Setting values for namespace %s to %s", namespace, namespace.data
             )
         except Exception:
-            LOG.exception("Unexpected error showing GUI page")
+            _log.exception("Unexpected error showing GUI page")
 
     def _activate_namespace(self, namespace: Namespace):
         """Instructs the GUI to load a namespace and its associated data.
@@ -242,7 +243,7 @@ class NamespaceManager:
         # GUI has announced presence
         # Announce connection, the GUI should connect on it soon
         gui_id = message.data.get("gui_id")
-        LOG.info(f"GUI with ID {gui_id} connected to core message bus")
+        _log.info(f"GUI with ID {gui_id} connected to core message bus")
         websocket_config = get_gui_websocket_config()
         port = websocket_config["base_port"]
         message = Message("mycroft.gui.port", dict(port=port, gui_id=gui_id))
