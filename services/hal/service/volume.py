@@ -108,13 +108,13 @@ class Mark2VolumeClient:
 
     def _handle_volume_mute(self, _message: Message):
         if not self.is_muted:
-            self.log.debug("Muting volume")
+            self.log.info("Muting volume")
             self._volume_before_mute = self._current_volume
             self.set_volume(self._volume_min)
 
     def _handle_volume_unmute(self, _message: Message):
         if self.is_muted:
-            self.log.debug("Unmuting volume")
+            self.log.info("Un-muting volume")
             self.set_volume(self._volume_before_mute)
 
     def stop(self):
@@ -129,7 +129,7 @@ class Mark2VolumeClient:
             subprocess.check_call(volume_cmd)
 
             self._current_volume = volume
-            self.log.debug("Volume set to %s", volume)
+            self.log.info("Volume set to %s", volume)
 
             # Normalize to [0, 1]
             self._norm_volume = volume / (self._volume_max - self._volume_min)
