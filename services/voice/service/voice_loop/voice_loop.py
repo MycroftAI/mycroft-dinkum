@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -21,11 +20,8 @@ from typing import Callable, Deque, Optional
 from mycroft.hotword import HotWordEngine
 from mycroft.stt import StreamingSTT
 from mycroft.util.audio import debiased_energy
-
 from .microphone import Microphone
 from .voice_activity import VoiceActivity
-
-LOG = logging.getLogger("voice_loop")
 
 
 @dataclass
