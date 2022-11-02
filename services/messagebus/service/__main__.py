@@ -26,12 +26,15 @@ import sdnotify
 import tornado.options
 from tornado import ioloop, web
 
+from mycroft.util.log import configure_mycroft_logger
 from .event_handler import MessageBusEventHandler
 from .load_config import load_message_bus_config
 
 LOG = logging.getLogger("messagebus")
 NOTIFIER = sdnotify.SystemdNotifier()
 WATCHDOG_DELAY = 0.5
+
+configure_mycroft_logger("bus")
 
 
 def main():
