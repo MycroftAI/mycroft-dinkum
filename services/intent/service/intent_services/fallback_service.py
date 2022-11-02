@@ -18,7 +18,9 @@ from collections import defaultdict, namedtuple
 from typing import Dict, Optional, Set
 
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 from .base import IntentMatch
 
@@ -42,7 +44,7 @@ class FallbackService:
         priority = message.data["priority"]
         skill_id = message.data["skill_id"]
         self._fallback_handlers[priority].add(name)
-        LOG.debug(
+        _log.info(
             "Registered fallback for %s (priority=%s, id=%s)", skill_id, priority, name
         )
 
@@ -54,7 +56,7 @@ class FallbackService:
         for handler_names in self._fallback_handlers.values():
             handler_names.discard(name)
 
-        LOG.debug("Unregistered fallback for %s (id=%s)", skill_id, name)
+        _log.info("Unregistered fallback for %s (id=%s)", skill_id, name)
 
     def _fallback_range(self, utterances, lang, message, fb_range: FallbackRange):
         """Send fallback request for a specified priority range.
@@ -75,7 +77,7 @@ class FallbackService:
         for priority, handler_names in sorted_handlers:
             if (priority < fb_range.start) or (priority >= fb_range.stop):
                 continue
-            LOG.debug(
+            _log.info(
                 "Trying %s fallback handler(s) at priority %s",
                 len(handler_names),
                 priority,
@@ -97,7 +99,7 @@ class FallbackService:
 
                 if reply and reply.data.get("handled", False):
                     skill_id = reply.data["skill_id"]
-                    LOG.debug(
+                    _log.info(
                         "Handled by fallback skill %s at priority %s",
                         skill_id,
                         priority,

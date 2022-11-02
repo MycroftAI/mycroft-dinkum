@@ -20,7 +20,9 @@ from threading import Thread
 from time import sleep
 
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 from .base import IntentMatch
 
@@ -44,7 +46,7 @@ class PadatiousMatcher:
         """
         if not self.has_result:
             padatious_intent = None
-            LOG.debug("Padatious Matching confidence > {}".format(limit))
+            _log.info("Padatious Matching confidence > {}".format(limit))
             for utt in utterances:
                 for variant in utt:
                     intent = self.service.calc_intent(variant)
@@ -55,7 +57,7 @@ class PadatiousMatcher:
                             padatious_intent.matches["utterance"] = utt[0]
 
             if padatious_intent:
-                LOG.info("Padatious match: %s", padatious_intent)
+                _log.info("Padatious match: %s", padatious_intent)
                 skill_id = padatious_intent.name.split(":")[0]
                 self.ret = IntentMatch(
                     "Padatious",
@@ -109,7 +111,7 @@ class PadatiousService:
         try:
             from padatious import IntentContainer
         except ImportError:
-            LOG.error("Padatious not installed. Please re-run dev_setup.sh")
+            _log.error("Padatious not installed. Please re-run dev_setup.sh")
             try:
                 call(
                     [
@@ -142,11 +144,7 @@ class PadatiousService:
         # self.bus.on("mycroft.skills.initialized", self.train)
 
     def train(self):
-        """Perform padatious training.
-
-        Args:
-            message (Message): optional triggering message
-        """
+        """Perform padatious training."""
         # padatious_single_thread = Configuration.get()["padatious"]["single_thread"]
         # if message is None:
         #     single_thread = padatious_single_thread
@@ -154,9 +152,9 @@ class PadatiousService:
         #     single_thread = message.data.get("single_thread", padatious_single_thread)
         single_thread = True
 
-        LOG.info("Training... (single_thread=%s)", single_thread)
+        _log.info("Training... (single_thread=%s)", single_thread)
         self.container.train(single_thread=single_thread)
-        LOG.info("Training complete.")
+        _log.info("Training complete.")
 
     def wait_and_train(self):
         """Wait for minimum time between training and start training."""
@@ -172,7 +170,7 @@ class PadatiousService:
                     self.train()
                     self.is_training_needed = False
             except Exception:
-                LOG.exception("Error while training")
+                _log.exception("Error while training")
 
     def __detach_intent(self, intent_name):
         """Remove an intent if it has been registered.
@@ -214,10 +212,10 @@ class PadatiousService:
         file_name = message.data["file_name"]
         name = message.data["name"]
 
-        LOG.debug("Registering Padatious " + object_name + ": " + name)
+        _log.debug("Registering Padatious " + object_name + ": " + name)
 
         if not isfile(file_name):
-            LOG.warning("Could not find file " + file_name)
+            _log.warning("Could not find file " + file_name)
             return False
 
         register_func(name, file_name)
@@ -239,9 +237,11 @@ class PadatiousService:
             partial(self.container.load_intent),
         )
         if is_registered:
-            LOG.debug("Registered Padatious intent: %s", message.data["name"])
+            _log.debug("Registered Padatious intent: %s", message.data["name"])
         else:
-            LOG.warning("Failed to register Padatious intent: %s", message.data["name"])
+            _log.warning(
+                "Failed to register Padatious intent: %s", message.data["name"]
+            )
 
     def register_entity(self, message: Message):
         """Messagebus handler for registering entities.

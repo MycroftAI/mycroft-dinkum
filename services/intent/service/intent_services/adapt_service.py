@@ -19,7 +19,10 @@ from threading import Lock
 from adapt.context import ContextManagerFrame
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
-from mycroft.util.log import LOG
+
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 from .base import IntentMatch
 
@@ -228,7 +231,7 @@ class AdaptService:
                 best_intent = intent
                 # TODO - Shouldn't Adapt do this?
                 best_intent["utterance"] = utt
-                LOG.info(best_intent)
+                _log.info(best_intent)
 
         for utt_tup in utterances:
             for utt in utt_tup:
@@ -247,7 +250,7 @@ class AdaptService:
                         take_best(utt_best, utt_tup[0])
 
                 except Exception as err:
-                    LOG.exception(err)
+                    _log.exception(err)
 
         if best_intent:
             self.update_context(best_intent)
@@ -256,7 +259,7 @@ class AdaptService:
                 "Adapt", best_intent["intent_type"], best_intent, skill_id
             )
 
-            LOG.info("Best adapt match: %s", best_intent)
+            _log.info("Best adapt match: %s", best_intent)
         else:
             ret = None
         return ret
@@ -299,7 +302,7 @@ class AdaptService:
         with self.lock:
             self.engine.register_intent_parser(intent)
 
-        LOG.debug("Registered adapt intent: %s", intent.name)
+        _log.debug("Registered adapt intent: %s", intent.name)
 
     def detach_skill(self, skill_id):
         """Remove all intents for skill.

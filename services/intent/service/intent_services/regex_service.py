@@ -15,9 +15,10 @@
 """An intent parsing service using regular expressions."""
 import re
 
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_mycroft_logger
 from .base import IntentMatch
+
+_log = get_mycroft_logger(__name__)
 
 
 class RegexService:
@@ -36,7 +37,7 @@ class RegexService:
 
         compiled_pattern = re.compile(pattern)
         self.patterns[name] = compiled_pattern
-        LOG.info("Registered regex intent: %s", compiled_pattern.pattern)
+        _log.info("Registered regex intent: %s", compiled_pattern.pattern)
 
     def match_intent(self, utterances, _=None, __=None):
         """Run regex matches.
@@ -57,7 +58,7 @@ class RegexService:
                 for variant in utt:
                     match = pattern.match(variant)
                     if match:
-                        LOG.info("'%s' matched %s", variant, pattern.pattern)
+                        _log.info("'%s' matched %s", variant, pattern.pattern)
                         skill_id = name.split(":")[0]
                         return IntentMatch("regex", name, match.groupdict(), skill_id)
 

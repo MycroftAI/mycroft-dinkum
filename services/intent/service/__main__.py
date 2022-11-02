@@ -14,8 +14,10 @@
 #
 from mycroft.service import DinkumService
 from mycroft.skills.event_scheduler import EventScheduler
-
+from mycroft.util.log import configure_mycroft_logger
 from .intent_service import IntentService as InternalIntentService
+
+configure_mycroft_logger("intent")
 
 
 class IntentService(DinkumService):
