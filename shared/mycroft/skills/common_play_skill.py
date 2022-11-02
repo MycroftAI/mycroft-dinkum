@@ -18,9 +18,10 @@ from enum import Enum, IntEnum
 from typing import Optional
 
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_mycroft_logger
 from .mycroft_skill import MycroftSkill
+
+_log = get_mycroft_logger(__name__)
 
 
 class CPSMatchLevel(Enum):
@@ -206,7 +207,7 @@ class CommonPlaySkill(MycroftSkill, ABC):
             # Invoke derived class to provide playback data
             result = self.CPS_start(phrase, data)
         except Exception:
-            LOG.exception("Error starting common play service")
+            _log.exception("Error starting common play service")
 
         if result is None:
             # Automatically close session

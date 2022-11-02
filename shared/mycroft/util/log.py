@@ -61,7 +61,7 @@ def _generate_log_config(log_file_name: str) -> dict:
         "stream": "ext://sys.stdout",
     }
     file_handler = {
-        "backupCount": 30,
+        "backupCount": 14,
         "class": "logging.handlers.TimedRotatingFileHandler",
         "formatter": "default",
         "filename": f"/var/log/mycroft/{log_file_name}.log",

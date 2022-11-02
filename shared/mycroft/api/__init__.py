@@ -12,21 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 import subprocess
 import typing
 from copy import copy, deepcopy
 
 import requests
-from mycroft.configuration import Configuration
-from mycroft.identity import IdentityManager
-from mycroft.util.platform import get_arch
-from mycroft.version import VersionManager
 from requests import HTTPError, RequestException
 
-LOG = logging.getLogger(__package__)
+from mycroft.configuration import Configuration
+from mycroft.identity import IdentityManager
+from mycroft.util.log import get_mycroft_logger
+from mycroft.util.platform import get_arch
+from mycroft.version import VersionManager
+
 UUID = "{MYCROFT_UUID}"
 
+_log = get_mycroft_logger("api")
 
 class BackendDown(RequestException):
     pass
@@ -47,7 +48,7 @@ def _read_pantavisor_file(file_path: str) -> str:
         result = subprocess.check_output(cmd)
         file_content = result.decode().strip()
     except Exception:
-        LOG.exception("Error reading pantacor id")
+        _log.exception("Error reading pantacor id")
         file_content = None
 
     return file_content
@@ -98,7 +99,7 @@ class Api:
                 self.refresh_token()
 
     def refresh_token(self):
-        LOG.debug("Refreshing token")
+        _log.info("Refreshing token")
         try:
             data = self.send(
                 {
@@ -110,10 +111,10 @@ class Api:
                 }
             )
             IdentityManager.save(data, lock=False)
-            LOG.debug("Saved credentials")
+            _log.info("Saved credentials")
         except HTTPError as e:
             if e.response.status_code == 401:
-                LOG.error("Could not refresh token, invalid refresh code.")
+                _log.error("Could not refresh token, invalid refresh code.")
             else:
                 raise
 
@@ -417,7 +418,7 @@ class DeviceApi(Api):
         if "blacklist" in _data:
             to_send["blacklist"] = _data["blacklist"]
         else:
-            LOG.warning("skills manifest lacks blacklist entry")
+            _log.warning("skills manifest lacks blacklist entry")
             to_send["blacklist"] = []
 
         # Make sure skills doesn't contain duplicates (keep only last)
@@ -425,7 +426,7 @@ class DeviceApi(Api):
             skills = {s["name"]: s for s in _data["skills"]}
             to_send["skills"] = [skills[key] for key in skills]
         else:
-            LOG.warning("skills manifest lacks skills entry")
+            _log.warning("skills manifest lacks skills entry")
             to_send["skills"] = []
 
         for s in to_send["skills"]:
@@ -538,7 +539,7 @@ def check_remote_pairing(ignore_errors):
     except Exception as e:
         error = e
 
-    LOG.warning("Could not get device info: {}".format(repr(error)))
+    _log.warning("Could not get device info: {}".format(repr(error)))
 
     if ignore_errors:
         return False

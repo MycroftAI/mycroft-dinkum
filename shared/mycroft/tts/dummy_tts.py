@@ -15,9 +15,10 @@
 
 """A Dummy TTS without any audio output."""
 
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_mycroft_logger
 from . import TTS, TTSValidator
+
+_log = get_mycroft_logger(__name__)
 
 
 class DummyTTS(TTS):
@@ -26,7 +27,7 @@ class DummyTTS(TTS):
 
     def get_tts(self, sentence, wav_file):
         """Don't do anything, return nothing."""
-        LOG.info("Mycroft: %s", sentence)
+        _log.info("Mycroft: %s", sentence)
         return None, None
 
 

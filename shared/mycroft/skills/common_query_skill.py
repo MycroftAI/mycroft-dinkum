@@ -17,8 +17,6 @@ from typing import Optional
 
 from mycroft.messagebus.message import Message
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.log import LOG
-
 from .mycroft_skill import MycroftSkill
 
 
@@ -212,7 +210,7 @@ class CommonQuerySkill(MycroftSkill, ABC):
         try:
             result = self.CQS_action(phrase, data)
         except Exception:
-            LOG.exception("Error running common query action")
+            self.log.exception("Error running common query action")
         finally:
             self.bus.emit(Message("query:action-complete", data=message.data))
 

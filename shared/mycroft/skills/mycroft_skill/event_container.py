@@ -1,9 +1,11 @@
 from inspect import signature
 
 from mycroft.messagebus import Message
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
 
 from ..skill_data import to_alnum
+
+_log = get_mycroft_logger(__name__)
 
 
 def unmunge_message(message, skill_id):
@@ -145,7 +147,7 @@ class EventContainer:
                 self.bus.on(name, handler)
                 self.events.append((name, handler))
 
-            LOG.debug("Added event: {}".format(name))
+            _log.debug("Added event: {}".format(name))
 
     def remove(self, name):
         """Removes an event from bus emitter and events list.
@@ -155,14 +157,14 @@ class EventContainer:
         Returns:
             bool: True if found and removed, False if not found
         """
-        LOG.debug("Removing event {}".format(name))
+        _log.debug("Removing event {}".format(name))
         removed = False
         for _name, _handler in list(self.events):
             if name == _name:
                 try:
                     self.events.remove((_name, _handler))
                 except ValueError:
-                    LOG.error("Failed to remove event {}".format(name))
+                    _log.error("Failed to remove event {}".format(name))
                     pass
                 removed = True
 
