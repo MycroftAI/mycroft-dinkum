@@ -20,6 +20,10 @@ from lingua_franca import load_languages
 from mycroft.service import DinkumService
 from mycroft.skills import MycroftSkill
 from mycroft.skills.settings import SettingsMetaUploader
+from mycroft.util.log import configure_mycroft_logger, get_mycroft_logger
+
+configure_mycroft_logger("skills")
+_log = get_mycroft_logger(__name__)
 
 from .load import create_skill_instance, load_skill_source
 
@@ -63,7 +67,7 @@ class SkillsService(DinkumService):
         """Load/create skill instances and initialize"""
         for skill_directory in self.args.skill:
             skill_id = Path(skill_directory).name
-            self.log.debug("Loading skill %s", skill_id)
+            _log.info("Loading skill %s", skill_id)
             skill_module = load_skill_source(skill_directory, skill_id)
             assert (
                 skill_module is not None
@@ -77,12 +81,12 @@ class SkillsService(DinkumService):
     def _unload_skills(self):
         try:
             for skill_instance in self._skill_instances.values():
-                self.log.debug("Unloading skill %s", skill_instance.skill_id)
+                _log.info("Unloading skill %s", skill_instance.skill_id)
                 skill_instance.default_shutdown()
 
             self._skill_instances.clear()
         finally:
-            self.log.debug("Stopping meta uploaders")
+            _log.info("Stopping meta uploaders")
             for meta_uploader in self._meta_uploaders:
                 meta_uploader.stop()
 
@@ -101,7 +105,7 @@ class SkillsService(DinkumService):
                 meta_uploader.upload()
                 self._meta_uploaders.append(meta_uploader)
         except Exception:
-            self.log.exception("Error while uploading settings meta")
+            _log.exception("Error while uploading settings meta")
 
 
 def main():
