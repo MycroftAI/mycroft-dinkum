@@ -13,10 +13,10 @@
 # limitations under the License.
 #
 from mycroft.service import DinkumService
-from mycroft.util.log import configure_mycroft_logger
+from mycroft.util.log import configure_loggers
 from .namespace import NamespaceManager
 
-configure_mycroft_logger("gui")
+configure_loggers("gui")
 
 class GuiService(DinkumService):
     """

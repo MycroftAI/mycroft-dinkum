@@ -25,10 +25,10 @@ from mycroft.hotword import load_hotword_module
 from mycroft.service import DinkumService
 from mycroft.stt import load_stt_module
 from mycroft.util.file_utils import get_cache_directory, resolve_resource_file
-from mycroft.util.log import configure_mycroft_logger
+from mycroft.util.log import configure_loggers
 from .voice_loop import AlsaMicrophone, MycroftVoiceLoop, SileroVoiceActivity
 
-configure_mycroft_logger("voice")
+configure_loggers("voice")
 
 
 class VoiceService(DinkumService):

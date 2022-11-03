@@ -15,10 +15,10 @@
 """An intent parsing service using regular expressions."""
 import re
 
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 from .base import IntentMatch
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("intent", __name__)
 
 
 class RegexService:

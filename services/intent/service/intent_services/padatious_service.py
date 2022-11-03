@@ -20,9 +20,9 @@ from threading import Thread
 from time import sleep
 
 from mycroft.messagebus.message import Message
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("intent", __name__)
 
 from .base import IntentMatch
 

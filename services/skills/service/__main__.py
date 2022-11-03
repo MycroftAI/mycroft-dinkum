@@ -20,10 +20,10 @@ from lingua_franca import load_languages
 from mycroft.service import DinkumService
 from mycroft.skills import MycroftSkill
 from mycroft.skills.settings import SettingsMetaUploader
-from mycroft.util.log import configure_mycroft_logger, get_mycroft_logger
+from mycroft.util.log import configure_loggers, get_service_logger
 
-configure_mycroft_logger("skills")
-_log = get_mycroft_logger(__name__)
+configure_loggers("skills")
+_log = get_service_logger("skills", __name__)
 
 from .load import create_skill_instance, load_skill_source
 

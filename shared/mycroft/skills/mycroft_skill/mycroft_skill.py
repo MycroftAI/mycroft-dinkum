@@ -40,7 +40,7 @@ from mycroft.enclosure.gui import SkillGUI
 from mycroft.filesystem import FileSystemAccess
 from mycroft.messagebus.message import Message
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_skill_logger
 from mycroft.util.string_utils import camel_case_split
 from xdg import BaseDirectory
 
@@ -175,7 +175,7 @@ class MycroftSkill:
         #: See mycroft.filesystem for details.
         self.file_system = FileSystemAccess(join("skills", self.skill_id))
 
-        self.log = get_mycroft_logger(self.skill_id)  #: Skill logger instance
+        self.log = get_skill_logger(self.skill_id)  #: Skill logger instance
         self.reload_skill = True  #: allow reloading (default True)
 
         self.events = EventContainer(bus)

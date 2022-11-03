@@ -20,9 +20,9 @@ This code is re-used in both to load config values.
 from collections import namedtuple
 
 from mycroft.configuration import Configuration
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("bus", __name__)
 
 MessageBusConfig = namedtuple("MessageBusConfig", ["host", "port", "route", "ssl"])
 

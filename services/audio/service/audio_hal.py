@@ -30,9 +30,9 @@ import sdl2
 import sdl2.sdlmixer as mixer
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("audio", __name__)
 
 ChannelType = int
 HookMusicFunc = ctypes.CFUNCTYPE(

@@ -14,12 +14,12 @@
 #
 """Defines the executable audio service."""
 from mycroft.service import DinkumService
-from mycroft.util.log import configure_mycroft_logger, get_mycroft_logger
+from mycroft.util.log import configure_loggers, get_service_logger
 from .audio_ui import AudioUserInterface
 from .tts import SpeakHandler, load_tts_module
 
-configure_mycroft_logger("audio")
-get_mycroft_logger(__name__)
+configure_loggers("audio")
+_log = get_service_logger("audio", __name__)
 
 
 class AudioService(DinkumService):

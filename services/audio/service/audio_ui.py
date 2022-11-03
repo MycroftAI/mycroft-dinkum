@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Logic to interface with the Auidio HAL."""
+"""Logic to interface with the Audio HAL."""
 import os
 import time
 from dataclasses import dataclass, field
@@ -25,14 +25,14 @@ from typing import Any, Callable, Dict, Optional
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 from .audio_hal import AudioHAL
 
 # Fixed sample rate for sound effects
 EFFECT_SAMPLE_RATE = 48_000  # Hz
 EFFECT_CHANNELS = 2
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("audio", __name__)
 
 
 class ForegroundChannel(IntEnum):

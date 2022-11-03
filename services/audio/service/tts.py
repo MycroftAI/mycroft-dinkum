@@ -24,10 +24,10 @@ from mycroft_bus_client import Message, MessageBusClient
 from mycroft.tts import TTS
 from mycroft.tts.dummy_tts import DummyTTS
 from mycroft.util.file_utils import get_cache_directory
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 from mycroft.util.plugins import load_plugin
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("audio", __name__)
 
 
 class SpeakHandler:

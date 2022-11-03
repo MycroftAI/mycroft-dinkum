@@ -17,7 +17,7 @@ import socket
 from threading import Thread
 from typing import Optional
 
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 from mycroft_bus_client import Message, MessageBusClient
 
 EVENT_CREATE = "create-ap"
@@ -26,7 +26,7 @@ EVENT_VISITED_PORTAL = "user-visited-portal"
 EVENT_ENTERED_CREDS = "user-entered-credentials"
 EVENT_DESTROYED = "ap-destroyed"
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("enclosure", __name__)
 
 
 class AwconnectClient:

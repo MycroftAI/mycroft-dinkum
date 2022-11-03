@@ -22,7 +22,7 @@ from mycroft.util.log import get_mycroft_logger
 from .remote import get_remote_settings_path
 from .util import load_commented_json, merge_dict
 
-_log = get_mycroft_logger("configuration")
+_log = get_mycroft_logger("mycroft.configuration")
 _DIR = Path(__file__).parent
 ConfigType = Dict[str, Any]
 

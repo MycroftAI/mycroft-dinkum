@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from mycroft.messagebus import Message, MessageBusClient
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
 from .bus import (
     create_gui_service,
@@ -52,7 +52,7 @@ from .bus import (
     send_message_to_gui,
 )
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("gui", __name__)
 
 @dataclass
 class Namespace:

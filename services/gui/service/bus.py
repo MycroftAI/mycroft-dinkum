@@ -34,9 +34,9 @@ from tornado.websocket import WebSocketHandler
 
 from mycroft.configuration import Configuration
 from mycroft.messagebus import Message
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("gui", __name__)
 write_lock = Lock()
 
 

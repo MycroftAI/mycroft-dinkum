@@ -20,9 +20,9 @@ from adapt.context import ContextManagerFrame
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
 
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("intent", __name__)
 
 from .base import IntentMatch
 

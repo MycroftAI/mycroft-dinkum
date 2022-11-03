@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 """Executable for running the enclosure service."""
+from logging import getLogger
 from pathlib import Path
 from typing import Optional
 
@@ -22,11 +23,11 @@ from mycroft_bus_client import Message
 from mycroft.configuration.remote import RemoteSettingsDownloader
 from mycroft.service import DinkumService
 from mycroft.skills.settings import SkillSettingsDownloader
-from mycroft.util.log import configure_mycroft_logger, get_mycroft_logger
+from mycroft.util.log import configure_loggers, get_service_logger
 from .connect_check import ConnectCheck
 
-configure_mycroft_logger("enclosure")
-_log = get_mycroft_logger(__name__)
+configure_loggers("enclosure")
+_log = get_service_logger("enclosure", __name__)
 
 
 class EnclosureService(DinkumService):

@@ -51,7 +51,7 @@ def _generate_log_config(log_file_name: str) -> dict:
         The logging configuration in dictionary format.
     """
     log_format = (
-        "{asctime} | {levelname:8} | {process:5} | {name}.{funcName} | {message}"
+        "{asctime} | {levelname:8} | {process:5} | {name} | {message}"
     )
     default_formatter = {"format": log_format, "style": "{"}
     console_handler = {
@@ -76,25 +76,58 @@ def _generate_log_config(log_file_name: str) -> dict:
     }
 
 
-def configure_mycroft_logger(log_file_name: str):
-    """Configures the base logger for any Mycroft service or application.
+def configure_loggers(service_name: str):
+    """Configures three loggers for Mycroft services, skills and library code.
+
+    This should be called once for each service in the __main__.py module before any
+    log messages are written to configure the loggers.
 
     Args:
-        log_file_name: the name of the log file, usually a service or application name
+        service_name: the name of the log file, usually a service or application name
     """
-    log_config = _generate_log_config(log_file_name)
+    log_config = _generate_log_config(service_name)
     mycroft_logger = {
-        "mycroft": {"level": "DEBUG", "handlers": ["file"], "propagate": 0}
+        service_name: {"level": "DEBUG", "handlers": ["file"], "propagate": 0},
+        "mycroft": {"level": "DEBUG", "handlers": ["file"], "propagate": 0},
+        "skill": {"level": "DEBUG", "handlers": ["file"], "propagate": 0}
     }
     log_config["loggers"] = mycroft_logger
     logging.config.dictConfig(log_config)
-    logging.getLogger("mycroft")
+    logging.getLogger(service_name)
 
 
-def get_mycroft_logger(module_name: str):
-    """Returns a logger instance based on the Mycroft logger.
+def get_mycroft_logger(module_name: str) -> logging.Logger:
+    """Returns a logger instance for use in mycroft library code (in shared.mycroft).
+
+    Call at the top of each module in the Mycroft library passing the __name__
+    attribute of the module.  Assumes the module name starts with "mycroft", so it
+    uses the "mycroft" logger.
+
+    Examples:
+        _log = get_mycroft_logger(__name__)
 
     Args:
         module_name: The name of the Python module producing the log message
     """
-    return logging.getLogger("mycroft." + module_name)
+    return logging.getLogger(module_name)
+
+
+def get_service_logger(service_name: str, module_name: str) -> logging.Logger:
+    """Returns a logger instance based on the Mycroft logger.
+
+    Call at the top of each module defined within a service.
+
+    Args:
+        service_name: the name of the service, which identifies the logger
+        module_name: the name of the Python module producing the log message
+    """
+    return logging.getLogger(service_name + "." + module_name)
+
+
+def get_skill_logger(skill_id: str) -> logging.Logger:
+    """Returns a logger instance for use in mycroft skills.
+
+    Args:
+        skill_id: internal identifier of a mycroft skill.
+    """
+    return logging.getLogger("skill." + skill_id)

@@ -21,11 +21,11 @@ from uuid import uuid4
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
 from mycroft.skills.intent_service_interface import open_intent_envelope
-from mycroft.util.log import get_mycroft_logger
+from mycroft.util.log import get_service_logger
 from mycroft.util.parse import normalize
 from mycroft_bus_client import Message, MessageBusClient
 
-_log = get_mycroft_logger(__name__)
+_log = get_service_logger("intent", __name__)
 
 from .intent_services import (
     AdaptService,
