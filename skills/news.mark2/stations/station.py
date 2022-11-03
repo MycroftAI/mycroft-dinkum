@@ -17,6 +17,7 @@ from abc import ABC, abstractproperty
 from builtins import property
 from collections.abc import Callable
 from pathlib import Path
+import requests
 
 import feedparser
 from mycroft.util.log import LOG
@@ -172,6 +173,31 @@ def create_custom_station(station_url):
     else:
         clazz = FileStation
     stations["custom"] = clazz("custom", "Your custom station", station_url)
+    return True
+
+
+def validate_station(station_url):
+    """
+    Since this url was entered by a user, we want to make sure it will
+    actually return something before sending it to the play service.
+    If the url points to something unexpected it can render mycroft
+    inoperable, as in the case of a URL reported by a user:
+    'http://stream.wlrn.mobi/WLRNFMAAC32', which is apparently an
+    http stream which we cannot deal with.
+    """
+    try:
+        head = requests.head(station_url, timeout=3)
+    except requests.ConnectTimeout:
+        LOG.debug(f"Custom station URL timed out: {station_url}")
+        return False
+    except Exception:
+        LOG.error(f"Something went wrong attempting to connect to custom station: {station_url}")
+        return False
+    if head.status_code > 399:
+        LOG.error(f"Something went wrong attempting to connect to custom station: {station_url}")
+        return False
+    else:
+        return True
 
 
 # NOTE: This list should be kept in sync with the settingsmeta select options,

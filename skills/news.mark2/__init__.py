@@ -23,6 +23,7 @@ from .stations.station import (
     country_defaults,
     create_custom_station,
     stations,
+    validate_station
 )
 
 # Minimum confidence levels
@@ -142,6 +143,7 @@ class NewsSkill(CommonPlaySkill):
             self.log.info("Creating custom News Station from Skill settings.")
             create_custom_station(custom_url)
 
+
     @intent_handler(AdaptIntent("").one_of("Give", "Latest").require("News"))
     def handle_latest_news(self, message):
         """Adapt intent handler to capture general queries for the latest news."""
@@ -196,8 +198,28 @@ class NewsSkill(CommonPlaySkill):
         return self.end_session(dialog=dialog, gui=gui, gui_clear=GuiClear.NEVER)
 
     def handle_play_request(self, station: BaseStation):
-        dialog = ("news", {"from": station.full_name})
+        """
+        This is the point at which the play request goes out to be actually
+        played.
+        """
+        # Since there might be a custom, user-supplied url in here,
+        # we need to make sure it can be played. If not it can
+        # cause serious problems.
         media_uri = station.media_uri
+        success = validate_station(media_uri)
+        if not success:
+            # For some reason the custom URL is not valid or not
+            # connecting right now.
+            station_setting = self.settings.get("station", "not_set")
+            if station_setting == "not_set":
+                # This is a custom station.
+                dialog = "custom.station.inaccessible"
+            else:
+                dialog = "could.not.start.the.news.feed"
+            gui_clear = GuiClear.NEVER
+            return self.end_session(dialog=dialog, gui_clear=gui_clear)
+
+        dialog = ("news", {"from": station.full_name})
         gui_page = "AudioPlayer_mark_ii.qml"
         gui_data = {
             "media": {
