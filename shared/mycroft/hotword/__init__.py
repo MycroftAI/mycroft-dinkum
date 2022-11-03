@@ -4,7 +4,7 @@ from typing import Any, Dict
 from mycroft.util.log import get_mycroft_logger
 from mycroft.util.plugins import load_plugin
 
-_log = get_mycroft_logger("hotword")
+_log = get_mycroft_logger("mycroft.hotword")
 
 
 class HotWordEngine(metaclass=ABCMeta):

@@ -27,7 +27,7 @@ from mycroft.version import VersionManager
 
 UUID = "{MYCROFT_UUID}"
 
-_log = get_mycroft_logger("api")
+_log = get_mycroft_logger("mycroft.api")
 
 class BackendDown(RequestException):
     pass

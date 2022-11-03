@@ -21,7 +21,7 @@ import xdg.BaseDirectory
 
 from mycroft.util.log import get_mycroft_logger
 
-_log = get_mycroft_logger("identity")
+_log = get_mycroft_logger("mycroft.identity")
 
 
 class DeviceIdentity:
