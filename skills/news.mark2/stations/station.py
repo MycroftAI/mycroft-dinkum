@@ -167,13 +167,21 @@ def create_custom_station(station_url):
 
     NOTE: it cannot be a FetcherStation because you can't define the fetching function.
     """
-    is_rss_feed = len(feedparser.parse(station_url).entries) > 0
-    if is_rss_feed:
-        clazz = RSSStation
+    # We first need to figure out if this is a stream. If so, it will
+    # break some of the other tests.
+    head = requests.head(station_url, timeout=3)
+    if head and head['Connection'] != 'Keep-Alive':
+        # These can work as a FileStation.
+        return FileStation("custom", "Your custom station", station_url)
+    elif head:
+        is_rss_feed = len(feedparser.parse(station_url).entries) > 0
+        if is_rss_feed:
+            clazz = RSSStation
+        else:
+            clazz = FileStation
+        return clazz("custom", "Your custom station", station_url)
     else:
-        clazz = FileStation
-    stations["custom"] = clazz("custom", "Your custom station", station_url)
-    return True
+        return False
 
 
 def validate_station(station_url):

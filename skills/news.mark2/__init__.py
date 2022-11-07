@@ -141,7 +141,7 @@ class NewsSkill(CommonPlaySkill):
         custom_url = self.settings.get("custom_url", "")
         if station_code == "not_set" and len(custom_url) > 0:
             self.log.info("Creating custom News Station from Skill settings.")
-            create_custom_station(custom_url)
+            stations["custom"] = create_custom_station(custom_url)
 
 
     @intent_handler(AdaptIntent("").one_of("Give", "Latest").require("News"))
@@ -206,9 +206,9 @@ class NewsSkill(CommonPlaySkill):
         # we need to make sure it can be played. If not it can
         # cause serious problems.
         media_uri = station.media_uri
-        success = validate_station(media_uri)
-        if not success:
-            # For some reason the custom URL is not valid or not
+
+        if not validate_station(media_uri):
+            # For some reason the URL is not valid or not
             # connecting right now.
             station_setting = self.settings.get("station", "not_set")
             if station_setting == "not_set":
@@ -301,7 +301,7 @@ class NewsSkill(CommonPlaySkill):
         custom_url = self.settings.get("custom_url", "")
         if station_code != "not_set":
             station = stations[station_code]
-        elif len(custom_url) > 0:
+        elif len(custom_url) > 0 and validate_station(custom_url):
             station = stations.get("custom")
         if station is None:
             station = self.get_default_station_by_country()
