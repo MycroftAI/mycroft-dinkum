@@ -1,0 +1,5 @@
+{
+  "utterance": "How are you doing",
+  "intent_type": "HowAreYou.intent",
+  "expected_dialog": "how.are.you"
+}
