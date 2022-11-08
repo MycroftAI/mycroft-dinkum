@@ -19,6 +19,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 import feedparser
+import requests
+
 from mycroft.util.log import LOG
 
 from .abc import get_abc_url
@@ -166,12 +168,40 @@ def create_custom_station(station_url):
 
     NOTE: it cannot be a FetcherStation because you can't define the fetching function.
     """
+    if not validate_station(station_url):
+        return False
     is_rss_feed = len(feedparser.parse(station_url).entries) > 0
     if is_rss_feed:
         clazz = RSSStation
     else:
         clazz = FileStation
     stations["custom"] = clazz("custom", "Your custom station", station_url)
+
+
+def validate_station(station_url):
+    """
+    Since we allow users to input custom station urls, we need to make sure they
+    at least won't crash everything. Certain kinds of streams can do that. For now,
+    since the skill isn't really designed for streaming, we will rule those out.
+    """
+    try:
+        head = requests.head(station_url, timeout=5)
+    except requests.exceptions.ConnectTimeout:
+        LOG.warning(f"Custom station timed out: {station_url}")
+        return False
+    except Exception:
+        LOG.warning(f"Something went wrong connecting to custom station: {station_url}")
+        return False
+    if head.status_code > 399:
+        LOG.warning(f"Status code {head.status_code} returned by custom station {station_url}")
+        return False
+    elif head.headers.get("Connection") == "Keep-Alive":
+        # This is an indefinite stream and will mess things up. Not intended to be 
+        # played here.
+        return False
+    else:
+        return True
+
 
 
 # NOTE: This list should be kept in sync with the settingsmeta select options,
