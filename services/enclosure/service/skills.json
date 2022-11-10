@@ -1,6 +1,7 @@
 {
     "skills": [
         { "name": "Alarm Skill", "skill_gid": "alarm.mark2" },
+	{ "name": "Camera Skill", "skill_gid": "camera.mark2" },
         { "name": "Date Skill", "skill_gid": "date.mark2" },
         { "name": "Fallback Query", "skill_gid": "fallback-query.mark2" },
         { "name": "Fallback Unknown", "skill_gid": "fallback-unknown.mark2" },
