@@ -24,7 +24,7 @@ from pyradios.base_url import fetch_hosts
 # Strings that are too long will overlap and be unreadable
 # in the marquee field. If strings are distorted, reduce
 # this number.
-CHARACTER_LIMIT = 30
+CHARACTER_LIMIT = 25
 
 # Genre tag filter. This list is *only* filtered out
 # when performing a weighted random choice, which is only
