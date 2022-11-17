@@ -102,7 +102,6 @@ class VoiceService(DinkumService):
         vad.start()
 
         stt = load_stt_module(self.config, self.bus)
-        stt.start()
 
         self.voice_loop = MycroftVoiceLoop(
             mic=mic,
