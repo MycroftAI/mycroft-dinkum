@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Optional
 
 import xdg.BaseDirectory
-from mycroft.configuration.remote import RemoteSettingsDownloader
+# from mycroft.configuration.remote import RemoteSettingsDownloader
 from mycroft.service import DinkumService
-from mycroft.skills.settings import SkillSettingsDownloader
+# from mycroft.skills.settings import SkillSettingsDownloader
 from mycroft_bus_client import Message
 
 from .connect_check import ConnectCheck
@@ -30,7 +30,7 @@ class EnclosureService(DinkumService):
 
         self.led_session_id: Optional[str] = None
         self.mycroft_ready = False
-        self._settings_downloader = RemoteSettingsDownloader()
+        # self._settings_downloader = RemoteSettingsDownloader()
 
     def start(self):
         enclosure = self.config["enclosure"]
@@ -38,7 +38,7 @@ class EnclosureService(DinkumService):
         self._idle_skill_overrides = enclosure["idle_skill_overrides"]
         self._idle_skill_overrides.append(self._idle_display_skill)
 
-        self._settings_downloader.initialize(self.bus)
+        # self._settings_downloader.initialize(self.bus)
 
         self.bus.on("mycroft.ready.get", self.handle_ready_get)
         self._wait_for_gui()
@@ -58,27 +58,29 @@ class EnclosureService(DinkumService):
         self.bus.on("gui.initialize.ended", self.handle_gui_reconnect)
 
         # Connected to internet + paired
-        self.bus.on("server-connect.startup-finished", self.handle_startup_finished)
+        # self.bus.on("server-connect.startup-finished", self.handle_startup_finished)
 
-        remote_settings_path = (
-            Path(xdg.BaseDirectory.xdg_config_home)
-            / "mycroft"
-            / "mycroft.remote.skill_settings.json"
-        )
-        self._skill_settings_downloader = SkillSettingsDownloader(
-            self.bus, remote_settings_path
-        )
-        self._connect_check = ConnectCheck(
-            self.bus, self.config, self._skill_settings_downloader
-        )
-        self._connect_check.load_data_files()
-        self._connect_check.initialize()
-        self._connect_check.start()
+        # remote_settings_path = (
+        #     Path(xdg.BaseDirectory.xdg_config_home)
+        #     / "mycroft"
+        #     / "mycroft.remote.skill_settings.json"
+        # )
+        # self._skill_settings_downloader = SkillSettingsDownloader(
+        #     self.bus, remote_settings_path
+        # )
+        # self._connect_check = ConnectCheck(
+        #     self.bus, self.config, self._skill_settings_downloader
+        # )
+        # self._connect_check.load_data_files()
+        # self._connect_check.initialize()
+        # self._connect_check.start()
+
+        self.handle_startup_finished()
 
     def stop(self):
         pass
 
-    def handle_startup_finished(self, _message: Message):
+    def handle_startup_finished(self, _message: Message = None):
         # Skills should have been loaded by now
         self.bus.emit(Message("mycroft.skills.initialized"))
 
@@ -86,7 +88,7 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.switch.report-states"))
 
         # Inform services that config may have changed
-        self.bus.emit(Message("configuration.updated"))
+        # self.bus.emit(Message("configuration.updated"))
 
         # Inform skills that we're ready
         self.mycroft_ready = True
@@ -102,11 +104,11 @@ class EnclosureService(DinkumService):
         self.bus.emit(Message("mycroft.gui.idle"))
 
         # Stop connect check activity
-        self._connect_check.default_shutdown()
-        self._connect_check = None
+        # self._connect_check.default_shutdown()
+        # self._connect_check = None
 
         self.log.debug("Completed start up successfully")
-        self._settings_downloader.schedule()
+        # self._settings_downloader.schedule()
 
     # -------------------------------------------------------------------------
 
