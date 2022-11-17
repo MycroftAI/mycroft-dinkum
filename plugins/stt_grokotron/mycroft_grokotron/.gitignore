@@ -1,0 +1,16 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+*.py[cod]
+*.egg
+build
+htmlcov
+
+*.egg-info/
+__pycache__/
+
+grokotron/data/
+grokotron/kaldi/
+grokotron/output/
