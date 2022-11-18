@@ -16,7 +16,7 @@ from mycroft.util.log import LOG
 from .utils import decode_output, make_wav_header
 
 _DIR = Path(__file__).parent
-_DEFAULT_GROKOTRON_DIR = _DIR / "grokotron"
+_DEFAULT_GROKOTRON_DIR = Path("/opt/grokotron")
 _DEFAULT_OUTPUT_DIR = _DEFAULT_GROKOTRON_DIR / "output"
 _DEFAULT_KALDI_BIN_DIR = _DEFAULT_GROKOTRON_DIR / "kaldi" / "bin"
 
