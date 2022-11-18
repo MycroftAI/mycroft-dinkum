@@ -12,27 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Executable for running the enclosure service."""
+from logging import getLogger
 from pathlib import Path
 from typing import Optional
 
 import xdg.BaseDirectory
+from mycroft_bus_client import Message
+
 from mycroft.configuration.remote import RemoteSettingsDownloader
 from mycroft.service import DinkumService
 from mycroft.skills.settings import SkillSettingsDownloader
-from mycroft_bus_client import Message
-
+from mycroft.util.log import configure_loggers, get_service_logger
 from .connect_check import ConnectCheck
+
+configure_loggers("enclosure")
+_log = get_service_logger("enclosure", __name__)
 
 
 class EnclosureService(DinkumService):
+    """Defines the enclosure service."""
+
     def __init__(self):
         super().__init__(service_id="enclosure")
-
         self.led_session_id: Optional[str] = None
         self.mycroft_ready = False
         self._settings_downloader = RemoteSettingsDownloader()
 
     def start(self):
+        """Performs service initialization logic."""
         enclosure = self.config["enclosure"]
         self._idle_display_skill = enclosure["idle_display_skill"]
         self._idle_skill_overrides = enclosure["idle_skill_overrides"]
@@ -76,9 +84,11 @@ class EnclosureService(DinkumService):
         self._connect_check.start()
 
     def stop(self):
+        """Performs service shutdown logic."""
         pass
 
-    def handle_startup_finished(self, _message: Message):
+    def handle_startup_finished(self, _: Message):
+        """Performs tasks required system services are initialized."""
         # Skills should have been loaded by now
         self.bus.emit(Message("mycroft.skills.initialized"))
 
@@ -91,7 +101,7 @@ class EnclosureService(DinkumService):
         # Inform skills that we're ready
         self.mycroft_ready = True
         self.bus.emit(Message("mycroft.ready"))
-        self.log.info("Ready")
+        _log.info("Enclosure service ready")
 
         # Set default volume
         self.bus.emit(
@@ -105,40 +115,64 @@ class EnclosureService(DinkumService):
         self._connect_check.default_shutdown()
         self._connect_check = None
 
-        self.log.debug("Completed start up successfully")
+        _log.info("All services ready for use")
         self._settings_downloader.schedule()
 
-    # -------------------------------------------------------------------------
+    def handle_ready_get(self, message: Message):
+        """Responds to request for "ready" status.
 
-    def handle_ready_get(self, message):
+        Args:
+            message: event message for mycroft.ready.get
+        """
         self.bus.emit(message.response(data={"ready": self.mycroft_ready}))
 
-    def handle_wake(self, message):
+    def handle_wake(self, message: Message):
+        """Prepare device to receive a request after the wake word is recognized.
+
+        Args:
+            message: event message for recognizer_loop:awoken
+        """
         self.led_session_id = message.data.get("mycroft_session_id")
 
         # Stop speaking
         self.bus.emit(Message("mycroft.tts.stop"))
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "awake"}))
 
-    def handle_skill_response(self, message):
+    def handle_skill_response(self, message: Message):
+        """Puts the device in a thinking state after a user response is received.
+
+        Args:
+            message: event message for mycroft.skill-response
+        """
         self.led_session_id = message.data.get("mycroft_session_id")
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "thinking"}))
 
-    def handle_session_started(self, message):
+    def handle_session_started(self, message: Message):
+        """Puts the device in a thinking state after a user request is received.
+
+        Args:
+            message: event message for mycroft.session.started
+        """
         if message.data.get("skill_id") != self._idle_display_skill:
             self.led_session_id = message.data.get("mycroft_session_id")
             self.bus.emit(
                 Message("mycroft.feedback.set-state", data={"state": "thinking"})
             )
 
-    def handle_session_ended(self, message):
+    def handle_session_ended(self, message: Message):
+        """Puts the device in a sleeping state after a session ends.
+
+        Args:
+            message: event message for mycroft.session.ended
+        """
         if message.data.get("mycroft_session_id") == self.led_session_id:
             self.led_session_id = None
             self.bus.emit(
                 Message("mycroft.feedback.set-state", data={"state": "asleep"})
             )
 
-    def handle_gui_idle(self, message):
+    def handle_gui_idle(self, _: Message):
+        """Displays idle screen if there are no idle overrides."""
         self.led_session_id = None
         self.bus.emit(Message("mycroft.feedback.set-state", data={"state": "asleep"}))
 
@@ -147,10 +181,15 @@ class EnclosureService(DinkumService):
                 Message("mycroft.gui.handle-idle", data={"skill_id": skill_id})
             )
             if response and response.data.get("handled", False):
-                self.log.debug("Idle was handled by %s", skill_id)
+                _log.info("Idle was handled by %s", skill_id)
                 break
 
-    def handle_switch_state(self, message):
+    def handle_switch_state(self, message: Message):
+        """Toggles microphone mute status when the hardware switch changes position.
+
+        Args:
+           message: event message for mycroft.switch.state
+        """
         name = message.data.get("name")
         state = message.data.get("state")
         if name == "mute":
@@ -164,12 +203,12 @@ class EnclosureService(DinkumService):
             # Action button wakes up device
             self.bus.emit(Message("mycroft.mic.listen"))
 
-    def handle_gui_reconnect(self, _message):
-        # Show idle skill GUI
+    def handle_gui_reconnect(self, _: Message):
+        """Shows idle skill GUI when the GUI connects."""
         self.bus.emit(Message("mycroft.gui.idle"))
 
-    def handle_unknown_recognition(self, _message):
-        # Show idle skill GUI
+    def handle_unknown_recognition(self, _: Message):
+        """Shows idle skill GUI when speech recognition fails."""
         self.bus.emit(Message("mycroft.gui.idle"))
 
 

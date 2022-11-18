@@ -23,11 +23,13 @@ from os.path import expanduser, isfile, join
 from threading import Lock, Thread
 
 import xdg.BaseDirectory
+
 from mycroft.configuration import Configuration
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_mycroft_logger
 from .mycroft_skill.event_container import EventContainer, create_basic_wrapper
+
+_log = get_mycroft_logger(__name__)
 
 
 def repeat_time(sched_time, repeat):
@@ -90,7 +92,7 @@ class EventScheduler(Thread):
                 try:
                     json_data = json.load(f)
                 except Exception as e:
-                    LOG.error(e)
+                    _log.exception("Unexpected error loading active scheduled events")
             current_time = time.time()
             with self.event_lock:
                 for key in json_data:
@@ -153,7 +155,7 @@ class EventScheduler(Thread):
 
             # Don't schedule if the event is repeating and already scheduled
             if repeat and event in self.events:
-                LOG.debug(
+                _log.warning(
                     "Repeating event {} is already scheduled, discarding".format(event)
                 )
             else:
@@ -179,9 +181,9 @@ class EventScheduler(Thread):
         if event and sched_time:
             self.schedule_event(event, sched_time, repeat, data, context)
         elif not event:
-            LOG.error("Scheduled event name not provided")
+            _log.error("Scheduled event name not provided")
         else:
-            LOG.error("Scheduled event time not provided")
+            _log.error("Scheduled event time not provided")
 
     def remove_event(self, event):
         """Remove an event from the list of scheduled events.
@@ -328,7 +330,7 @@ class EventSchedulerInterface:
         data = data or {}
 
         def on_error(e):
-            LOG.exception(
+            _log.exception(
                 "An error occured executing the scheduled event " "{}".format(repr(e))
             )
 
@@ -389,7 +391,7 @@ class EventSchedulerInterface:
                 when = datetime.now() + timedelta(seconds=interval)
             self._schedule_event(handler, when, data, name, interval, context=context)
         else:
-            LOG.debug(
+            _log.warning(
                 "The event is already scheduled, cancel previous "
                 "event if this scheduling should replace the last."
             )
@@ -441,7 +443,7 @@ class EventSchedulerInterface:
             event_time = int(status.data[0][0])
             current_time = int(time.time())
             time_left_in_seconds = event_time - current_time
-            LOG.info(time_left_in_seconds)
+            _log.info(time_left_in_seconds)
             return time_left_in_seconds
         else:
             raise Exception("Event Status Messagebus Timeout")

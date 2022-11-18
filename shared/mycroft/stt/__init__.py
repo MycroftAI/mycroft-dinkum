@@ -18,9 +18,11 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, BinaryIO, Dict, Optional
 
 from mycroft.api import STTApi
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
 from mycroft.util.plugins import load_plugin
 from mycroft_bus_client import MessageBusClient
+
+_log = get_mycroft_logger("stt")
 
 
 class StreamingSTT(metaclass=ABCMeta):
@@ -80,10 +82,10 @@ class MycroftSTT(StreamingSTT):
             self._flac_proc = None
 
             result = self._api.stt(flac, "en-US", 1)
-            LOG.info(result)
+            _log.info(result)
             return result["transcription"]
         except Exception:
-            LOG.exception("Error in Mycroft STT")
+            _log.exception("Error in Mycroft STT")
 
         return None
 
@@ -129,14 +131,14 @@ def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingS
     stt_config = config["stt"]
     module_name = stt_config["module"]
     if module_name == "mycroft":
-        LOG.debug("Using Mycroft STT")
+        _log.info("Using Mycroft STT")
         return MycroftSTT(bus, config)
 
-    LOG.debug("Loading speech to text module: %s", module_name)
+    _log.info("Loading speech to text module: %s", module_name)
     module = load_plugin("mycroft.plugin.stt", module_name)
     assert module, f"Failed to load {module_name}"
     module_config = stt_config.get(module_name, {})
     stt = module(bus=bus, config=module_config)
-    LOG.info("Loaded speech to text module: %s", module_name)
+    _log.info("Loaded speech to text module: %s", module_name)
 
     return stt

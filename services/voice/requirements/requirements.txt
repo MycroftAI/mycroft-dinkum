@@ -11,3 +11,5 @@ onnxruntime>=1.6,<2.0
 
 # service
 sdnotify~=0.3.0
+
+mycroft-messagebus-client==0.9.4

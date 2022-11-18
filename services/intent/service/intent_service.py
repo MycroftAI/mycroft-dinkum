@@ -21,9 +21,11 @@ from uuid import uuid4
 from mycroft.configuration import Configuration
 from mycroft.configuration.locale import set_default_lf_lang
 from mycroft.skills.intent_service_interface import open_intent_envelope
-from mycroft.util.log import LOG
+from mycroft.util.log import get_service_logger
 from mycroft.util.parse import normalize
 from mycroft_bus_client import Message, MessageBusClient
+
+_log = get_service_logger("intent", __name__)
 
 from .intent_services import (
     AdaptService,
@@ -77,7 +79,7 @@ class IntentService:
         try:
             self.padatious_service = PadatiousService(bus, config["padatious"])
         except Exception as err:
-            LOG.exception(
+            _log.exception(
                 "Failed to create padatious handlers " "({})".format(repr(err))
             )
         self.fallback = FallbackService(bus)
@@ -118,11 +120,11 @@ class IntentService:
         self.fallback.session_id = mycroft_session_id
 
         with self._session_lock:
-            LOG.debug("Current sessions: %s", self._sessions)
+            _log.debug("Current sessions: %s", self._sessions)
             if mycroft_session_id not in self._sessions:
                 self.start_session(mycroft_session_id)
 
-        LOG.debug(
+        _log.debug(
             "Enter handle utterance: message.data:%s, session_id:%s",
             message.data,
             mycroft_session_id,
@@ -180,10 +182,10 @@ class IntentService:
                 # Ask politely for forgiveness for failing in this vital task
                 self.send_complete_intent_failure(mycroft_session_id, message)
                 self.end_session(mycroft_session_id)
-        except Exception as err:
-            LOG.exception(err)
+        except Exception:
+            _log.exception("Unexpected error matching utterance to intent")
 
-        LOG.debug("Exit handle utterance")
+        _log.debug("Exit handle utterance")
 
     def _register_event_handlers(self):
         self.bus.on("register_vocab", self.handle_register_vocab)
@@ -260,7 +262,7 @@ class IntentService:
 
             if skill_id:
                 # Target skill directly
-                LOG.debug("Stopping skill: %s", skill_id)
+                _log.info("Stopping skill: %s", skill_id)
                 mycroft_session_id = str(uuid4())
                 self.start_session(
                     mycroft_session_id,
@@ -295,19 +297,19 @@ class IntentService:
         if mycroft_session_id is None:
             mycroft_session_id = str(uuid4())
 
-        LOG.debug("Starting session: %s", mycroft_session_id)
+        _log.info("Starting session: %s", mycroft_session_id)
         session = Session(id=mycroft_session_id, **session_kwargs)
         self._sessions[session.id] = session
         session.started(self.bus)
 
     def abort_session(self, mycroft_session_id: str):
         """Abort an existing session"""
-        LOG.warning("Aborted session: %s", mycroft_session_id)
+        _log.warning("Aborted session: %s", mycroft_session_id)
         self.end_session(mycroft_session_id, aborted=True)
 
     def end_session(self, mycroft_session_id: str, aborted: bool = False):
         """End an existing session"""
-        LOG.debug("Ending session: %s", mycroft_session_id)
+        _log.info("Ending session: %s", mycroft_session_id)
         session = self._sessions.get(mycroft_session_id, None)
         if session is not None:
             if aborted:
@@ -319,7 +321,7 @@ class IntentService:
         Requests that Mycroft record a new voice command without being woken up.
         The session ID ensures that the response will make it to the right skill.
         """
-        LOG.debug("Triggering listen for session %s", mycroft_session_id)
+        _log.info("Triggering listen for session %s", mycroft_session_id)
         self.bus.emit(
             Message(
                 "mycroft.mic.listen",
@@ -336,7 +338,7 @@ class IntentService:
             self._disable_idle_timeout()
 
         for action in session.run(self.bus):
-            LOG.debug("Completed action for session %s: %s", session.id, action)
+            _log.info("Completed action for session %s: %s", session.id, action)
             if isinstance(action, GetResponseAction):
                 # Next utterance belongs to this session (raw_utterance)
                 self._trigger_listen(session.id)
@@ -354,7 +356,7 @@ class IntentService:
                         timeout = IDLE_QUICK_TIMEOUT
                     self._set_idle_timeout(timeout)
                 else:
-                    LOG.debug(
+                    _log.info(
                         "Skipping GUI clear for %s since GUI belongs to another session (%s)",
                         session.id,
                         self._last_gui_session.id,
@@ -368,7 +370,7 @@ class IntentService:
     def handle_session_start(self, message: Message):
         """Handle request for session start"""
         mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Starting session: %s", mycroft_session_id)
+        _log.info("Starting session: %s", mycroft_session_id)
         session = Session(
             id=mycroft_session_id,
             skill_id=message.data.get("skill_id"),
@@ -384,7 +386,7 @@ class IntentService:
     def handle_session_continue(self, message: Message):
         """Handle requests for session to be continued"""
         mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Continuing session: %s", mycroft_session_id)
+        _log.info("Continuing session: %s", mycroft_session_id)
 
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
@@ -402,7 +404,7 @@ class IntentService:
     def handle_session_end(self, message: Message):
         """Handle request to end session"""
         mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("Requested session end: %s", mycroft_session_id)
+        _log.info("Requested session end: %s", mycroft_session_id)
 
         with self._session_lock:
             session = self._sessions.get(mycroft_session_id)
@@ -420,7 +422,7 @@ class IntentService:
         """Called when a session has ended"""
         with self._session_lock:
             mycroft_session_id = message.data.get("mycroft_session_id")
-            LOG.debug("Cleaning up ended session: %s", mycroft_session_id)
+            _log.info("Cleaning up ended session: %s", mycroft_session_id)
             session = self._sessions.pop(mycroft_session_id, None)
 
             if session is not None:
@@ -445,7 +447,7 @@ class IntentService:
     def handle_tts_finished(self, message: Message):
         """Called when a TTS session has ended"""
         mycroft_session_id = message.data["mycroft_session_id"]
-        LOG.debug("TTS finished: %s", mycroft_session_id)
+        _log.info("TTS finished: %s", mycroft_session_id)
 
         with self._session_lock:
             # Wake up appropriate session and run the rest of its actions
@@ -457,7 +459,7 @@ class IntentService:
     def handle_media_finished(self, message: Message):
         """Called when audio has finished playing"""
         mycroft_session_id = message.data.get("mycroft_session_id")
-        LOG.debug("Audio finished: %s", mycroft_session_id)
+        _log.info("Audio finished: %s", mycroft_session_id)
 
         with self._session_lock:
             # Wake up appropriate session and run the rest of its actions
@@ -472,7 +474,7 @@ class IntentService:
             idle_seconds = IDLE_TIMEOUT
 
         self._idle_seconds_left = idle_seconds
-        LOG.debug("Idle timeout set for %s second(s)", self._idle_seconds_left)
+        _log.info("Idle timeout set for %s second(s)", self._idle_seconds_left)
 
     def _handle_get_response(self, message: Message) -> bool:
         """
@@ -487,7 +489,7 @@ class IntentService:
                 for session in self._sessions.values():
                     if session.expect_response:
                         if session.id != mycroft_session_id:
-                            LOG.warning(
+                            _log.warning(
                                 "Response expected for session %s, but session %s is active",
                                 session.id,
                                 mycroft_session_id,
@@ -508,7 +510,7 @@ class IntentService:
                             )
                         )
                         handled = True
-                        LOG.debug(
+                        _log.debug(
                             "Raw utterance handled by skill %s, session=%s",
                             session.skill_id,
                             mycroft_session_id,
@@ -520,7 +522,7 @@ class IntentService:
     def _disable_idle_timeout(self):
         """Stop GUI screen from going to idle after a timeout"""
         self._idle_seconds_left = None
-        LOG.debug("Disabled idle timeout")
+        _log.info("Disabled idle timeout")
 
     def _check_idle_timeout(self):
         """Runs in a daemon thread, checking if the idle timeout has been reached"""
@@ -553,7 +555,7 @@ class IntentService:
 
                 time.sleep(interval)
         except Exception:
-            LOG.exception("Error while checking idle timeout")
+            _log.exception("Error while checking idle timeout")
 
     # -------------------------------------------------------------------------
 
@@ -569,7 +571,7 @@ class IntentService:
                 data={"mycroft_session_id": mycroft_session_id},
             )
         )
-        LOG.info("No intent recognized")
+        _log.info("No intent recognized")
 
     def handle_register_vocab(self, message):
         """Register adapt vocabulary.
@@ -579,7 +581,7 @@ class IntentService:
         """
         # TODO: 22.02 Remove backwards compatibility
         if _is_old_style_keyword_message(message):
-            LOG.warning(
+            _log.warning(
                 "Deprecated: Registering keywords with old message. "
                 "This will be removed in v22.02."
             )
@@ -815,5 +817,5 @@ def _normalize_all_utterances(utterances):
         else:
             combined.append((utt, norm))
 
-    LOG.debug("Utterances: {}".format(combined))
+    _log.info("Utterances: {}".format(combined))
     return combined

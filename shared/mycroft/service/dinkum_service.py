@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Defines the base class for all Dinkum services."""
 import argparse
-import logging
 import signal
 import time
 from abc import ABC, abstractmethod
@@ -22,36 +22,54 @@ from threading import Event, Thread
 from typing import Collection, List, Optional
 
 import sdnotify
+from mycroft_bus_client import Message
+
 from mycroft.configuration import Configuration
 from mycroft.messagebus.client import create_client
-from mycroft_bus_client import Message
+from mycroft.util.log import get_mycroft_logger
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
 
+_log = get_mycroft_logger(__name__)
+
 
 class ServiceState(str, Enum):
+    """Enumerates the states (i.e. status) services can have."""
     NOT_STARTED = "not_started"
     STARTED = "started"
     RUNNING = "running"
     STOPPING = "stopping"
 
 
+# TODO: Add logging of configuration values used by service at time of load and reload.
 class DinkumService(ABC):
-    """Shared base class for dinkum services"""
+    """Shared base class for dinkum services.
+
+    Attributes
+        service_id: short textual description of the service
+    """
 
     def __init__(self, service_id: str):
         self.service_id = service_id
-        self.log = logging.getLogger(self.service_id)
+        self.config = Configuration.get()
         self._notifier = sdnotify.SystemdNotifier()
         self._state: ServiceState = ServiceState.NOT_STARTED
 
     @property
     def state(self):
+        """Exposes a read-only public property representing the service state.
+
+        Only the service itself should be able to change its state.
+        """
         return self._state
 
     def main(self, argv: Optional[List[str]] = None):
-        """Service entry point"""
+        """Service entry point.
+
+        Args:
+            argv: arguments passed to the service from the command line
+        """
         parser = argparse.ArgumentParser()
         parser.add_argument("--service-id", help="Override service id")
         args = parser.parse_args(argv)
@@ -77,35 +95,23 @@ class DinkumService(ABC):
                 self.after_stop()
                 self._state = ServiceState.NOT_STARTED
         except Exception:
-            self.log.exception("Service failed to start")
+            _log.exception("Service failed to start")
 
     def before_start(self):
-        """Initialization logic called before start()"""
-        self.config = Configuration.get()
-
-        level_str = self.config.get("log_level", "DEBUG").upper()
-        level = logging.getLevelName(level_str)
-
-        log_format = self.config.get("log_format")
-        if log_format:
-            logging.basicConfig(level=level, format=log_format)
-        else:
-            logging.basicConfig(level=level)
-
-        self.log.info("Starting service...")
-
+        """Executes logic that needs to occur after constructor but prior to start."""
+        _log.info("%s service starting...", self.service_id)
         self._connect_to_bus()
 
     @abstractmethod
     def start(self):
-        """
-        User code for starting service.
+        """Executes service-specific startup logic.
+
         Any exception here will cause systemd to restart the service.
         """
         pass
 
     def after_start(self):
-        """Initialization logic called after start()"""
+        """Executes logic that needs to occur after start but before run."""
         self._start_watchdog()
 
         # Inform systemd that we successfully started
@@ -113,11 +119,10 @@ class DinkumService(ABC):
         self.bus.emit(Message(f"{self.service_id}.initialize.ended"))
 
     def run(self):
-        """
-        User code for running the service.
+        """Runs the service until it is stopped.
+
         Defaults to blocking until the service is terminated externally.
         """
-        # Wait for exit signal
         run_event = Event()
 
         def signal_handler(_sig, _frame):
@@ -136,53 +141,52 @@ class DinkumService(ABC):
 
     @abstractmethod
     def stop(self):
-        """
-        User code for stopping the service.
+        """Executes service-specific shutdown logic.
+
         Called even if there is an exception in run()
         """
         pass
 
     def after_stop(self):
-        """Shut down code called after stop()"""
+        """Executes logic that needs to occur after stop but before exiting."""
         self.bus.close()
-
-    # -------------------------------------------------------------------------
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
         self.bus = create_client(self.config)
         self.bus.run_in_thread()
         self.bus.connected_event.wait()
+        _log.info("Connected to Mycroft Core message bus")
 
         # Add event handlers
         self.bus.on(f"{self.service_id}.service.state", self._report_service_state)
         self.bus.on("configuration.updated", self._reload_config)
 
         self.bus.emit(Message(f"{self.service_id}.initialize.started"))
-        self.log.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):
-        """Response to service state requests"""
-        self.bus.emit(message.response(data={"state": self.state.value})),
+        """Communicates service state changes."""
+        self.bus.emit(message.response(data={"state": self.state.value}))
+        _log.info("Service %s %s", self.service_id, self.state.value)
 
     def _reload_config(self, _message):
-        """Force reloading of config"""
+        """Forces reloading of config"""
         Configuration.reload()
-        self.log.debug("Reloaded configuration")
+        _log.info("Reloaded configuration")
 
     def _start_watchdog(self):
-        """Run systemd watchdog in separate thread"""
+        """Runs systemd watchdog in separate thread."""
         Thread(target=self._watchdog, daemon=True).start()
 
     def _watchdog(self):
-        """Notify systemd that the service is still running"""
+        """Notifies systemd that the service is still running."""
         try:
             while True:
                 # Prevent systemd from restarting service
                 self._notifier.notify("WATCHDOG=1")
                 time.sleep(WATCHDOG_DELAY)
         except Exception:
-            self.log.exception("Unexpected error in watchdog thread")
+            _log.exception("Unexpected error in watchdog thread")
 
     def _wait_for_service(
         self,
@@ -190,11 +194,17 @@ class DinkumService(ABC):
         states: Optional[Collection[ServiceState]] = None,
         wait_sec: float = 1.0,
     ):
+        """Pauses this service while waiting for another service to report a state.
+
+        Args:
+            service_id: ID of the service being waited on
+            states: States to wait for
+            wait_sec: number of seconds to wait between checking for state
+        """
         if states is None:
             states = {ServiceState.RUNNING}
 
-        # Wait for intent service
-        self.log.debug("Waiting for %s service...", service_id)
+        _log.info("Waiting for %s service to report %s state(s)", service_id, states)
         while True:
             response = self.bus.wait_for_response(
                 Message(f"{service_id}.service.state")
@@ -204,11 +214,19 @@ class DinkumService(ABC):
 
             time.sleep(wait_sec)
 
-        self.log.debug("%s service connected", service_id)
+        _log.info(
+            "Received %s state from %s service - ending wait",
+            service_id,
+            response.data.get("state")
+        )
 
     def _wait_for_gui(self, wait_sec: float = 1.0):
-        # Wait for GUI connected
-        self.log.debug("Waiting for GUI...")
+        """Pauses this service while it waits for GUI to report ready.
+
+        Args:
+            wait_sec: number of seconds to wait between GUI status checks
+        """
+        _log.info("Connecting to GUI...")
         while True:
             response = self.bus.wait_for_response(Message("gui.status.request"))
             if response and response.data.get("connected", False):
@@ -216,11 +234,15 @@ class DinkumService(ABC):
 
             time.sleep(wait_sec)
 
-        self.log.debug("GUI connected")
+        _log.info("GUI connected")
 
     def _wait_for_ready(self, wait_sec: float = 1.0):
-        # Wait for Mycroft ready
-        self.log.debug("Waiting for ready...")
+        """Pauses this service until all services report ready.
+
+        Args:
+            wait_sec: number of seconds to wait between system ready checks
+        """
+        _log.debug("Waiting for all services to report ready...")
         while True:
             response = self.bus.wait_for_response(Message("mycroft.ready.get"))
             if response and response.data.get("ready", False):
@@ -228,4 +250,4 @@ class DinkumService(ABC):
 
             time.sleep(wait_sec)
 
-        self.log.debug("Ready")
+        _log.debug("All services reported ready - ending wait")

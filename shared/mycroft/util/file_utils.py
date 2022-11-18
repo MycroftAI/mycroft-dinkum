@@ -14,21 +14,26 @@
 #
 import os
 import tempfile
-import typing
+from typing import Optional
 
 import xdg
+
 from mycroft.configuration import Configuration
-from mycroft.util.log import LOG
+from .log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
-def ensure_directory_exists(directory, domain=None, permissions=0o777):
+def ensure_directory_exists(
+    directory: str, domain: str = None, permissions: int = 0o777
+) -> str:
     """Create a directory and give access rights to all
 
     Args:
-        directory (str): Root directory
-        domain (str): Domain. Basically a subdirectory to prevent things like
-                      overlapping signal filenames.
-        rights (int): Directory permissions (default is 0o777)
+        directory: root directory
+        domain: basically a subdirectory to prevent things like
+            overlapping signal filenames.
+        permissions: directory permissions (default is 0o777)
 
     Returns:
         (str) a path to the directory
@@ -45,25 +50,25 @@ def ensure_directory_exists(directory, domain=None, permissions=0o777):
             save = os.umask(0)
             os.makedirs(directory, permissions)
         except OSError:
-            LOG.warning("Failed to create: %s", directory)
+            _log.warning("Failed to create: %s", directory)
         finally:
             os.umask(save)
 
     return directory
 
 
-def create_file(filename):
-    """Create the file filename and create any directories needed
+def create_file(filename: str):
+    """Create the file filename and any directories needed
 
     Args:
-        filename: Path to the file to be created
+        filename: path to the file to be created
     """
     ensure_directory_exists(os.path.dirname(filename), permissions=0o775)
     with open(filename, "w", encoding="utf-8") as f:
         f.write("")
 
 
-def resolve_resource_file(res_name: str) -> typing.Optional[str]:
+def resolve_resource_file(res_name: str) -> Optional[str]:
     """Convert a resource into an absolute filename.
 
     Resource names are in the form: 'filename.ext'
@@ -86,10 +91,10 @@ def resolve_resource_file(res_name: str) -> typing.Optional[str]:
         where the package has been installed.
 
     Args:
-        res_name (str): a resource path/name
+        res_name: a resource path/name
 
     Returns:
-        (str) path to resource or None if no resource found
+        path to resource or None if no resource found
     """
     config = Configuration.get()
 
@@ -123,7 +128,7 @@ def resolve_resource_file(res_name: str) -> typing.Optional[str]:
     return None  # Resource cannot be resolved
 
 
-def get_cache_directory(domain=None):
+def get_cache_directory(domain: str = None) -> str:
     """Get a directory for caching data.
 
     This directory can be used to hold temporary caches of data to
@@ -133,10 +138,10 @@ def get_cache_directory(domain=None):
     the file.
 
     Args:
-        domain (str): The cache domain.  Basically just a subdirectory.
+        domain: The cache domain.  Basically just a subdirectory.
 
     Returns:
-        (str) a path to the directory where you can cache data
+        a path to the directory where you can cache data
     """
     config = Configuration.get()
     directory = config.get("cache_path")

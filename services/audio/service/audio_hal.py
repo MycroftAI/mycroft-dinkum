@@ -30,7 +30,9 @@ import sdl2
 import sdl2.sdlmixer as mixer
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
-from mycroft.util.log import LOG
+from mycroft.util.log import get_service_logger
+
+_log = get_service_logger("audio", __name__)
 
 ChannelType = int
 HookMusicFunc = ctypes.CFUNCTYPE(
@@ -102,7 +104,7 @@ class AudioHAL:
                     )
                 )
             except Exception:
-                LOG.exception("Error finishing channel: %s", channel)
+                _log.exception("Error finishing channel: %s", channel)
 
         self._fg_channel_finished = fg_channel_finished
 
@@ -138,10 +140,10 @@ class AudioHAL:
         self._bg_playlist_file = tempfile.NamedTemporaryFile(suffix=".m3u", mode="w+")
 
     def initialize(self, bus: MessageBusClient):
-        """Start audio HAL"""
+        """Starts audio HAL."""
         self.bus = bus
 
-        LOG.debug("Initializing SDL mixer")
+        _log.info("Initializing SDL mixer")
 
         ret = mixer.Mix_Init(
             mixer.MIX_INIT_MP3
@@ -165,26 +167,26 @@ class AudioHAL:
         self._reset_caches()
 
     def shutdown(self):
-        """Shut down audio HAL"""
+        """Shuts down audio HAL."""
         self._reset_caches()
 
         self.stop_background()
 
-        LOG.debug("Stopping SDL mixer")
+        _log.info("Stopping SDL mixer")
         mixer.Mix_CloseAudio()
         mixer.Mix_Quit()
 
     def _reset_caches(self):
-        """Clear all media caches"""
+        """Clears all media caches."""
         self._fg_free = {}
         self._fg_media_ids = {}
         self._bg_media_id = None
 
     def _stop_bg_process(self):
-        """Stop background VLC process if running"""
+        """Stops background VLC process if running."""
         if self._bg_proc is not None:
             if self._bg_proc.poll() is None:
-                LOG.debug("Stopping background media process")
+                _log.info("Stopping background media process")
                 self._bg_proc.terminate()
 
                 try:
@@ -193,14 +195,14 @@ class AudioHAL:
                 except subprocess.TimeoutExpired:
                     self._bg_proc.kill()
 
-                LOG.debug("Stopped background media process")
+                _log.info("Background media process stopped")
 
             self._bg_proc = None
 
     def _bg_media_finished(self):
         """Callback when background playlist is finished playing"""
         media_id = self._bg_media_id or ""
-        LOG.debug("Background media finished: %s", media_id)
+        _log.info("Finished playing background media: %s", media_id)
 
         self.bus.emit(
             Message(
@@ -210,15 +212,13 @@ class AudioHAL:
         )
 
     def _check_sdl(self, ret: int):
-        """Check SDL call return value and raise exception if an error occurred."""
+        """Checks SDL call return value and raise exception if an error occurred."""
         if ret < 0:
             raise SDLException(self._get_mixer_error())
 
     def _get_mixer_error(self) -> str:
-        """Get the last mixer error string"""
+        """Returns the last mixer error string."""
         return mixer.Mix_GetError().decode("utf8")
-
-    # -------------------------------------------------------------------------
 
     def play_foreground(
         self,
@@ -228,11 +228,22 @@ class AudioHAL:
         volume: Optional[float] = None,
         mycroft_session_id: Optional[str] = None,
     ) -> float:
-        """Play an audio file on a foreground channel."""
+        """Plays an audio file on a foreground channel.
+
+        Args:
+            channel: audio channel playing the audio media
+            file_path: absolute path to the audio media
+            media_id: internal identifier of the audio media
+            volume: loudness of the media playback
+            mycroft_session_id: identifier of the session related to audio playback
+
+        Returns:
+            Duration of audio in seconds
+        """
         file_path_str = str(file_path)
+        _log.info("Playing audio file %s in foreground", file_path)
 
         # Need to load new chunk
-        LOG.debug("Loading audio file: %s", file_path)
         with self._mixer_lock:
             last_chunk: Optional[mixer.Mix_Chunk] = self._fg_free.pop(channel, None)
             if last_chunk is not None:
@@ -268,39 +279,66 @@ class AudioHAL:
             return duration_sec
 
     def pause_foreground(self, channel: int = -1):
-        """Pause media on a foreground channel (-1 for all)"""
+        """Pauses media on a foreground audio channel.
+
+        Args:
+            channel: Audio channel to pause (defaults to -1 for all)
+        """
         with self._mixer_lock:
             mixer.Mix_Pause(channel)
 
     def resume_foreground(self, channel: int = -1):
-        """Resume media on a foreground channel (-1 for all)"""
+        """Resumes media on a foreground audio channel.
+
+        Args:
+            channel: Audio channel to pause (defaults to -1 for all)
+        """
         with self._mixer_lock:
             mixer.Mix_Resume(channel)
 
     def stop_foreground(self, channel: int = -1):
-        """Stop media on a foreground channel (-1 for all)"""
+        """Stops media on a foreground audio channel.
+
+        Args:
+            channel: Audio channel to pause (defaults to -1 for all)
+        """
         with self._mixer_lock:
             mixer.Mix_HaltChannel(channel)
 
     def set_foreground_volume(self, volume: float, channel: int = -1):
-        """Set volume [0-1] of a foreground channel (-1 for all)"""
+        """Sets volume of a foreground audio channel.
+
+        Args:
+            volume: value between zero and one representing playback volume
+            channel: Audio channel to pause (defaults to -1 for all)
+        """
         with self._mixer_lock:
             mixer.Mix_Volume(channel, self._clamp_volume(volume))
 
     def _clamp_volume(self, volume: float) -> int:
-        """Convert volume in [0, 1] to SDL volume in [0, 128)"""
+        """Converts volume to SDL volume in [0, 128)
+
+        Args:
+            volume: value between zero and one representing playback volume
+
+        Returns:
+            Value between zero and 128 representing SDL volume
+        """
         volume_num = int(volume * mixer.MIX_MAX_VOLUME)
         volume_num = max(0, volume_num)
         volume_num = min(mixer.MIX_MAX_VOLUME, volume_num)
 
         return volume_num
 
-    # -------------------------------------------------------------------------
-
     def start_background(
         self, uri_playlist: Iterable[str], media_id: Optional[str] = None
     ):
-        """Start a playlist playing on a background channel"""
+        """Starts a playlist playing on a background channel.
+
+        Args:
+            uri_playlist: sequence of URIs representing audio media
+            media_id: internal identifier for the audio media
+        """
         self._stop_bg_process()
 
         self._bg_playlist_file.truncate(0)
@@ -338,10 +376,10 @@ class AudioHAL:
         with self._mixer_lock:
             mixer.Mix_HookMusic(self._bg_music_hook, None)
 
-        LOG.info("Playing background music")
+        _log.info("Playing playlist in background")
 
     def stop_background(self):
-        """Stop the background channel"""
+        """Stops audio playing on the background channel."""
         # Disable music hook.
         # HookMusicFunc() creates a NULL pointer
         with self._mixer_lock:
@@ -352,27 +390,25 @@ class AudioHAL:
         self._bg_media_id = None
 
     def pause_background(self):
-        """Pause the background channel"""
+        """Pauses the audio playing on the background channel."""
         self._bg_paused = True
 
         if self._bg_proc is not None:
-            # Pause process
             os.kill(self._bg_proc.pid, signal.SIGSTOP)
 
     def resume_background(self):
         """Resume the background channel"""
         if self._bg_proc is not None:
-            # Resume process
             os.kill(self._bg_proc.pid, signal.SIGCONT)
 
         self._bg_paused = False
 
     def set_background_volume(self, volume: float):
-        """Set the volume of the background music"""
+        """Sets the volume of the background music."""
         self._bg_volume = max(0, min(volume, 1))
 
     def get_background_time(self) -> int:
-        """Get position of background stream in milliseconds"""
+        """Returns position of background stream in milliseconds"""
         # Default: 48Khz, 32-bit stereo
         bytes_per_sample = self.audio_width
         bytes_per_ms = (
@@ -382,5 +418,5 @@ class AudioHAL:
         return self._bg_position // bytes_per_ms
 
     def is_background_playing(self):
-        """True if background stream is currently playing"""
+        """Returns True if background stream is currently playing."""
         return not self._bg_paused

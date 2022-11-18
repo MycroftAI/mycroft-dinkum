@@ -14,7 +14,6 @@
 #
 """Common functionality relating to the implementation of mycroft skills."""
 import itertools
-import logging
 import re
 import sys
 import traceback
@@ -31,8 +30,9 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-import mycroft.dialog
 from adapt.intent import Intent, IntentBuilder
+
+import mycroft.dialog
 from mycroft.api import DeviceApi
 from mycroft.configuration import Configuration
 from mycroft.dialog import load_dialogs
@@ -40,7 +40,7 @@ from mycroft.enclosure.gui import SkillGUI
 from mycroft.filesystem import FileSystemAccess
 from mycroft.messagebus.message import Message
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.log import LOG
+from mycroft.util.log import get_skill_logger
 from mycroft.util.string_utils import camel_case_split
 from xdg import BaseDirectory
 
@@ -175,7 +175,7 @@ class MycroftSkill:
         #: See mycroft.filesystem for details.
         self.file_system = FileSystemAccess(join("skills", self.skill_id))
 
-        self.log = logging.getLogger(self.skill_id)  #: Skill logger instance
+        self.log = get_skill_logger(self.skill_id)  #: Skill logger instance
         self.reload_skill = True  #: allow reloading (default True)
 
         self.events = EventContainer(bus)
@@ -205,7 +205,7 @@ class MycroftSkill:
         """change skill state to new value.
         does nothing except log a warning
         if the new state is invalid"""
-        self.log.debug(
+        self.log.info(
             "change_state() skill:%s - changing state from %s to %s"
             % (self.skill_id, self.skill_control.state, new_state)
         )
@@ -262,11 +262,11 @@ class MycroftSkill:
         if self._enclosure:
             return self._enclosure
         else:
-            LOG.error(
+            self.log.error(
                 "Skill not fully initialized. Move code "
                 + "from  __init__() to initialize() to correct this."
             )
-            LOG.error(simple_trace(traceback.format_stack()))
+            self.log.error(simple_trace(traceback.format_stack()))
             raise Exception("Accessed MycroftSkill.enclosure in __init__")
 
     @property
@@ -274,11 +274,11 @@ class MycroftSkill:
         if self._bus:
             return self._bus
         else:
-            LOG.error(
+            self.log.error(
                 "Skill not fully initialized. Move code "
                 + "from __init__() to initialize() to correct this."
             )
-            LOG.error(simple_trace(traceback.format_stack()))
+            self.log.error(simple_trace(traceback.format_stack()))
             raise Exception("Accessed MycroftSkill.bus in __init__")
 
     @property
@@ -382,7 +382,7 @@ class MycroftSkill:
                 }
         for key in self.public_api:
             if "type" in self.public_api[key] and "func" in self.public_api[key]:
-                LOG.debug(
+                self.log.info(
                     "Adding api method: " "{}".format(self.public_api[key]["type"])
                 )
 
@@ -422,7 +422,7 @@ class MycroftSkill:
         """
         remote_settings = message.data.get(self.skill_id)
         if remote_settings is not None:
-            LOG.info("Updating settings for skill " + self.skill_id)
+            self.log.info("Updating settings for skill " + self.skill_id)
             self.settings.update(**remote_settings)
             save_settings(self.settings_write_path, self.settings)
             if self.settings_change_callback is not None:
@@ -573,7 +573,7 @@ class MycroftSkill:
         result = self._find_resource(res_name, self.lang, res_dirname)
         if not result and self.lang != "en-us":
             # when resource not found try fallback to en-us
-            LOG.warning(
+            self.log.warning(
                 "Resource '{}' for lang '{}' not found: trying 'en-us'".format(
                     res_name, self.lang
                 )
@@ -635,7 +635,7 @@ class MycroftSkill:
             msg_data = {"skill": handler_name}
             msg = mycroft.dialog.get("skill.error", self.lang, msg_data)
             # self.speak(msg)
-            LOG.exception(msg)
+            self.log.exception(msg)
             # append exception information in message
             skill_data["exception"] = repr(e)
 
@@ -671,7 +671,7 @@ class MycroftSkill:
     def _add_intent_handler(self, name, handler):
         def _handle_intent(message: Message):
             self._mycroft_session_id = message.data.get("mycroft_session_id")
-            self.log.debug(
+            self.log.info(
                 "Handling %s with skill %s (session=%s)",
                 name,
                 self.skill_id,
@@ -684,7 +684,7 @@ class MycroftSkill:
                 message = unmunge_message(message, self.skill_id)
                 result_message = handler(message)
             except Exception:
-                LOG.exception("Error in intent handler: %s", name)
+                self.log.exception("Error in intent handler: %s", name)
 
                 # Speak error
                 self.emit_start_session(
@@ -840,12 +840,12 @@ class MycroftSkill:
                 bool: True if disabled, False if it wasn't registered
         """
         if intent_name in self.intent_service:
-            LOG.debug("Disabling intent " + intent_name)
+            self.log.debug("Disabling intent " + intent_name)
             name = "{}:{}".format(self.skill_id, intent_name)
             self.intent_service.detach_intent(name)
             return True
         else:
-            LOG.error(
+            self.log.error(
                 "Could not disable "
                 "{}, it hasn't been registered.".format(intent_name)
             )
@@ -867,10 +867,10 @@ class MycroftSkill:
             else:
                 intent.name = intent_name
                 self.register_intent(intent, None)
-            LOG.debug("Enabling intent {}".format(intent_name))
+            self.log.debug("Enabling intent {}".format(intent_name))
             return True
         else:
-            LOG.error(
+            self.log.error(
                 "Could not enable " "{}, it hasn't been registered.".format(intent_name)
             )
             return False
@@ -964,7 +964,7 @@ class MycroftSkill:
             audio_file = resolve_resource_file(acknowledge)
 
             if not audio_file:
-                LOG.warning("Could not find 'acknowledge' audio file!")
+                self.log.warning("Could not find 'acknowledge' audio file!")
                 return
 
             uri = f"file://{audio_file}"
@@ -986,7 +986,7 @@ class MycroftSkill:
             locale_path = join(self.root_dir, "locale", self.lang)
             self.dialog_renderer = load_dialogs(locale_path)
         else:
-            LOG.debug("No dialog loaded")
+            self.log.info("No dialog loaded")
         self.resources.dialog_renderer = self.dialog_renderer
 
     def load_vocab_files(self):
@@ -1016,7 +1016,7 @@ class MycroftSkill:
     def __handle_skill_stop(self, message: Message):
         skill_id = message.data.get("skill_id")
         if skill_id == self.skill_id:
-            self.log.debug("Handling stop in skill: %s", self.skill_id)
+            self.log.info("Handling stop in skill: %s", self.skill_id)
             self._mycroft_session_id = message.data.get("mycroft_session_id")
 
             result_message: Optional[Message] = None
@@ -1051,7 +1051,7 @@ class MycroftSkill:
         try:
             self.shutdown()
         except Exception as e:
-            LOG.error(
+            self.log.error(
                 "Skill specific shutdown function encountered "
                 "an error: {}".format(repr(e))
             )
@@ -1076,7 +1076,7 @@ class MycroftSkill:
         try:
             self.stop()
         except Exception:
-            LOG.error("Failed to stop skill: {}".format(self.skill_id), exc_info=True)
+            self.log.error("Failed to stop skill: {}".format(self.skill_id), exc_info=True)
 
     def schedule_event(self, handler, when, data=None, name=None, context=None):
         """Schedule a single-shot event.
@@ -1479,7 +1479,7 @@ class MycroftSkill:
                 self.acknowledge()
                 result_message = self.raw_utterance(utterance, state)
             except Exception:
-                LOG.exception("Unexpected error in raw_utterance")
+                self.log.exception("Unexpected error in raw_utterance")
 
             if result_message is None:
                 result_message = self.end_session()
@@ -1496,6 +1496,6 @@ class MycroftSkill:
             try:
                 handled = self.handle_gui_idle()
             except Exception:
-                LOG.exception("Unexpected error handling GUI idle message")
+                self.log.exception("Unexpected error handling GUI idle message")
             finally:
                 self.bus.emit(message.response(data={"handled": handled}))

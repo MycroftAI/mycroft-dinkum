@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Base class for activites.
+"""Defines the base class for activities.
 
 An activity is some action that occurs between a started and ended event.
 """
@@ -21,11 +21,18 @@ import threading
 import typing
 
 from mycroft.messagebus import Message
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 class Activity(abc.ABC):
-    """Base class for activities"""
+    """Base class for activities.
+
+    Attributes:
+        name: the name of the activity
+        bus: an instance of the message bus client
+    """
 
     def __init__(self, name: str, bus):
         self.name = name
@@ -35,25 +42,33 @@ class Activity(abc.ABC):
         self._ended_event = f"{self.name}.ended"
 
     def run(self):
-        """Runs activity, blocking until finished"""
+        """Runs activity, blocking until finished."""
         self.bus.emit(Message(self._started_event))
+        _log.info("Activity %s started", self.name)
         try:
             self._run()
         except Exception:
-            LOG.exception("error in activity %s", self.name)
+            _log.exception("Error in activity %s", self.name)
             end_data = dict(success=False)
         else:
             end_data = dict(success=True)
 
         self.bus.emit(Message(self._ended_event, end_data))
+        _log.info("Activity %s ended", self.name)
 
     def run_background(self, timeout: typing.Optional[float] = None):
-        """Runs activity in a thread, blocking only if timeout is set"""
+        """Runs activity in a thread, blocking only if timeout is set
+
+        Args:
+            timeout: number of seconds until the activity times out.
+        """
+        _log.info("Background activity %s started", self.name)
         bg_thread = threading.Thread(target=self.run, daemon=True)
         bg_thread.start()
 
         if timeout is not None:
             bg_thread.join(timeout=timeout)
+        _log.info("Background activity %s ended", self.name)
 
     @abc.abstractmethod
     def _run(self):

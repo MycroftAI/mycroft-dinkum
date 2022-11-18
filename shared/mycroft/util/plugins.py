@@ -13,21 +13,22 @@
 # limitations under the License.
 #
 """Common functions for loading plugins."""
-import logging
-import typing
 from importlib.metadata import entry_points
+from typing import Any, Dict, Optional
 
-LOG = logging.getLogger(__package__)
+from .log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
-def find_plugins(plug_type: str) -> typing.Dict[str, typing.Any]:
+def find_plugins(plug_type: str) -> Dict[str, Any]:
     """Finds all plugins matching specific entrypoint type.
 
     Args:
-        plug_type (str): plugin entrypoint string to retrieve
+        plug_type: plugin entrypoint string to retrieve
 
     Returns:
-        dict mapping plugin names to plugin entrypoints
+        mapping of plugin names to plugin entrypoints
     """
     return {
         entry_point.name: entry_point.load()
@@ -35,12 +36,12 @@ def find_plugins(plug_type: str) -> typing.Dict[str, typing.Any]:
     }
 
 
-def load_plugin(plug_type: str, plug_name: str) -> typing.Any:
+def load_plugin(plug_type: str, plug_name: str) -> Optional[Any]:
     """Load a specific plugin from a specific plugin type.
 
     Args:
-        plug_type: (str) plugin type name. Ex. "mycroft.plugin.tts".
-        plug_name: (str) specific plugin name
+        plug_type: plugin type name. Ex. "mycroft.plugin.tts".
+        plug_name: specific plugin name
 
     Returns:
         Loaded plugin Object or None if no matching object was found.
@@ -49,7 +50,7 @@ def load_plugin(plug_type: str, plug_name: str) -> typing.Any:
     if plug_name in plugins:
         ret = plugins[plug_name]
     else:
-        LOG.warning("Could not find the plugin %s.%s", plug_type, plug_name)
+        _log.warning("Could not find the plugin %s.%s", plug_type, plug_name)
         ret = None
 
     return ret

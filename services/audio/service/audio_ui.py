@@ -1,18 +1,38 @@
 #!/usr/bin/env python3
+# Copyright 2022 Mycroft AI Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""Logic to interface with the Audio HAL."""
 import os
 import time
 from dataclasses import dataclass, field
 from enum import IntEnum
 from queue import Queue
 from threading import Event, RLock, Semaphore, Thread
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from mycroft.messagebus import Message
 from mycroft.messagebus.client import MessageBusClient
 from mycroft.util.file_utils import resolve_resource_file
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_service_logger
 from .audio_hal import AudioHAL
+
+# Fixed sample rate for sound effects
+EFFECT_SAMPLE_RATE = 48_000  # Hz
+EFFECT_CHANNELS = 2
+
+_log = get_service_logger("audio", __name__)
 
 
 class ForegroundChannel(IntEnum):
@@ -20,14 +40,6 @@ class ForegroundChannel(IntEnum):
 
     EFFECT = 0
     SPEECH = 1
-
-
-# Fixed sample rate for sound effects
-EFFECT_SAMPLE_RATE = 48_000  # Hz
-EFFECT_CHANNELS = 2
-
-
-# -----------------------------------------------------------------------------
 
 
 @dataclass
@@ -48,15 +60,19 @@ class TTSRequest:
 
     @property
     def is_first_chunk(self):
+        """Returns True if first chunk of TTS audio."""
         return self.chunk_index <= 0
 
     @property
     def is_last_chunk(self):
+        """Returns True if last chunk of TTS audio."""
         return self.chunk_index >= (self.num_chunks - 1)
 
 
 @dataclass
 class TTSSession:
+    """Defines a session representing TTS playback."""
+
     mycroft_session_id: Optional[str] = None
     chunk_queue: "Queue[TTSRequest]" = field(default_factory=Queue)
     speech_finished: Event = field(default_factory=Event)
@@ -64,52 +80,51 @@ class TTSSession:
 
 
 class RepeatingTimer(Thread):
-    """Repeatedly calls a function at a fixed interval in a separate thread"""
+    """Repeatedly calls a function at a fixed interval in a separate thread
 
-    def __init__(self, interval: float, function):
-        self.interval = interval
-        self.function = function
-        self.cancelled = False
+    Attributes:
+        interval: number of seconds to sleep between function executions
+        function: the function to execute at the specified interval
+        cancelled: indicates whether the function execution has been cancelled or not
+    """
 
+    def __init__(self, interval: float, function: Callable):
+        self.interval: float = interval
+        self.function: Callable = function
+        self.cancelled: bool = False
         super().__init__()
 
     def cancel(self):
+        """Cancels the repeated execution of the function."""
         self.cancelled = True
 
     def start(self):
+        """Starts the repeated execution of the function."""
         self.cancelled = False
         super().start()
 
     def run(self):
+        """Executes a function on a specified time interval."""
         seconds_to_wait = self.interval
 
         while True:
             if self.cancelled:
                 break
-
             time.sleep(seconds_to_wait)
-
             if self.cancelled:
                 break
-
             start_time = time.time()
-
             try:
                 self.function()
             except Exception:
-                LOG.exception("timer")
-
+                _log.exception("Unexpected error in repeating timer")
             end_time = time.time()
-
             if self.cancelled:
                 break
 
             # Take run time of function into account to avoid drift
             seconds_elapsed = end_time - start_time
             seconds_to_wait = max(0, self.interval - seconds_elapsed)
-
-
-# -----------------------------------------------------------------------------
 
 
 class AudioUserInterface:
@@ -165,7 +180,7 @@ class AudioUserInterface:
         self._is_running = True
 
     def initialize(self, bus: MessageBusClient):
-        """Initializes the service"""
+        """Initializes the interface."""
         self.bus = bus
         self._is_running = True
         self._ahal.initialize(self.bus)
@@ -184,7 +199,7 @@ class AudioUserInterface:
             self.bus.on(event_name, handler)
 
     def shutdown(self):
-        """Shuts down the service"""
+        """Shuts down the interface."""
         try:
             self._is_running = False
             self._mycroft_session_id = None
@@ -200,16 +215,15 @@ class AudioUserInterface:
 
             self._ahal.shutdown()
         except Exception:
-            LOG.exception("error shutting down")
+            _log.exception("Unexpected error occurred while attempting shutdown")
 
     def _detach_events(self):
         """Removes bus event handlers"""
         for event_name, handler in self._bus_events.items():
             self.bus.remove(event_name, handler)
 
-    # -------------------------------------------------------------------------
-
-    def _stop_tts(self, _message=None):
+    def _stop_tts(self, _: Message = None):
+        """Stop the playback of TTS."""
         with self._session_lock:
             self._mycroft_session_id = None
 
@@ -221,14 +235,12 @@ class AudioUserInterface:
         self._ahal.set_background_volume(
             1.0 - self.config["listener"]["duck_while_listening"]
         )
-        LOG.info("Ducked volume")
+        _log.info("Ducked volume")
 
     def _unduck_volume(self):
         """Restore volumes after voice commands"""
         self._ahal.set_background_volume(1.0)
-        LOG.info("Unducked volume")
-
-    # -------------------------------------------------------------------------
+        _log.info("Unducked volume")
 
     def handle_play_sound(self, message):
         """Handler for skills' play_sound_uri"""
@@ -239,7 +251,6 @@ class AudioUserInterface:
 
     def handle_start_listening(self, _message):
         """Play sound when Mycroft begins recording a command"""
-
         self._duck_volume()
         self._stop_tts()
 
@@ -247,6 +258,7 @@ class AudioUserInterface:
             self._play_effect(self._start_listening_uri)
 
     def handle_end_listening(self, _message):
+        """Executes logic required after listening for a command is complete."""
         self._unduck_volume()
 
     def _play_effect(
@@ -255,7 +267,13 @@ class AudioUserInterface:
         volume: Optional[float] = None,
         mycroft_session_id: Optional[str] = None,
     ):
-        """Play sound effect from uri"""
+        """Play sound effect from a file URI.
+
+        Args:
+            uri: a file URI representing the location of the audio file.
+            volume: the volume to use for playback
+            mycroft_session_id: the active session
+        """
         if uri:
             assert uri.startswith("file://"), "Only file URIs are supported for effects"
             file_path = uri[len("file://") :]
@@ -265,9 +283,14 @@ class AudioUserInterface:
                 volume=volume,
                 mycroft_session_id=mycroft_session_id,
             )
-            LOG.info("Played sound: %s", uri)
+            _log.info("Played sound: %s", uri)
 
     def handle_tts_session_start(self, message):
+        """Primes the interface for speaking a TTS result.
+
+        Args:
+            message: Event message for starting TTS playback
+        """
         mycroft_session_id = message.data.get("mycroft_session_id")
 
         with self._session_lock:
@@ -285,13 +308,14 @@ class AudioUserInterface:
                 # Stop any TTS currently speaking
                 self._ahal.stop_foreground(ForegroundChannel.SPEECH)
 
-        LOG.debug(
-            "Started TTS session %s",
-            mycroft_session_id,
-        )
+        _log.info("Started TTS playback for session %s", mycroft_session_id)
 
     def handle_tts_chunk(self, message):
-        """Queues a text to speech audio chunk to be played"""
+        """Queues a text to speech audio chunk to be played
+
+        Args:
+            message: event message for playback of a TTS chunk (i.e. segment)
+        """
         uri = message.data["uri"]
         mycroft_session_id = message.data.get("mycroft_session_id", "")
         chunk_index = message.data.get("chunk_index", 0)
@@ -301,10 +325,9 @@ class AudioUserInterface:
         with self._session_lock:
             if mycroft_session_id != self._mycroft_session_id:
                 # Doesn't match session from tts.session.start
-                LOG.debug(
-                    "Dropping TTS chunk from cancelled session %s: %s",
+                _log.debug(
+                    "Dropping TTS chunk from cancelled session %s",
                     mycroft_session_id,
-                    text,
                 )
                 return
 
@@ -319,25 +342,32 @@ class AudioUserInterface:
             session.chunk_queue.put(request)
             self._speech_ready.release()
 
-            LOG.info(
-                "Queued TTS chunk %s/%s: %s (session=%s): %s",
+            _log.debug(
+                "Queued TTS chunk %s/%s: %s: %s",
                 chunk_index + 1,
                 num_chunks,
                 uri,
-                mycroft_session_id,
                 text,
             )
         else:
-            LOG.error("TTS session was not started: %s", mycroft_session_id)
+            _log.error(
+                "TTS playback cancelled - session %s not found ", mycroft_session_id
+            )
 
-    def handle_tts_started(self, _message: Message):
+    def handle_tts_started(self, _: Message):
+        """Performs required tasks resulting from TTS started event."""
         self._duck_volume()
 
-    def handle_tts_finished(self, _message: Message):
+    def handle_tts_finished(self, _: Message):
+        """Performs required tasks resulting from TTS finished event."""
         self._unduck_volume()
 
     def handle_media_finished(self, message):
-        """Callback when VLC media item has finished playing"""
+        """Performs required logic resulting from completion of VLC media playback.
+
+        Args:
+            message: event message for finishing media playback
+        """
         channel = message.data.get("channel")
         background = message.data.get("background", False)
         media_id = message.data.get("media_id")
@@ -346,11 +376,11 @@ class AudioUserInterface:
             # Signal speech thread to play next TTS chunk
             session = self._sessions.get(media_id)
             if session is not None:
-                LOG.debug("TTS chunk finished playing for session %s", media_id)
+                _log.debug("TTS chunk finished playing")
                 session.speech_finished.set()
         elif background:
             # Signal background stream complete
-            LOG.info("Background stream finished")
+            _log.info("Background stream finished")
             self.bus.emit(
                 Message(
                     "mycroft.audio.queue_end",
@@ -359,7 +389,7 @@ class AudioUserInterface:
             )
 
     def _speech_run(self):
-        """Thread proc for text to speech"""
+        """Playback of TTS results in a background thread."""
         try:
             while self._is_running:
                 self._speech_ready.acquire()
@@ -382,7 +412,9 @@ class AudioUserInterface:
                                     mycroft_session_id=session_id,
                                 )
 
-                            LOG.debug("Cleaned up TTS session %s", session_id)
+                            _log.info(
+                                "Cleaned up TTS playback for session %s", session_id
+                            )
 
                 if session.chunk_queue.empty():
                     # No TTS chunks
@@ -424,12 +456,11 @@ class AudioUserInterface:
                     )
 
                     if duration_sec is not None:
-                        LOG.info(
-                            "Speaking TTS chunk %s/%s for %s sec from session %s",
+                        _log.debug(
+                            "Speaking TTS chunk %s/%s for %s sec",
                             request.chunk_index + 1,
                             request.num_chunks,
                             duration_sec,
-                            session.mycroft_session_id,
                         )
 
                         # Wait at most a half second after TTS should have been finished.
@@ -457,12 +488,14 @@ class AudioUserInterface:
                     )
 
         except Exception:
-            LOG.exception("error is speech thread")
+            _log.exception("Unexpected error in speech thread")
 
-    def _finish_tts_session(
-        self,
-        mycroft_session_id: str,
-    ):
+    def _finish_tts_session(self, mycroft_session_id: str):
+        """Executes logic required after TTS playback is completed.
+
+        Args:
+            mycroft_session_id: the identifier of the session that requested TTS
+        """
         # Report speaking finished for speak(wait=True)
         self.bus.emit(
             Message(
@@ -479,19 +512,17 @@ class AudioUserInterface:
                 data={"mycroft_session_id": mycroft_session_id},
             )
         )
-
-        LOG.info("TTS session finished: %s", mycroft_session_id)
-
-    # -------------------------------------------------------------------------
+        _log.info("TTS playback ended for session %s", mycroft_session_id)
 
     def handle_stream_play(self, message: Message):
-        """Handler for mycroft.audio.service.play
+        """Play tracks using the background audio stream.
 
-        Play tracks using the background stream.
+        Args:
+            message: Event message for stream playback
         """
         tracks = message.data.get("tracks", [])
         if not tracks:
-            LOG.warning("Play message received with not tracks: %s", message.data)
+            _log.warning("Play message received with not tracks: %s", message.data)
             return
 
         uri_playlist = []
@@ -508,11 +539,7 @@ class AudioUserInterface:
         self._ahal.stop_background()
 
         self._stream_session_id = message.data.get("mycroft_session_id")
-        LOG.info(
-            "Playing background stream: %s (session=%s)",
-            uri_playlist,
-            self._stream_session_id,
-        )
+        _log.info("Playing background stream: %s", uri_playlist)
         self._ahal.start_background(uri_playlist)
         self.bus.emit(
             Message(
@@ -522,10 +549,14 @@ class AudioUserInterface:
         )
 
     def handle_stream_pause(self, message: Message):
-        """Handler for mycroft.audio.service.pause"""
+        """Pauses playback of a background audio stream.
+
+        Args:
+            message: message attached to mycroft.audio.service.pause event
+        """
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
-            LOG.debug("Pausing background stream (session=%s)", mycroft_session_id)
+            _log.info("Pausing background stream")
             self._ahal.pause_background()
             self.bus.emit(
                 Message(
@@ -535,10 +566,14 @@ class AudioUserInterface:
             )
 
     def handle_stream_resume(self, message: Message):
-        """Handler for mycroft.audio.service.resume"""
+        """Resumes playback of a background audio stream.
+
+        Args:
+            message: message attached to mycroft.audio.service.resume event
+        """
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
-            LOG.debug("Resuming background stream (session=%s)", mycroft_session_id)
+            _log.info("Resuming background stream")
             self._ahal.resume_background()
             self.bus.emit(
                 Message(
@@ -548,10 +583,14 @@ class AudioUserInterface:
             )
 
     def handle_stream_stop(self, message):
-        """Handler for mycroft.audio.service.stop"""
+        """Stops playback of a background audio stream.
+
+        Args:
+            message: message attached to the mycroft.audio.service.stop event
+        """
         mycroft_session_id = message.data.get("mycroft_session_id")
         if mycroft_session_id == self._stream_session_id:
-            LOG.debug("Stopping background stream (session=%s)", mycroft_session_id)
+            _log.info("Stopping background stream")
 
             # Don't ever actually stop the background stream.
             # This lets us resume it later at any point.

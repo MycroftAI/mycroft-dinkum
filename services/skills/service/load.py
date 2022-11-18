@@ -13,13 +13,14 @@
 # limitations under the License.
 #
 import importlib
-import logging
 import os
 import sys
 
 from mycroft_bus_client import MessageBusClient
 
-LOG = logging.getLogger("skills")
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger("__name__")
 SKILL_MAIN_MODULE = "__init__.py"
 
 
@@ -28,8 +29,7 @@ def create_skill_instance(skill_module, skill_id: str, bus: MessageBusClient):
     try:
         instance = skill_module.create_skill(skill_id)
     except Exception as e:
-        log_msg = "Skill __init__ failed with {}"
-        LOG.exception(log_msg.format(repr(e)))
+        _log.exception("Skill %s __init__ failed", skill_id)
         instance = None
 
     if instance:
@@ -45,7 +45,7 @@ def create_skill_instance(skill_module, skill_id: str, bus: MessageBusClient):
             instance.default_shutdown()
             instance = None
             log_msg = "Skill initialization failed with {}"
-            LOG.exception(log_msg.format(repr(e)))
+            _log.exception(log_msg.format(repr(e)))
 
     return instance
 
@@ -55,12 +55,12 @@ def load_skill_source(skill_directory: str, skill_id: str):
     main_file_path = os.path.join(skill_directory, SKILL_MAIN_MODULE)
     if not os.path.exists(main_file_path):
         error_msg = "Failed to load {} due to a missing file."
-        LOG.error(error_msg.format(skill_id))
+        _log.error(error_msg.format(skill_id))
     else:
         try:
             skill_module = _load_skill_module(main_file_path, skill_id)
         except Exception as e:
-            LOG.exception("Failed to load skill: " "{} ({})".format(skill_id, repr(e)))
+            _log.exception("Failed to load skill: " "{} ({})".format(skill_id, repr(e)))
         else:
             module_is_skill = hasattr(skill_module, "create_skill") and callable(
                 skill_module.create_skill

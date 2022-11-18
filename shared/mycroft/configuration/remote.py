@@ -19,12 +19,13 @@ from threading import Timer
 from typing import Any, Dict, Optional
 
 import xdg.BaseDirectory
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
 from mycroft.util.string_utils import camel_case_split
 from mycroft_bus_client import Message, MessageBusClient
 
 ONE_MINUTE = 60
 
+_log = get_mycroft_logger(__name__)
 
 def get_remote_settings_path() -> Path:
     return Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / "mycroft.remote.conf"
@@ -37,7 +38,7 @@ def download_remote_settings(api) -> Dict[str, Any]:
     try:
         location = api.get_location()
     except Exception:
-        LOG.exception("RequestException fetching remote location")
+        _log.exception("RequestException fetching remote location")
 
     if location:
         setting["location"] = location
@@ -124,7 +125,7 @@ class RemoteSettingsDownloader:
         self._timer = Timer(ONE_MINUTE, self._download)
         self._timer.daemon = True
         self._timer.start()
-        LOG.debug("Scheduled download of remote config in %s second(s)", ONE_MINUTE)
+        _log.debug("Scheduled download of remote config in %s second(s)", ONE_MINUTE)
 
     def _download(self):
         try:
@@ -133,7 +134,7 @@ class RemoteSettingsDownloader:
                 with open(self._config_path, "r") as config_file:
                     self._last_settings = json.load(config_file)
 
-            LOG.debug("Downloading remote settings")
+            _log.info("Downloading remote settings")
             current_settings = download_remote_settings(self.api)
 
             if current_settings != self._last_settings:
@@ -142,13 +143,13 @@ class RemoteSettingsDownloader:
                     json.dump(current_settings, settings_file)
 
                 self._last_settings = current_settings
-                LOG.debug("Wrote remote config: %s", self._config_path)
+                _log.info("Wrote remote config: %s", self._config_path)
 
                 assert self.bus is not None
 
                 # Inform services that config may have changed
                 self.bus.emit(Message("configuration.updated"))
         except Exception:
-            LOG.exception("Error downloading remote config")
+            _log.exception("Error downloading remote config")
         finally:
             self.schedule()

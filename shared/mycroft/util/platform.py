@@ -17,5 +17,5 @@ import os
 
 
 def get_arch():
-    """Get architecture string of system."""
+    """Returns architecture name of system."""
     return os.uname()[4]

@@ -104,7 +104,7 @@ class Mark2SwitchClient:
             await button_interface.call_report()
 
             await dbus.wait_for_disconnect()
-            self.log.debug("Disconnected from DBus")
+            self.log.info("Disconnected from DBus")
         except Exception:
             self.log.exception("Error reading button state")
 

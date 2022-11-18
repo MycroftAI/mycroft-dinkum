@@ -19,10 +19,10 @@ from typing import Callable, Dict, Optional
 from uuid import uuid4
 
 from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
-
+from mycroft.util.log import get_mycroft_logger
 from .mycroft_skill import MycroftSkill
 
+_log = get_mycroft_logger(__name__)
 FallbackHandler = Callable[[Message], bool]
 
 
@@ -81,7 +81,7 @@ class FallbackSkill(MycroftSkill):
                         # Automatically close session
                         response_message = self.end_session()
             except Exception:
-                LOG.exception("Unexpected error in fallback handler")
+                _log.exception("Unexpected error in fallback handler")
 
             self.bus.emit(
                 message.response(

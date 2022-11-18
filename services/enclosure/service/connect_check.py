@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Ensures device is connected to internet and Selene."""
 import json
 import time
 from enum import Enum, auto
@@ -68,7 +69,7 @@ class Authentication(str, Enum):
 
 
 class State(Enum):
-    """State of this skill"""
+    """Defines the states of this skill."""
 
     CHECK_INTERNET = auto()
     #
@@ -96,7 +97,8 @@ class State(Enum):
 
 
 class ConnectCheck(MycroftSkill):
-    """
+    """Wi-Fi connection and Selene pairing skill.
+
     Skill for doing:
 
     1. Internet detection
@@ -695,7 +697,7 @@ class ConnectCheck(MycroftSkill):
         sync_path = (
             Path(xdg.BaseDirectory.xdg_config_home) / "mycroft" / ".pantacor.synced"
         )
-        if not sync_path.exists():
+        if not sync_path.exists() and self.deployment_manager == "pantacor":
             for i in range(PANTACOR_RETRIES):
                 try:
                     self.log.debug(

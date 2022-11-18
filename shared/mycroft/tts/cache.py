@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 def hash_sentence(sentence: str):
@@ -34,7 +36,7 @@ class AudioFile:
             with open(self.path, "wb") as audio_file:
                 audio_file.write(audio)
         except Exception:
-            LOG.exception("Failed to write {} to cache".format(self.name))
+            _log.exception("Failed to write {} to cache".format(self.name))
 
     def exists(self):
         return self.path.exists()
@@ -53,7 +55,7 @@ class PhonemeFile:
                 with open(self.path) as phoneme_file:
                     phonemes = phoneme_file.read().strip()
             except Exception:
-                LOG.exception("Failed to read phoneme from cache")
+                _log.exception("Failed to read phoneme from cache")
 
         return json.loads(phonemes)
 
@@ -68,7 +70,7 @@ class PhonemeFile:
             with open(self.path, "w") as phoneme_file:
                 phoneme_file.write(rec)
         except Exception:
-            LOG.exception("Failed to write {} to cache".format(self.name))
+            _log.exception("Failed to write {} to cache".format(self.name))
 
     def exists(self):
         return self.path.exists()

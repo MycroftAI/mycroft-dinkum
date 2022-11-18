@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Defines the executable audio service."""
 from mycroft.service import DinkumService
-
+from mycroft.util.log import configure_loggers, get_service_logger
 from .audio_ui import AudioUserInterface
 from .tts import SpeakHandler, load_tts_module
+
+configure_loggers("audio")
+_log = get_service_logger("audio", __name__)
 
 
 class AudioService(DinkumService):
@@ -60,6 +64,7 @@ class AudioService(DinkumService):
         super().__init__(service_id="audio")
 
     def start(self):
+        """Performs service-specific initialization."""
         # Text to speech plugin
         self._tts = load_tts_module(self.config)
 
@@ -72,12 +77,13 @@ class AudioService(DinkumService):
         self._speak_handler.start()
 
     def stop(self):
+        """Performs service-specific shutdown."""
         self._speak_handler.stop()
         self._audio_ui.shutdown()
 
 
 def main():
-    """Service entry point"""
+    """Service entry point."""
     AudioService().main()
 
 

@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 import os
 from pathlib import Path
 from typing import Any, ClassVar, Dict, Iterable, Union, cast
 
 import xdg.BaseDirectory
 
+from mycroft.util.log import get_mycroft_logger
 from .remote import get_remote_settings_path
 from .util import load_commented_json, merge_dict
 
-LOG = logging.getLogger(__package__)
-
+_log = get_mycroft_logger("mycroft.configuration")
 _DIR = Path(__file__).parent
 ConfigType = Dict[str, Any]
 
@@ -37,12 +36,12 @@ class Configuration:
         """Get singleton configuration (load if necessary)"""
         if (not cache) or (not Configuration.__is_loaded):
             for config_path in Configuration.get_paths():
-                LOG.debug("Loading config file: %s", config_path)
+                _log.info("Loading config file: %s", config_path)
                 try:
                     delta_config = Configuration.load(config_path)
                     merge_dict(Configuration.__config, delta_config)
                 except Exception:
-                    LOG.exception("Error loading config file: %s", config_path)
+                    _log.exception("Error loading config file: %s", config_path)
 
             Configuration.__is_loaded = True
 
@@ -55,7 +54,7 @@ class Configuration:
 
     @staticmethod
     def reload():
-        LOG.debug("Reloading configuration")
+        _log.info("Reloading configuration")
         Configuration.get(cache=False)
 
     @staticmethod

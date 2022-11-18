@@ -20,20 +20,22 @@ This code is re-used in both to load config values.
 from collections import namedtuple
 
 from mycroft.configuration import Configuration
-from mycroft.util.log import LOG
+from mycroft.util.log import get_service_logger
+
+_log = get_service_logger("bus", __name__)
 
 MessageBusConfig = namedtuple("MessageBusConfig", ["host", "port", "route", "ssl"])
 
 
 def load_message_bus_config(**overrides):
     """Load the bits of device configuration needed to run the message bus."""
-    LOG.info("Loading message bus configs")
+    _log.info("Loading message bus configs")
     config = Configuration.get()
 
     try:
         websocket_configs = config["websocket"]
     except KeyError as ke:
-        LOG.error("No websocket configs found ({})".format(repr(ke)))
+        _log.error("No websocket configs found ({})".format(repr(ke)))
         raise
     else:
         mb_config = MessageBusConfig(
@@ -44,7 +46,7 @@ def load_message_bus_config(**overrides):
         )
         if not all([mb_config.host, mb_config.port, mb_config.route]):
             error_msg = "Missing one or more websocket configs"
-            LOG.error(error_msg)
+            _log.error(error_msg)
             raise ValueError(error_msg)
 
     return mb_config

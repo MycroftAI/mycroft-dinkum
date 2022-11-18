@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -20,7 +19,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import onnxruntime
 
-LOG = logging.getLogger("voice_activity")
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 @dataclass
@@ -37,6 +38,7 @@ class VoiceActivity:
     def reset(self):
         pass
 
+
 # -----------------------------------------------------------------------------
 
 
@@ -49,7 +51,7 @@ class SileroVoiceActivity(VoiceActivity):
     _c_array: Optional[np.ndarray] = None
 
     def start(self):
-        LOG.debug("Loading VAD model: %s", self.model)
+        _log.info("Loading VAD model: %s", self.model)
         self._session = onnxruntime.InferenceSession(str(self.model))
         self._session.intra_op_num_threads = 1
         self._session.inter_op_num_threads = 1

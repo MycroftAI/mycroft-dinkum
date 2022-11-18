@@ -24,7 +24,9 @@ from pathlib import Path
 
 from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.format import expand_options
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 class MustacheDialogRenderer:
@@ -89,7 +91,7 @@ class MustacheDialogRenderer:
         """
         context = context or {}
         if template_name not in self.templates:
-            LOG.warning("Missing template file: %s", template_name)
+            _log.warning("Missing template file: %s", template_name)
             return get(template_name, context=context)
 
             # When not found, return the name itself as the dialog
@@ -138,7 +140,7 @@ def load_dialogs(dialog_dir, renderer=None):
 
     directory = Path(dialog_dir)
     if not directory.exists() or not directory.is_dir():
-        LOG.warning("No dialog files found: {}".format(dialog_dir))
+        _log.warning("No dialog files found: {}".format(dialog_dir))
         return renderer
 
     for path, _, files in os.walk(str(directory)):
@@ -171,7 +173,7 @@ def get(phrase, lang=None, context=None):
     filename = join("text", lang.lower(), phrase + ".dialog")
     template = resolve_resource_file(filename)
     if not template:
-        LOG.debug("Resource file not found: {}".format(filename))
+        _log.debug("Resource file not found: {}".format(filename))
         return phrase
 
     stache = MustacheDialogRenderer()

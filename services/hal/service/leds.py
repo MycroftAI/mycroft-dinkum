@@ -112,7 +112,7 @@ class Mark2LedClient:
         if value is not None:
             value = max(0.0, min(1.0, float(value)))
             self._brightness = (MAX_BRIGHTNESS - MIN_BRIGHTNESS) * value
-            self.log.debug("Brightness changed to %s", self._brightness)
+            self.log.info("Brightness changed to %s", self._brightness)
 
             # Show LEDs with new brightness
             self._last_pixels = None

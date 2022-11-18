@@ -17,10 +17,13 @@ import json
 import sys
 import traceback
 
-from mycroft.messagebus.message import Message
-from mycroft.util.log import LOG
 from pyee import EventEmitter
 from tornado.websocket import WebSocketHandler
+
+from mycroft.messagebus.message import Message
+from mycroft.util.log import get_service_logger
+
+_log = get_service_logger("bus", __name__)
 
 client_connections = []
 
@@ -34,7 +37,7 @@ class MessageBusEventHandler(WebSocketHandler):
         self.emitter.on(event_name, handler)
 
     def on_message(self, message):
-        LOG.debug(message)
+        _log.debug(message)
         try:
             deserialized_message = Message.deserialize(message)
         except Exception:
@@ -43,7 +46,7 @@ class MessageBusEventHandler(WebSocketHandler):
         try:
             self.emitter.emit(deserialized_message.msg_type, deserialized_message)
         except Exception as e:
-            LOG.exception(e)
+            _log.exception(e)
             traceback.print_exc(file=sys.stdout)
             pass
 
@@ -51,7 +54,7 @@ class MessageBusEventHandler(WebSocketHandler):
             for client in client_connections:
                 client.write_message(message)
         except Exception as e:
-            LOG.exception(e)
+            _log.exception(e)
             traceback.print_exc(file=sys.stdout)
             pass
 

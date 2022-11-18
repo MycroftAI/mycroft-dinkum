@@ -14,16 +14,15 @@
 # limitations under the License.
 #
 
-"""
-The mycroft.util.parse module provides various parsing functions for things
-like numbers, times, durations etc. It's intention is to convert naturally
-expressed concepts into standard computer readable formats. Doing this also
-enables localization.
+"""Provides various parsing functions for things like numbers, times, durations etc.
+
+Its intention is to convert naturally expressed concepts into standard computer
+readable formats. Doing this also enables localization.
 
 It also provides some useful associated functions like basic fuzzy matching.
 
 The module uses lingua-franca (https://github.com/mycroftai/lingua-franca) to
-do most of the actual parsing. However methods may be wrapped specifically for
+do most of the actual parsing. However, methods may be wrapped specifically for
 use in Mycroft Skills.
 """
 
@@ -42,8 +41,10 @@ from lingua_franca.parse import (
     normalize,
 )
 
-from .log import LOG
+from .log import get_mycroft_logger
 from .time import now_local
+
+_log = get_mycroft_logger(__name__)
 
 
 def _log_unsupported_language(language, supported_languages):
@@ -57,7 +58,7 @@ def _log_unsupported_language(language, supported_languages):
             The list of supported languages.
     """
     supported = " ".join(supported_languages)
-    LOG.warning(
+    _log.warning(
         'Language "{language}" not recognized! Please make sure your '
         "language is one of the following: {supported}.".format(
             language=language, supported=supported

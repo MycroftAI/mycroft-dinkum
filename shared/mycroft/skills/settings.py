@@ -62,22 +62,25 @@ from http import HTTPStatus
 from pathlib import Path
 from threading import Timer
 
+from mycroft_bus_client import Message, MessageBusClient
 import requests
 import yaml
+
 from mycroft.api import DeviceApi
 from mycroft.identity import IdentityManager
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
 from mycroft.util.string_utils import camel_case_split
-from mycroft_bus_client import Message, MessageBusClient
 
 ONE_MINUTE = 60
+
+_log = get_mycroft_logger(__name__)
 
 
 def get_local_settings(skill_dir, skill_name) -> dict:
     """Build a dictionary using the JSON string stored in settings.json."""
     skill_settings = {}
     settings_path = Path(skill_dir).joinpath("settings.json")
-    LOG.info(settings_path)
+    _log.info(settings_path)
     if settings_path.exists():
         with open(str(settings_path)) as settings_file:
             settings_file_content = settings_file.read()
@@ -87,7 +90,7 @@ def get_local_settings(skill_dir, skill_name) -> dict:
             # TODO change to check for JSONDecodeError in 19.08
             except Exception:
                 log_msg = "Failed to load {} settings from settings.json"
-                LOG.exception(log_msg.format(skill_name))
+                _log.exception(log_msg.format(skill_name))
 
     return skill_settings
 
@@ -106,9 +109,11 @@ def save_settings(skill_dir, skill_settings):
         try:
             json.dump(skill_settings, settings_file)
         except Exception:
-            LOG.exception("error saving skill settings to " "{}".format(settings_path))
+            _log.exception("error saving skill settings to " "{}".format(settings_path))
         else:
-            LOG.info("Skill settings successfully saved to " "{}".format(settings_path))
+            _log.info(
+                "Skill settings successfully saved to " "{}".format(settings_path)
+            )
 
 
 def get_display_name(skill_name: str):
@@ -177,13 +182,13 @@ class SettingsMetaUploader:
                 self._load_settings_meta_file()
 
             self._update_settings_meta()
-            LOG.debug("Uploading settings meta for " + self.skill_gid)
+            _log.info("Uploading settings meta for " + self.skill_gid)
             synced = self._issue_api_call()
         else:
-            LOG.debug("settingsmeta.json not uploaded - no identity")
+            _log.info("settingsmeta.json not uploaded - no identity")
 
         if not synced and not self._stopped:
-            LOG.debug("Scheduling manifest upload in %s second(s)", ONE_MINUTE)
+            _log.info("Scheduling manifest upload in %s second(s)", ONE_MINUTE)
             self.upload_timer = Timer(ONE_MINUTE, self.upload)
             self.upload_timer.daemon = True
             self.upload_timer.start()
@@ -207,12 +212,12 @@ class SettingsMetaUploader:
                     self.settings_meta = yaml.safe_load(meta_file)
         except requests.HTTPError as http_error:
             if http_error.response.status_code == HTTPStatus.UNAUTHORIZED:
-                LOG.warning("Settings not uploaded - device not paired")
+                _log.warning("Settings not uploaded - device not paired")
             else:
-                LOG.exception("Settings not uploaded")
+                _log.exception("Settings not uploaded")
         except Exception:
             log_msg = "Failed to load settingsmeta file: "
-            LOG.exception(log_msg + str(self.settings_meta_path))
+            _log.exception(log_msg + str(self.settings_meta_path))
 
     def _update_settings_meta(self):
         """Make sure the skill gid and name are included in settings meta.
@@ -233,7 +238,7 @@ class SettingsMetaUploader:
                     'DEPRECATION WARNING: The "{}" attribute in the '
                     "settingsmeta file is no longer supported."
                 )
-                LOG.warning(log_msg.format(deprecated))
+                _log.warning(log_msg.format(deprecated))
                 del self.settings_meta[deprecated]
 
     def _issue_api_call(self):
@@ -241,7 +246,7 @@ class SettingsMetaUploader:
         try:
             self.api.upload_skill_metadata(self.settings_meta)
         except Exception:
-            LOG.exception(
+            _log.exception(
                 "Failed to upload skill settings meta " "for {}".format(self.skill_gid)
             )
             success = False
@@ -269,7 +274,7 @@ class SkillSettingsDownloader:
         self.last_download_result = {}
 
         if self.remote_cache_path.exists():
-            LOG.debug("Loading remote skill settings from %s", self.remote_cache_path)
+            _log.info("Loading remote skill settings from %s", self.remote_cache_path)
             with open(
                 self.remote_cache_path, "r", encoding="utf-8"
             ) as remote_cache_file:
@@ -301,21 +306,21 @@ class SkillSettingsDownloader:
                 ) as remote_cache_file:
                     json.dump(remote_settings, remote_cache_file)
 
-                LOG.debug("Wrote remote skill settings to %s", self.remote_cache_path)
+                _log.info("Wrote remote skill settings to %s", self.remote_cache_path)
 
                 # Emit change event
-                LOG.debug("Skill settings changed since last download")
+                _log.info("Skill settings changed since last download")
                 self._emit_settings_change_events(remote_settings)
                 self.last_download_result = remote_settings
             else:
-                LOG.debug("No skill settings changes since last download")
+                _log.debug("No skill settings changes since last download")
         # If this method is called outside of the timer loop, ensure the
         # existing timer is canceled before starting a new one.
         if self.download_timer:
             self.download_timer.cancel()
 
         if self.continue_downloading:
-            LOG.debug("Scheduling settings download in %s second(s)", ONE_MINUTE)
+            _log.debug("Scheduling settings download in %s second(s)", ONE_MINUTE)
             self.download_timer = Timer(ONE_MINUTE, self.download)
             self.download_timer.daemon = True
             self.download_timer.start()
@@ -331,11 +336,11 @@ class SkillSettingsDownloader:
             remote_settings = self.api.get_skill_settings()
         except requests.HTTPError as http_error:
             if http_error.response.status_code == HTTPStatus.UNAUTHORIZED:
-                LOG.warning("Settings not downloaded - device not paired")
+                _log.warning("Settings not downloaded - device not paired")
             else:
-                LOG.exception("Settings not downloaded")
+                _log.exception("Settings not downloaded")
         except Exception:
-            LOG.exception("Failed to download remote settings from server.")
+            _log.exception("Failed to download remote settings from server.")
 
         return remote_settings
 
@@ -346,7 +351,7 @@ class SkillSettingsDownloader:
             try:
                 previous_settings = self.last_download_result.get(skill_gid)
             except Exception:
-                LOG.exception("error occurred handling setting change events")
+                _log.exception("error occurred handling setting change events")
             else:
                 if previous_settings != skill_settings:
                     changed_data[skill_gid] = skill_settings

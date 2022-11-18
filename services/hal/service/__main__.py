@@ -13,10 +13,12 @@
 # limitations under the License.
 #
 from mycroft.service import DinkumService
-
+from mycroft.util.log import configure_loggers
 from .leds import Mark2LedClient
 from .switch import Mark2SwitchClient
 from .volume import Mark2VolumeClient
+
+configure_loggers("hal")
 
 
 class HalService(DinkumService):

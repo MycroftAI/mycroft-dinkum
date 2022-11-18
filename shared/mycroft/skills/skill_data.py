@@ -21,7 +21,9 @@ from typing import List, Optional, Tuple
 
 from mycroft.util.file_utils import resolve_resource_file
 from mycroft.util.format import expand_options
-from mycroft.util.log import LOG
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 SkillResourceTypes = namedtuple(
     "SkillResourceTypes",
@@ -152,7 +154,7 @@ class ResourceFile:
             file_path = resolve_resource_file(str(sub_path))
 
         if file_path is None:
-            LOG.error(f"Could not find resource file {file_name}")
+            _log.error(f"Could not find resource file {file_name}")
 
         return file_path
 
@@ -263,7 +265,7 @@ class NamedValueFile(ResourceFile):
         try:
             name, value = line.split(self.delimiter)
         except ValueError:
-            LOG.exception(
+            _log.exception(
                 f"Failed to load value file {self.file_path} "
                 f"record containing {line}"
             )
@@ -594,9 +596,9 @@ class RegexExtractor:
             extract: the value extracted from the user utterance
         """
         if extract is None:
-            LOG.info(f"No {self.group_name.lower()} extracted from utterance")
+            _log.info(f"No {self.group_name.lower()} extracted from utterance")
         else:
-            LOG.info(f"{self.group_name} extracted from utterance: " + extract)
+            _log.info(f"{self.group_name} extracted from utterance: " + extract)
 
 
 def to_alnum(skill_id):

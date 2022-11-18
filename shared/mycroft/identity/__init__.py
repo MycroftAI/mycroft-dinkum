@@ -13,14 +13,15 @@
 # limitations under the License.
 #
 import json
-import logging
 import os
 import time
 from pathlib import Path
 
 import xdg.BaseDirectory
 
-LOG = logging.getLogger(__package__)
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger("mycroft.identity")
 
 
 class DeviceIdentity:
@@ -51,7 +52,7 @@ class IdentityManager:
 
     @staticmethod
     def _load():
-        LOG.debug("Loading identity")
+        _log.info("Loading identity")
         try:
             identity_path = IdentityManager.get_identity_path()
             with open(identity_path, "r", encoding="utf-8") as f:
@@ -66,7 +67,7 @@ class IdentityManager:
 
     @staticmethod
     def save(login=None, lock=True):
-        LOG.debug("Saving identity")
+        _log.info("Saving identity")
 
         IdentityManager._update(login)
         identity_path = IdentityManager.get_identity_path()
@@ -78,7 +79,7 @@ class IdentityManager:
 
     @staticmethod
     def _update(login=None):
-        LOG.debug("Updaing identity")
+        _log.info("Updating identity")
         login = login or {}
         expiration = login.get("expiration", 0)
         IdentityManager.__identity.uuid = login.get("uuid", "")

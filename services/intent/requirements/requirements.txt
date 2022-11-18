@@ -1,5 +1,6 @@
 adapt-parser@https://github.com/MycroftAI/adapt/tarball/feature/exclude_and_exactly
 lingua-franca==0.4.2
+mycroft-messagebus-client==0.9.4
 padatious==0.4.8
 padaos==0.1.9
 fann2==1.0.7

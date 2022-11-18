@@ -16,13 +16,14 @@
 #
 # -----------------------------------------------------------------------------
 import json
-import logging
 import subprocess
 import sys
 import time
 from typing import Optional
 
-_LOGGER = logging.getLogger("xmos_microphone")
+from mycroft.util.log import get_mycroft_logger
+
+_log = get_mycroft_logger(__name__)
 
 
 class XmosMicrophone:
@@ -38,7 +39,7 @@ class XmosMicrophone:
                 if line.startswith(f"{xmos_name}:"):
                     return line.split(":", maxsplit=1)[-1].strip()
         except Exception:
-            _LOGGER.exception("Error getting parameter: %s", name)
+            _log.exception("Error getting parameter: %s", name)
 
         return None
 
