@@ -22,8 +22,7 @@ import Mycroft 1.0 as Mycroft
 import Mycroft.Private.Mark2SystemAccess 1.0
 
 Delegate {
-    // iconSource: Qt.resolvedUrl("./audio-restart.svg")
-    iconSource: Qt.resolvedUrl("./system-reboot.svg")
+    iconSource: Qt.resolvedUrl("./audio-restart.svg")
 
     text: i18n("Restart Audio Service")
     onClicked: {
