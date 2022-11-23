@@ -85,7 +85,8 @@ GridLayout {
             visible: plasmoid.configuration.showMuteButton
         }
         AdditionalSettingsDelegate {}
-        RebootDelegate {}
+	AudioRestartDelegate {}
+        // RebootDelegate {}
         ShutdownDelegate {}
     }
 }
