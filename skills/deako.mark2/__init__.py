@@ -162,7 +162,7 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
         return result_dicts
 
-    def change_device_state(self, target: str, power: bool, dim: Optional[int] = None):
+    def change_device_state(self, target: str, power: Optional[bool] = None, dim: Optional[int] = None) -> None:
         """
         All commands that result in a change of device state go through here.
 
@@ -207,33 +207,70 @@ class DeakoSkill(MycroftSkill):
 
     # Intent handlers.
 
+    # Intent handlers
+    # @intent_handler("show.camera.image.intent")
+    # def handle_show_camera_image_intent(self, message: Message) -> None:
+    #     """Handle show camera image intent."""
+    #     message.data["Entity"] = message.data.get("entity")
+    #     self._handle_camera_image_actions(message)
+    """
     @intent_handler(
         AdaptIntent()
         .optionally("Turn")
-        .require("Power") 
+        .optionally("Dim")
+        .one_of("Power", )
         .require("Lights")
     )
+    """
+    @intent_handler("change.device.state.intent")
     def handle_toggle_lights(self, message):
         """
         E.g.:
             "Turn on desk light."
         """
+        device_name = None
         power = None
-        target = None
+        dim_value = None
+        target_id = None
         dialog = None
         self.log.info("Deako skill handler triggered.")
         utterance = message.data.get("utterance", "").lower().strip()
-        self.log.info(f"Devices: {self.devices}")
-        target, power = self.parse_utterance(utterance)
-        self.change_device_state(target, power)
+        device_name = message.data.get("name", "").lower().strip()
+        power = True if message.data.get("power", "") == "on" else power = False
+        dim_value = message.data.get("percentage", "")
+        self.log.debug(f"Dim value is {dim_value}")
+        target_id = self._find_target_id(device_name)
+
+        if dim_value:
+            self.change_device_state(target_id, dim_value)
+        elif power:
+            self.change_device_state(target_id, power)
+        else:
+            dialog = "power.or.dim"
+            return self.end_session(dialog=dialog)
         acknowledgement = self._read_result()
         event = self._read_result()
-        dialog = "done"
+        dialog = ""
         return self.end_session(dialog=dialog)
+
+    def _find_target_id(self, device_name):
+        known_devices = {
+            device["data"]["name"]: device for device in self.devices
+        }
+        self.log.info(f"Known devices: {known_devices}")
+        self.log.info(f"Looking for name: {device_name}")
+        for device in self.devices:
+            if device["data"]["name"].lower().strip() == device_name:
+                return device["data"]["uuid"]
+        return ""
+
+    def convert_to_percentage(self, dim_value):
+        pass
 
     def parse_utterance(self, utterance: str) -> Tuple[str, bool]:
         target = None
         power = None
+        dialog = None
         known_devices = {
             device["data"]["name"]: device for device in self.devices
         }
@@ -244,9 +281,13 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f"Looking for name: {light_name}")
         this_device = known_devices.get(light_name, "")
         self.log.info(f"Found device: {this_device}")
-        if not this_device:
-            # TODO: Something.
-            pass
+        if not this_device and light_name:
+            # Device not found.
+            dialog = ("cant.find.device.name", {"name": light_name})
+            return self.end_session(dialog=dialog)
+        else:
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
         # noinspection PyTypeChecker
         target = this_device["data"]["uuid"]
         if 'on' in utterance:
@@ -254,6 +295,7 @@ class DeakoSkill(MycroftSkill):
         else:
             power = False
         return target, power
+
 
 def create_skill(skill_id: str):
     """Boilerplate to invoke the weather skill."""

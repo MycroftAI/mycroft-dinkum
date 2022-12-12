@@ -1,0 +1,3 @@
+(dim|set|raise|cut) (the|) {name} (light|lights) (to|by) {percent} (percent|)
+(light|lights) (dim|set|raise|cut) (to|by) {percent} (percent|)
+{name} (light|lights) (dim|set|raise|cut) (to|by) {percent} (percent|)

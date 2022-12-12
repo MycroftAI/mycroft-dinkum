@@ -1,0 +1,10 @@
+(light|lights) (on|off)
+{name} (light|lights) (on|off)
+turn (on|off) (the|) (light|lights)
+turn (on|off) (the|) (light|lights) (in|) (the|) {name}
+turn (on|off) (the|) (light|lights) (in|on|by|beside|beneath|under|over|sitting on) (the|) {name}
+turn (on|off) (the|) {name} (light|lights)
+turn (the|) (light|lights) (on|off)
+turn (the|) (light|lights) (on|off) (in|) (the|) {name}
+turn (the|) (light|lights) (on|off) (in|on|by|beside|beneath|under|over|sitting on) (the|) {name}
+turn (the|) {name} (light|lights) (on|off)
