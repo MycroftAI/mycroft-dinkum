@@ -37,9 +37,11 @@ other switches.
 """
 
 import json
+import time
+from pathlib import Path
 from typing import Dict, List, Union, Optional
 
-import zeroconf
+# import zeroconf
 import telnetlib
 from telnetlib import Telnet
 
@@ -93,7 +95,7 @@ class DeakoSkill(MycroftSkill):
     def __init__(self, skill_id: str) -> None:
         super().__init__(skill_id=skill_id, name="DeakoSkill")
         self.host = None
-        self.conn = None
+        self.connection = None
         self.devices = None
         self.rooms = None
         self.appliances = None
@@ -102,11 +104,18 @@ class DeakoSkill(MycroftSkill):
     def initialize(self):
         """Do these things after the skill is loaded."""
         self.host = self.discover_host()
-        self.conn = self.connect_to_host()
+        self.log.info(f"Host discovered: {self.host}")
+        self.connection = self.connect_to_host()
+        # time.sleep(1)
         self.devices = self.get_device_list()
-        self.rooms = self.load_names("./locale/en-us/vocabulary/rooms.voc")
-        self.furniture = self.load_names("./locale/en-us/vocabulary/furniture.voc")
-        self.appliances = self.load_names("./locale/en-us/vocabulary/appliances.voc")
+        self.log.info(f"self.devices: {self.devices}")
+        self.rooms_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
+        self.furniture_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
+        self.appliances_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
+        self.rooms = self.load_names(self.rooms_directory)
+        self.furniture = self.load_names(self.furniture_directory)
+        self.appliances = self.load_names(self.appliances_directory)
+        self.names = self.rooms + self.furniture + self.appliances
 
     @staticmethod
     def load_names(file_path):
@@ -121,15 +130,21 @@ class DeakoSkill(MycroftSkill):
 
     def connect_to_host(self) -> Optional[Telnet]:
         try:
-            return telnetlib.Telnet(self.host)
+            return telnetlib.Telnet(self.host, timeout=10)
         except:
             # TODO: Fill in and specify.
-            pass
+            self.log.error(f"Couldn't connect to {self.host}")
+
+    def send_ping(self) -> bool:
+        result = None
+        self._execute
 
     def get_device_list(self) -> List[Device_message]:
         result = None
         self._execute_command(DEVICE_LIST)
+        time.sleep(1)
         results = self._read_result()
+        self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
             # TODO: Something here.
             # Things didn't work.
@@ -137,6 +152,7 @@ class DeakoSkill(MycroftSkill):
         result_dicts = [
             json.loads(result) for result in results.strip().split("\n")
         ]
+        self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
         return result_dicts
@@ -149,6 +165,8 @@ class DeakoSkill(MycroftSkill):
         self._execute_command(CHANGE_DEVICE_STATE)
 
     def _execute_command(self, command: Device_message) -> bool:
+        # Telnet can't handle commands coming at it very fast.
+        # time.sleep(1)
         try:
             self.connection.write(json.dumps(command).encode() + b"x\r")
         except:
@@ -160,31 +178,45 @@ class DeakoSkill(MycroftSkill):
         output = None
         i = 300000
         while not output and i > 0:
+            # time.sleep(.1)
             try:
                 output = self.connection.read_very_eager().decode("utf-8")
             except:
                 # TODO: Fill in and specify.
                 pass
             i -= 1
+        self.log.info(f"Tried read {i}")
         return output
 
     # Intent handlers.
 
     @intent_handler(
         AdaptIntent()
-        .optionally("turn")
-        .one_of("light", "lights")
-        .one_of("on", "off")
+        .optionally("Turn")
+        .require("Power") 
+        .require("Lights")
     )
     def handle_toggle_lights(self, message):
+        """
+        E.g.:
+            "Turn on desk light."
+        """
+        self.log.info("Deako skill handler triggered.")
         utterance = message.data.get("utterance", "").lower().strip()
         power = None
         light_name = None
         target = None
+        self.log.info(f"Devices: {self.devices}")
         known_devices = {
             device["data"]["name"]: device for device in self.devices
         }
-        this_device = known_devices.get("light_name", "")
+        self.log.info(f"Known devices: {known_devices}")
+        for name in self.names:
+            if name in utterance:
+                light_name = name
+        self.log.info(f"Looking for name: {light_name}")
+        this_device = known_devices.get(light_name, "")
+        self.log.info(f"Found device: {this_device}")
         if not this_device:
             # TODO: Something.
             pass
@@ -197,6 +229,8 @@ class DeakoSkill(MycroftSkill):
         self.change_device_state(target, power)
         acknowledgement = self._read_result()
         event = self._read_result()
+        dialog = "done"
+        return self.end_session(dialog=dialog)
 
 
 def create_skill(skill_id: str):
