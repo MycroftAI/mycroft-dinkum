@@ -39,7 +39,7 @@ other switches.
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Tuple
 
 # import zeroconf
 import telnetlib
@@ -100,6 +100,14 @@ class DeakoSkill(MycroftSkill):
         self.rooms = None
         self.appliances = None
         self.furniture = None
+        self.names = None
+        self.rooms_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
+        self.furniture_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
+        self.appliances_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
+        self.rooms = self.load_names(self.rooms_directory)
+        self.furniture = self.load_names(self.furniture_directory)
+        self.appliances = self.load_names(self.appliances_directory)
+        self.names = self.rooms + self.furniture + self.appliances
 
     def initialize(self):
         """Do these things after the skill is loaded."""
@@ -109,13 +117,6 @@ class DeakoSkill(MycroftSkill):
         # time.sleep(1)
         self.devices = self.get_device_list()
         self.log.info(f"self.devices: {self.devices}")
-        self.rooms_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
-        self.furniture_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
-        self.appliances_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
-        self.rooms = self.load_names(self.rooms_directory)
-        self.furniture = self.load_names(self.furniture_directory)
-        self.appliances = self.load_names(self.appliances_directory)
-        self.names = self.rooms + self.furniture + self.appliances
 
     @staticmethod
     def load_names(file_path):
@@ -136,13 +137,17 @@ class DeakoSkill(MycroftSkill):
             self.log.error(f"Couldn't connect to {self.host}")
 
     def send_ping(self) -> bool:
-        result = None
-        self._execute
+        """
+        Pinging seems the best way to make sure a connection is
+        still active before sending a new command.
+        """
+        self._execute_command(DEVICE_PING)
+        return self._read_result()
 
     def get_device_list(self) -> List[Device_message]:
         result = None
         self._execute_command(DEVICE_LIST)
-        time.sleep(1)
+        # time.sleep(1)
         results = self._read_result()
         self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
@@ -158,6 +163,17 @@ class DeakoSkill(MycroftSkill):
         return result_dicts
 
     def change_device_state(self, target: str, power: bool, dim: Optional[int] = None):
+        """
+        All commands that result in a change of device state go through here.
+
+        Although we connect when the skill is initialized, the connection
+        may have been lost so we will ping the hub device first.
+        """
+        if not self.send_ping():
+            # We aren't connected anymore. Re-initialize to make sure
+            # everything is up to date.
+            self.initialize()
+
         CHANGE_DEVICE_STATE["data"]["target"] = target
         CHANGE_DEVICE_STATE["data"]["state"]["power"] = power
         if dim:
@@ -177,6 +193,7 @@ class DeakoSkill(MycroftSkill):
     def _read_result(self) -> str:
         output = None
         i = 300000
+        time.sleep(1)
         while not output and i > 0:
             # time.sleep(.1)
             try:
@@ -201,12 +218,22 @@ class DeakoSkill(MycroftSkill):
         E.g.:
             "Turn on desk light."
         """
+        power = None
+        target = None
+        dialog = None
         self.log.info("Deako skill handler triggered.")
         utterance = message.data.get("utterance", "").lower().strip()
-        power = None
-        light_name = None
-        target = None
         self.log.info(f"Devices: {self.devices}")
+        target, power = self.parse_utterance(utterance)
+        self.change_device_state(target, power)
+        acknowledgement = self._read_result()
+        event = self._read_result()
+        dialog = "done"
+        return self.end_session(dialog=dialog)
+
+    def parse_utterance(self, utterance: str) -> Tuple[str, bool]:
+        target = None
+        power = None
         known_devices = {
             device["data"]["name"]: device for device in self.devices
         }
@@ -226,12 +253,7 @@ class DeakoSkill(MycroftSkill):
             power = True
         else:
             power = False
-        self.change_device_state(target, power)
-        acknowledgement = self._read_result()
-        event = self._read_result()
-        dialog = "done"
-        return self.end_session(dialog=dialog)
-
+        return target, power
 
 def create_skill(skill_id: str):
     """Boilerplate to invoke the weather skill."""
