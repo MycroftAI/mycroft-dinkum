@@ -202,7 +202,6 @@ class DeakoSkill(MycroftSkill):
         CHANGE_DEVICE_STATE["data"]["state"]["power"] = power
         if dim:
             CHANGE_DEVICE_STATE["data"]["state"]["dim"] = dim
-        self.log.debug(f"Message: {CHANGE_DEVICE_STATE}")
         self._execute_command(CHANGE_DEVICE_STATE)
 
     def _execute_command(self, command: Device_message) -> bool:
@@ -228,7 +227,6 @@ class DeakoSkill(MycroftSkill):
                 pass
             i -= 1
         self.log.info(f"Tried read {i}")
-        self.log.debug(f"Response: {output}")
         return output
 
     # Intent handlers. ~~~~~~~~~~~~~~~~
