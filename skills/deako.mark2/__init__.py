@@ -132,7 +132,7 @@ class DeakoSkill(MycroftSkill):
             int(percent) for percent in self.percents
             if percent.isnumeric()
         ]
-        self.percents.sort(reverse=True)
+        self.percents.sort(reverse=True) 
         self.powers = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Power.voc"))
 
         # Connect and get device info.
@@ -249,6 +249,10 @@ class DeakoSkill(MycroftSkill):
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Utterance: {utterance}")
         target_id, power, dim_value = self._parse_utterance(utterance)
+        
+        if not target_id:
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
 
         self.change_device_state(target_id, power, dim_value)
         # We expect two messages from the api. First a confirmation,
@@ -271,9 +275,10 @@ class DeakoSkill(MycroftSkill):
             device for device in self.devices
             if device["data"]["name"] in utterance
         ]
+        self.log.debug(f"Candidates: {candidate_devices}")
         if not candidate_devices:
             dialog = "cant.find.device"
-            return self.end_session(dialog=dialog)
+            return "", "", ""
 
         # Names can be more than one word and can have overlapping words. Just in
         # case this is true, we take the longest matching name.
@@ -286,6 +291,7 @@ class DeakoSkill(MycroftSkill):
         for percent in self.percents:
             if str(percent) in utterance:
                 dim_value = percent
+                break
 
         target_id = named_device["data"]["uuid"]
         return target_id, power, dim_value
