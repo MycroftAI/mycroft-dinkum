@@ -91,46 +91,56 @@ class DeakoSkill(MycroftSkill):
     """
 
     """
-
     def __init__(self, skill_id: str) -> None:
         super().__init__(skill_id=skill_id, name="DeakoSkill")
+
+        # Telnet
         self.host = None
         self.connection = None
+
+        # Devices
         self.devices = None
+
+        # Names.
         self.rooms = None
         self.appliances = None
         self.furniture = None
+        self.lights = None
         self.names = None
 
-        self.rooms_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
-        self.furniture_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
-        self.appliances_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
-        self.rooms = self.load_names(self.rooms_file)
-        self.furniture = self.load_names(self.furniture_file)
-        self.appliances = self.load_names(self.appliances_file)
-        self.names = self.rooms + self.furniture + self.appliances 
+        # States
+        self.percents = None
+        self.powers = None
+        self.states = None
 
     def initialize(self):
         """Do these things after the skill is loaded."""
+
+        # Get names.
+        self.rooms = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Rooms.voc"))
+        self.furniture = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Furniture.voc"))
+        self.appliances = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Appliances.voc"))
+        self.lights = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Lights.voc"))
+        self.names = self.rooms + self.furniture + self.appliances + self.lights
+        # Names can potentially be more than one word and can overlap. We want to get
+        # the longest matching name so that we dont erroneously have a partial match.
+        self.names.sort(key=len, reverse=True)
+
+        # Get states.
+        self.percents = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Percent.voc"))
+        self.percents = [
+            int(percent) for percent in self.percents
+            if percent.isnumeric()
+        ]
+        self.percents.sort(reverse=True)
+        self.powers = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Power.voc"))
+
+        # Connect and get device info.
         self.host = self.discover_host()
         self.log.info(f"Host discovered: {self.host}")
         self.connection = self.connect_to_host()
-        # time.sleep(1)
         self.devices = self.get_device_list()
         self.log.info(f"self.devices: {self.devices}")
-        # self.power_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "power.entity") 
-        # self.name_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "name.entity") 
-        # self.percent_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "percent.entity") 
-        self.power_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/power.entity"
-        self.name_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/name.entity"
-        self.percent_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/percent.entity"
-
-
-        self.log.debug(f"Filepath: {str(self.percent_file)}")
-        self.register_entity_file(self.power_file)
-        self.register_entity_file(self.name_file)
-        self.register_entity_file(self.percent_file)
-
 
     @staticmethod
     def load_names(file_path):
@@ -150,19 +160,19 @@ class DeakoSkill(MycroftSkill):
             # TODO: Fill in and specify.
             self.log.error(f"Couldn't connect to {self.host}")
 
-    def send_ping(self) -> bool:
+    def send_ping(self) -> str:
         """
         Pinging seems the best way to make sure a connection is
         still active before sending a new command.
         """
         self._execute_command(DEVICE_PING)
-        return self._read_result()
+        return self.read_result()
 
     def get_device_list(self) -> List[Device_message]:
-        result = None
+        result_dicts = None
         self._execute_command(DEVICE_LIST)
         # time.sleep(1)
-        results = self._read_result()
+        results = self.read_result()
         self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
             # TODO: Something here.
@@ -206,12 +216,11 @@ class DeakoSkill(MycroftSkill):
             return False
         return True
 
-    def _read_result(self) -> str:
+    def read_result(self) -> str:
         output = None
         i = 300000
         time.sleep(1)
         while not output and i > 0:
-            # time.sleep(.1)
             try:
                 output = self.connection.read_very_eager().decode("utf-8")
             except:
@@ -222,65 +231,66 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Response: {output}")
         return output
 
-    # Intent handlers.
+    # Intent handlers. ~~~~~~~~~~~~~~~~
 
-    # Intent handlers
-    # @intent_handler("show.camera.image.intent")
-    # def handle_show_camera_image_intent(self, message: Message) -> None:
-    #     """Handle show camera image intent."""
-    #     message.data["Entity"] = message.data.get("entity")
-    #     self._handle_camera_image_actions(message)
-    """
     @intent_handler(
-        AdaptIntent()
-        .optionally("Turn")
-        .optionally("Dim")
-        .one_of("Power", )
-        .require("Lights")
+        AdaptIntent("SwitchStateChange")
+        .one_of("Turn", "Dim")
+        .one_of("Power", "Percent")
+        .one_of("Lights", "Furniture", "Rooms", "Appliances")
     )
-    """
-    @intent_handler("change.device.state.intent")
-    def handle_toggle_lights(self, message):
+    def handle_change_device_state(self, message):
         """
         E.g.:
             "Turn on desk light."
         """
-        device_name = None
-        power = None
-        dim_value = None
-        target_id = None
         dialog = None
+
         self.log.info("Deako skill handler triggered.")
+
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Utterance: {utterance}")
-        device_name = message.data.get("name", "").lower().strip()
-        self.log.debug(f"Device name: {device_name}")
-        self.log.debug(f"Power: {message.data.get('power', '')}")
-        power = True if message.data.get("power", "") in ["on", ""] else False
-        self.log.debug(f"Power: {power}")
-        dim_value = message.data.get("percent", "")
-        self.log.debug(f"Dim value is {dim_value}")
-        target_id = self._find_target_id(device_name)
-        if not target_id:
-            # Device not found.
-            dialog = ("cant.find.device.name", {"name": device_name})
-            return self.end_session(dialog=dialog)
-        if dim_value.isnumeric():
-            dim_value = int(dim_value)
-        elif dim_value:
-            dialog = "dim.integer"
-            return self.end_session(dialog=dialog)
-        if dim_value:
-            self.change_device_state(target_id, power, dim_value)
-        elif power:
-            self.change_device_state(target_id, power)
-        else:
-            dialog = "power.or.dim"
-            return self.end_session(dialog=dialog)
-        acknowledgement = self._read_result()
-        event = self._read_result()
-        dialog = ""
+        target_id, power, dim_value = self._parse_utterance(utterance)
+
+        self.change_device_state(target_id, power, dim_value)
+        # We expect two messages from the api. First a confirmation,
+        # then a message indicating that the event has taken place.
+        conf_msg = self.read_result()
+        event_msg = self.read_result()
+
+        self.log.debug(f"Confirmation: {conf_msg}")
+        self.log.debug(f"Event: {event_msg}")
+
         return self.end_session(dialog=dialog)
+
+    def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
+        target_id = None
+        power = None
+        dim_value = None
+        dialog = None
+
+        candidate_devices = [
+            device for device in self.devices
+            if device["data"]["name"] in utterance
+        ]
+        if not candidate_devices:
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
+
+        # Names can be more than one word and can have overlapping words. Just in
+        # case this is true, we take the longest matching name.
+        named_device = sorted(candidate_devices, key=lambda d: d["data"]["name"]).pop()
+
+        # If the utterance only mentions a dim value, we want to
+        # keep power True.
+        power = False if "off" in utterance else True
+
+        for percent in self.percents:
+            if percent in utterance:
+                dim_value = percent
+
+        target_id = named_device["data"]["uuid"]
+        return target_id, power, dim_value
 
     def _find_target_id(self, device_name):
         known_devices = {
@@ -293,37 +303,8 @@ class DeakoSkill(MycroftSkill):
                 return device["data"]["uuid"]
         return ""
 
-    def convert_to_percentage(self, dim_value):
+    def _convert_to_int(self, dim_value):
         pass
-
-    def parse_utterance(self, utterance: str) -> Tuple[str, bool]:
-        target = None
-        power = None
-        dialog = None
-        known_devices = {
-            device["data"]["name"]: device for device in self.devices
-        }
-        self.log.info(f"Known devices: {known_devices}")
-        for name in self.names:
-            if name in utterance:
-                light_name = name
-        self.log.info(f"Looking for name: {light_name}")
-        this_device = known_devices.get(light_name, "")
-        self.log.info(f"Found device: {this_device}")
-        if not this_device and light_name:
-            # Device not found.
-            dialog = ("cant.find.device.name", {"name": light_name})
-            return self.end_session(dialog=dialog)
-        else:
-            dialog = "cant.find.device"
-            return self.end_session(dialog=dialog)
-        # noinspection PyTypeChecker
-        target = this_device["data"]["uuid"]
-        if 'on' in utterance:
-            power = True
-        else:
-            power = False
-        return target, power
 
 
 def create_skill(skill_id: str):
@@ -334,7 +315,42 @@ def create_skill(skill_id: str):
 
 
 
-
+#     device_name = None
+    #     power = None
+    #     dim_value = None
+    #     target_id = None
+    #     dialog = None
+    #     self.log.info("Deako skill handler triggered.")
+    #     utterance = message.data.get("utterance", "").lower().strip()
+    #     self.log.debug(f"Utterance: {utterance}")
+    #     device_name = message.data.get("name", "").lower().strip()
+    #     self.log.debug(f"Device name: {device_name}")
+    #     self.log.debug(f"Power: {message.data.get('power', '')}")
+    #     power = True if message.data.get("power", "") in ["on", ""] else False
+    #     self.log.debug(f"Power: {power}")
+    #     dim_value = message.data.get("percent", "")
+    #     self.log.debug(f"Dim value is {dim_value}")
+    #     target_id = self._find_target_id(device_name)
+    #     if not target_id:
+    #         # Device not found.
+    #         dialog = ("cant.find.device.name", {"name": device_name})
+    #         return self.end_session(dialog=dialog)
+    #     if dim_value.isnumeric():
+    #         dim_value = int(dim_value)
+    #     elif dim_value:
+    #         dialog = "dim.integer"
+    #         return self.end_session(dialog=dialog)
+    #     if dim_value:
+    #         self.change_device_state(target_id, power, dim_value)
+    #     elif power:
+    #         self.change_device_state(target_id, power)
+    #     else:
+    #         dialog = "power.or.dim"
+    #         return self.end_session(dialog=dialog)
+    #     acknowledgement = self._read_result()
+    #     event = self._read_result()
+    #     dialog = ""
+    #     return self.end_session(dialog=dialog)
 
 
 
