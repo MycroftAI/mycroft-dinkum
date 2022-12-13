@@ -286,7 +286,7 @@ class DeakoSkill(MycroftSkill):
         power = False if "off" in utterance else True
 
         for percent in self.percents:
-            if percent in utterance:
+            if str(percent) in utterance:
                 dim_value = percent
 
         target_id = named_device["data"]["uuid"]
