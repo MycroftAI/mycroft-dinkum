@@ -101,13 +101,14 @@ class DeakoSkill(MycroftSkill):
         self.appliances = None
         self.furniture = None
         self.names = None
-        self.rooms_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
-        self.furniture_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
-        self.appliances_directory = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
-        self.rooms = self.load_names(self.rooms_directory)
-        self.furniture = self.load_names(self.furniture_directory)
-        self.appliances = self.load_names(self.appliances_directory)
-        self.names = self.rooms + self.furniture + self.appliances
+
+        self.rooms_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "rooms.voc")
+        self.furniture_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "furniture.voc")
+        self.appliances_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "appliances.voc")
+        self.rooms = self.load_names(self.rooms_file)
+        self.furniture = self.load_names(self.furniture_file)
+        self.appliances = self.load_names(self.appliances_file)
+        self.names = self.rooms + self.furniture + self.appliances 
 
     def initialize(self):
         """Do these things after the skill is loaded."""
@@ -117,6 +118,19 @@ class DeakoSkill(MycroftSkill):
         # time.sleep(1)
         self.devices = self.get_device_list()
         self.log.info(f"self.devices: {self.devices}")
+        # self.power_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "power.entity") 
+        # self.name_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "name.entity") 
+        # self.percent_file = Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "percent.entity") 
+        self.power_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/power.entity"
+        self.name_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/name.entity"
+        self.percent_file = "/opt/mycroft-dinkum/skills/deako.mark2/locale/en-us/vocabulary/percent.entity"
+
+
+        self.log.debug(f"Filepath: {str(self.percent_file)}")
+        self.register_entity_file(self.power_file)
+        self.register_entity_file(self.name_file)
+        self.register_entity_file(self.percent_file)
+
 
     @staticmethod
     def load_names(file_path):
@@ -178,6 +192,7 @@ class DeakoSkill(MycroftSkill):
         CHANGE_DEVICE_STATE["data"]["state"]["power"] = power
         if dim:
             CHANGE_DEVICE_STATE["data"]["state"]["dim"] = dim
+        self.log.debug(f"Message: {CHANGE_DEVICE_STATE}")
         self._execute_command(CHANGE_DEVICE_STATE)
 
     def _execute_command(self, command: Device_message) -> bool:
@@ -185,6 +200,7 @@ class DeakoSkill(MycroftSkill):
         # time.sleep(1)
         try:
             self.connection.write(json.dumps(command).encode() + b"x\r")
+            self.log.debug(f"Sent: {json.dumps(command)}")
         except:
             # TODO: Fill this in and narrow exception type.
             return False
@@ -203,6 +219,7 @@ class DeakoSkill(MycroftSkill):
                 pass
             i -= 1
         self.log.info(f"Tried read {i}")
+        self.log.debug(f"Response: {output}")
         return output
 
     # Intent handlers.
@@ -235,14 +252,26 @@ class DeakoSkill(MycroftSkill):
         dialog = None
         self.log.info("Deako skill handler triggered.")
         utterance = message.data.get("utterance", "").lower().strip()
+        self.log.debug(f"Utterance: {utterance}")
         device_name = message.data.get("name", "").lower().strip()
-        power = True if message.data.get("power", "") == "on" else power = False
-        dim_value = message.data.get("percentage", "")
+        self.log.debug(f"Device name: {device_name}")
+        self.log.debug(f"Power: {message.data.get('power', '')}")
+        power = True if message.data.get("power", "") in ["on", ""] else False
+        self.log.debug(f"Power: {power}")
+        dim_value = message.data.get("percent", "")
         self.log.debug(f"Dim value is {dim_value}")
         target_id = self._find_target_id(device_name)
-
+        if not target_id:
+            # Device not found.
+            dialog = ("cant.find.device.name", {"name": device_name})
+            return self.end_session(dialog=dialog)
+        if dim_value.isnumeric():
+            dim_value = int(dim_value)
+        elif dim_value:
+            dialog = "dim.integer"
+            return self.end_session(dialog=dialog)
         if dim_value:
-            self.change_device_state(target_id, dim_value)
+            self.change_device_state(target_id, power, dim_value)
         elif power:
             self.change_device_state(target_id, power)
         else:
