@@ -132,7 +132,8 @@ class DeakoSkill(MycroftSkill):
             int(percent) for percent in self.percents
             if percent.isnumeric()
         ]
-        self.percents.sort(reverse=True) 
+        self.percents.sort(reverse=True)
+        # self.fractions = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Fraction.voc"))
         self.powers = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Power.voc"))
 
         # Connect and get device info.
@@ -234,7 +235,7 @@ class DeakoSkill(MycroftSkill):
     @intent_handler(
         AdaptIntent("SwitchStateChange")
         .one_of("Turn", "Dim")
-        .one_of("Power", "Percent")
+        .one_of("Power", "Percent", "Fraction")
         .one_of("Lights", "Furniture", "Rooms", "Appliances")
     )
     def handle_change_device_state(self, message):
@@ -293,6 +294,9 @@ class DeakoSkill(MycroftSkill):
                 dim_value = percent
                 break
 
+        if not dim_value:
+            dim_value = self._convert_to_int(utterance)
+
         target_id = named_device["data"]["uuid"]
         return target_id, power, dim_value
 
@@ -305,10 +309,28 @@ class DeakoSkill(MycroftSkill):
         for device in self.devices:
             if device["data"]["name"].lower().strip() == device_name:
                 return device["data"]["uuid"]
-        return ""
+        return None
 
-    def _convert_to_int(self, dim_value):
-        pass
+    def _convert_to_int(self, utterance: str) -> Union[int, None]:
+        """
+        Devices use ints from 1-100 for dim/brightness values.
+        This finds factions and converts them.
+        Some of them are rounded to multiples of 5 because
+        further precision isn't necessary.
+        """
+        fractions = [ 
+            {"string": "three quarters", "int": 75}, 
+            {"string": "two thirds", "int": 65},
+            {"string": "quarter", "int": 25},
+            {"string": "third", "int": 35},
+            {"string": "half", "int": 50},
+        ]
+        for fraction in fractions:
+            if fraction["string"] in utterance:
+                return fraction["int"]
+        return None
+
+
 
 
 def create_skill(skill_id: str):
