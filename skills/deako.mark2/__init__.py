@@ -172,7 +172,7 @@ class DeakoSkill(MycroftSkill):
     def get_device_list(self) -> List[Device_message]:
         result_dicts = None
         self._execute_command(DEVICE_LIST)
-        # time.sleep(1)
+        time.sleep(.1)
         results = self.read_result()
         self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
@@ -206,8 +206,6 @@ class DeakoSkill(MycroftSkill):
         self._execute_command(CHANGE_DEVICE_STATE)
 
     def _execute_command(self, command: Device_message) -> bool:
-        # Telnet can't handle commands coming at it very fast.
-        # time.sleep(1)
         try:
             self.connection.write(json.dumps(command).encode() + b"x\r")
             self.log.debug(f"Sent: {json.dumps(command)}")
@@ -219,7 +217,6 @@ class DeakoSkill(MycroftSkill):
     def read_result(self) -> str:
         output = None
         i = 300000
-        time.sleep(1)
         while not output and i > 0:
             try:
                 output = self.connection.read_very_eager().decode("utf-8")
@@ -227,7 +224,8 @@ class DeakoSkill(MycroftSkill):
                 # TODO: Fill in and specify.
                 pass
             i -= 1
-        self.log.info(f"Tried read {i}")
+        tries = 300000 - i
+        self.log.info(f"Tried read {tries}")
         return output
 
     # Intent handlers. ~~~~~~~~~~~~~~~~
