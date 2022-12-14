@@ -48,7 +48,7 @@ from telnetlib import Telnet
 from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
-
+from mycroft.util.file_utils import resolve_resource_file
 
 # This is hardcoded here just for testing.
 HOST = "10.0.0.252"
@@ -113,8 +113,13 @@ class DeakoSkill(MycroftSkill):
         self.powers = None
         self.states = None
 
+        # Sound
+        self.success_sound = None
+
     def initialize(self):
         """Do these things after the skill is loaded."""
+
+        self.success_sound = resolve_resource_file("snd/beep.wav")
 
         # Get names.
         self.rooms = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Rooms.voc"))
@@ -262,7 +267,13 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Confirmation: {conf_msg}")
         self.log.debug(f"Event: {event_msg}")
 
-        return self.end_session(dialog=dialog)
+        sound_uri = f"file://{self.success_sound}"
+        audio_alert = sound_uri
+        
+        return self.end_session(
+            # audio_alert=audio_alert, 
+            dialog=dialog
+        )
 
     def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
         target_id = None
