@@ -119,7 +119,7 @@ class DeakoSkill(MycroftSkill):
     def initialize(self):
         """Do these things after the skill is loaded."""
 
-        self.success_sound = resolve_resource_file("snd/beep.wav")
+        self.success_sound = resolve_resource_file("snd/blop-mark-diangelo.wav")
 
         # Get names.
         self.rooms = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Rooms.voc"))
@@ -177,7 +177,7 @@ class DeakoSkill(MycroftSkill):
     def get_device_list(self) -> List[Device_message]:
         result_dicts = None
         self._execute_command(DEVICE_LIST)
-        time.sleep(.1)
+        time.sleep(.2)
         results = self.read_result()
         self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
@@ -209,6 +209,8 @@ class DeakoSkill(MycroftSkill):
         if dim:
             CHANGE_DEVICE_STATE["data"]["state"]["dim"] = dim
         self._execute_command(CHANGE_DEVICE_STATE)
+        sound_uri = f"file://{self.success_sound}"
+        self.play_sound_uri(sound_uri)
 
     def _execute_command(self, command: Device_message) -> bool:
         try:
@@ -267,11 +269,8 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Confirmation: {conf_msg}")
         self.log.debug(f"Event: {event_msg}")
 
-        sound_uri = f"file://{self.success_sound}"
-        audio_alert = sound_uri
-        
         return self.end_session(
-            # audio_alert=audio_alert, 
+        #     audio_alert=audio_alert, 
             dialog=dialog
         )
 
