@@ -177,7 +177,7 @@ class DeakoSkill(MycroftSkill):
     def get_device_list(self) -> List[Device_message]:
         result_dicts = None
         self._execute_command(DEVICE_LIST)
-        time.sleep(.2)
+        time.sleep(.5)
         results = self.read_result()
         self.log.info(f"Device list results: {results}")
         if not results or len(results) < 2:
@@ -213,6 +213,13 @@ class DeakoSkill(MycroftSkill):
         self.play_sound_uri(sound_uri)
 
     def _execute_command(self, command: Device_message) -> bool:
+        # Irrelevant messages can appear in the buffer when, for instance,
+        # someone manually turns a light on or off, which sends an event 
+        # message out. In order to make sure we are later reading the
+        # message that is actually responding to the last command, we
+        # need to flush the buffer by reading anything already sitting
+        # in it.
+        self.read_result(flush=True)
         try:
             self.connection.write(json.dumps(command).encode() + b"x\r")
             self.log.debug(f"Sent: {json.dumps(command)}")
@@ -221,9 +228,12 @@ class DeakoSkill(MycroftSkill):
             return False
         return True
 
-    def read_result(self) -> str:
+    def read_result(self, flush=False) -> str:
         output = None
-        i = 300000
+        i = 1
+        if not flush:
+            time.sleep(.25)
+            i = 300000
         while not output and i > 0:
             try:
                 output = self.connection.read_very_eager().decode("utf-8")
@@ -279,24 +289,35 @@ class DeakoSkill(MycroftSkill):
         .require("Scan")
         .require("Device")
     )
-    def handle_scan_devices(self, message):
-        dialog = "scanning"
-        self.emit_start_session(dialog)
+    def handle_scan_devices(self, message): 
         dialog = None
+        self.emit_start_session(dialog) 
         new_device_list = self.get_device_list()
-        if new_device_list == self.devices:
+        self.log.debug(f"New device list: {new_device_list}")
+        self.log.debug(f"Old devices: {self.devices}")
+       
+        old_ids, old_names = self._get_ids_names(self.devices)
+        new_ids, new_names = self._get_ids_names(new_device_list)
+        added_or_changed_ids = new_ids.difference(old_ids)
+        added_or_changed_names = new_names.difference(old_names)
+    
+        if old_ids == new_ids and old_names = new_names:
+            # Same set.
             dialog = "no.new.devices"
             return self.end_session(dialog=dialog)
-        known_ids_names = {
-            device["data"]["uuid"]: device["data"]["name"]
-            for device in self.devices
-        }
-        for new_device in new_device_list:
+        elif added_or_changed_names:
+            # New name(s).
+            # Are they new devices or just a new name?
+            self
+
+        elif new_ids.difference(old_ids):
+            # New id.
+            pass
+        
+
+        for new_id_name in new_ids_names:
             # Renamed device
-            if (
-                    known_ids_names.get(new_device["data"]["uuid"], "") and
-                    new_device["data"]["name"] != known_ids_names[new_device["data"]["uuid"]]
-            ):
+            if new_id_name[0] :
                 dialog = (
                     "renamed.device",
                     {
@@ -304,21 +325,39 @@ class DeakoSkill(MycroftSkill):
                         "new_name": new_device["data"]["name"]
                     }
                 )
-                self.emit_continue_session(dialog)
+                self.continue_session(dialog)
+                # This is to keep subsequent dialog from coming too fast or overlapping.
+                time.sleep(1)
             # New device
-            elif not known_ids_names.get(new_device["data"]["uuid"], ""):
+            elif new_device["data"]["uuid"] not in known_ids_names.keys():
                 dialog = ("new.device", {"new_name": new_device["data"]["name"]})
-                self.emit_continue_session(dialog)
+                self.continue_session(dialog)
+                # This is to keep subsequent dialog from coming too fast or overlapping.
+                time.sleep(1)
+
         # Removed devices
-        new_device_ids = [
-            new_device["data"]["uuid"] for new_device in new_device_list
-        ]
         for known_id, known_name in known_ids_names.items():
             if known_id not in new_device_ids:
                 dialog = ("removed.device", {"old_name": known_name})
-                self.emit_continue_session(dialog)
+                self.continue_session(dialog)
+                # This is to keep subsequent dialog from coming too fast or overlapping.
+                time.sleep(1)
+
         dialog = "scan.complete"
         return self.end_session(dialog=dialog)
+
+    def _get_ids_names(device_list):
+        ids = {device["data"]["uuid"] for device in device_list}
+        names = {device["data"]["name"] for device in device_list}
+        return ids, names
+
+    def _find_device(devices, name=None, id=None):
+        for device in devices:
+            if name and device["data"]["name"] == name:
+                return device
+            elif device["data"]["uuid"] == id:
+                return device
+        return None
 
     def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
         target_id = None
