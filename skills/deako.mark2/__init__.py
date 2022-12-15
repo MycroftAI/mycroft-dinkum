@@ -274,6 +274,52 @@ class DeakoSkill(MycroftSkill):
             dialog=dialog
         )
 
+    @intent_handler(
+        AdaptIntent("GetDeviceList")
+        .require("Scan")
+        .require("Device")
+    )
+    def handle_scan_devices(self, message):
+        dialog = "scanning"
+        self.emit_start_session(dialog)
+        dialog = None
+        new_device_list = self.get_device_list()
+        if new_device_list == self.devices:
+            dialog = "no.new.devices"
+            return self.end_session(dialog=dialog)
+        known_ids_names = {
+            device["data"]["uuid"]: device["data"]["name"]
+            for device in self.devices
+        }
+        for new_device in new_device_list:
+            # Renamed device
+            if (
+                    known_ids_names.get(new_device["data"]["uuid"], "") and
+                    new_device["data"]["name"] != known_ids_names[new_device["data"]["uuid"]]
+            ):
+                dialog = (
+                    "renamed.device",
+                    {
+                        "old_name": known_ids_names[new_device["data"]["uuid"]],
+                        "new_name": new_device["data"]["name"]
+                    }
+                )
+                self.emit_continue_session(dialog)
+            # New device
+            elif not known_ids_names.get(new_device["data"]["uuid"], ""):
+                dialog = ("new.device", {"new_name": new_device["data"]["name"]})
+                self.emit_continue_session(dialog)
+        # Removed devices
+        new_device_ids = [
+            new_device["data"]["uuid"] for new_device in new_device_list
+        ]
+        for known_id, known_name in known_ids_names.items():
+            if known_id not in new_device_ids:
+                dialog = ("removed.device", {"old_name": known_name})
+                self.emit_continue_session(dialog)
+        dialog = "scan.complete"
+        return self.end_session(dialog=dialog)
+
     def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
         target_id = None
         power = None
