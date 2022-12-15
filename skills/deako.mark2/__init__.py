@@ -280,7 +280,6 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Event: {event_msg}")
 
         return self.end_session(
-        #     audio_alert=audio_alert, 
             dialog=dialog
         )
 
@@ -385,17 +384,25 @@ class DeakoSkill(MycroftSkill):
                 return device
         return None
 
+    def _find_candidate_devices(self, utterance):
+        return [
+            device for device in self.devices
+            if device["data"]["name"] in utterance
+        ]
+
     def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
         target_id = None
         power = None
         dim_value = None
         dialog = None
 
-        candidate_devices = [
-            device for device in self.devices
-            if device["data"]["name"] in utterance
-        ]
+        candidate_devices = self._find_candidate_devices(utterance)
         self.log.debug(f"Candidates: {candidate_devices}")
+
+        if not candidate_devices:
+            self.devices = self.get_device_list()
+            candidate_devices = self._find_candidate_devices(utterance)
+            self.log.debug(f"Candidates: {candidate_devices}")
         if not candidate_devices:
             dialog = "cant.find.device"
             return "", "", ""
