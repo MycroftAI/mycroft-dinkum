@@ -298,28 +298,38 @@ class DeakoSkill(MycroftSkill):
 
         added_devices, removed_devices, renamed_devices = self._compare_devices(self.devices, new_device_list)
 
+        self.log.debug(f"Added: {added_devices}")
+        self.log.debug(f"Removed: {removed_devices}")
+        self.log.debug(f"Renamed: {renamed_devices}")
+
         if added_devices:
             for added_device in added_devices:
                 dialog = ("new.device", {"new_name": added_device["data"]["name"]})
-                self.continue_session(dialog)
+                self.bus.emit(
+                    self.continue_session(dialog)
+                )
                 # This is to keep subsequent dialog from coming too fast or overlapping.
                 time.sleep(1)
         elif removed_devices:
             for removed_device in removed_devices:
                 dialog = ("removed.device", {"old_name": removed_device["data"]["name"]})
-                self.continue_session(dialog)
+                self.bus.emit(
+                    self.continue_session(dialog)
+                )
                 # This is to keep subsequent dialog from coming too fast or overlapping.
                 time.sleep(1)
         elif renamed_devices:
+            self.log.debug("Going to speak.")
             for renamed_device in renamed_devices:
+                
                 dialog = (
                     "renamed.device",
                     {
                         "old_name": renamed_device["old_name"],
-                        "new_name": new_device["new_name"]
+                        "new_name": renamed_device["new_name"]
                     }
                 )
-                self.continue_session(dialog)
+                self.bus.emit(self.continue_session(dialog))
                 # This is to keep subsequent dialog from coming too fast or overlapping.
                 time.sleep(1)
         else:
@@ -337,16 +347,16 @@ class DeakoSkill(MycroftSkill):
 
         added_devices = self._find_mismatch(new_list, old_list)
         removed_devices = self._find_mismatch(old_list, new_list)
-        old_list = [
-            {old_device["data"]["uuid"]: old_device["data"]["name"]} for old_device in old_list
-        ]
+        old_list = {
+            old_device["data"]["uuid"]: old_device["data"]["name"] for old_device in old_list
+        }
         for new_device in new_list:
             if old_list[new_device["data"]["uuid"]]:
-                if old_list[new_device["data"]["uuid"]]["data"]["name"] != new_device["data"]["name"]:
+                if old_list[new_device["data"]["uuid"]] != new_device["data"]["name"]:
                     renamed_devices.append(
                         {
                             "new_name": new_device["data"]["name"],
-                            "old_name": old_list[new_device["data"]["uuid"]]["data"]["name"]
+                            "old_name": old_list[new_device["data"]["uuid"]]
                         }
                     )
         return added_devices, removed_devices, renamed_devices
