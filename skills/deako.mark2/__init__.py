@@ -107,6 +107,8 @@ class DeakoSkill(MycroftSkill):
         self.furniture = None
         self.lights = None
         self.names = None
+        self.name_map = None
+        self.stt_vocab = None
 
         # States
         self.percents = None
@@ -122,6 +124,10 @@ class DeakoSkill(MycroftSkill):
         self.success_sound = resolve_resource_file("snd/blop-mark-diangelo.wav")
 
         # Get names.
+        # TODO: Currently these are reading from intent vocab files, which are assumed to
+        # be identical to the corresponding STT slot files. We will need some mechanism to
+        # ensure this. Or, if we decide to trim these down to only the names currently in
+        # use, then we need a mechanism to do that as well.
         self.rooms = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Rooms.voc"))
         self.furniture = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Furniture.voc"))
         self.appliances = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Appliances.voc"))
@@ -131,6 +137,19 @@ class DeakoSkill(MycroftSkill):
         # the longest matching name so that we dont erroneously have a partial match.
         self.names.sort(key=len, reverse=True)
 
+        # Get possible names from STT slot files. The slot files define all possible names
+        # that local STT (Grokotron) can recognize -- assuming that the most recent STT
+        # training run used the up-to-date files.
+        stt_vocab_path = Path("/opt/grokotron/slots")
+        stt_vocab_files = list(stt_vocab_path.iterdir())
+        self.stt_vocab = [
+            self.load_names(stt_vocab_file) for stt_vocab_file in stt_vocab_files
+        ]
+        # Flattening vocab list.
+        self.stt_vocab = [
+            item for slotlist in self.stt_vocab for item in slotlist
+        ]
+
         # Get states.
         self.percents = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Percent.voc"))
         self.percents = [
@@ -138,7 +157,6 @@ class DeakoSkill(MycroftSkill):
             if percent.isnumeric()
         ]
         self.percents.sort(reverse=True)
-        # self.fractions = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Fraction.voc"))
         self.powers = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Power.voc"))
 
         # Connect and get device info.
@@ -152,7 +170,7 @@ class DeakoSkill(MycroftSkill):
     def load_names(file_path):
         with open(file_path, "r") as f:
             return [
-                room.lower().strip() for room in f.readlines()
+                name.lower().strip() for name in f.readlines()
             ]
 
     def discover_host(self):
@@ -190,7 +208,27 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
+        self._update_name_map(result_dicts)
         return result_dicts
+
+    def _update_name_map(self, result_dicts):
+        # Add new devices.
+        for result in result_dicts:
+            if result["data"]["uuid"] not in self.name_map.values():
+                self.name_map[result["data"]["name"]] = result["data"]["uuid"]
+        # Remove devices.
+        for name, uuid in self.name_map.items():
+            if uuid not in [result["data"]["uuid"] for result in result_dicts]:
+                self.name_map.pop(name)
+
+    def _change_device_name(self, new_name, old_name):
+        dialog = None
+        if new_name in self.name_map:
+            dialog = ("name.exists", {"name": new_name})
+            return self.end_session(dialog=dialog)
+        uuid = self.name_map[old_name]
+        self.name_map[new_name] = uuid
+        self.name_map.pop(old_name)
 
     def change_device_state(self, target: str, power: Optional[bool] = None, dim: Optional[int] = None) -> None:
         """
@@ -338,6 +376,42 @@ class DeakoSkill(MycroftSkill):
         dialog = "scan.complete"
         return self.end_session(dialog=dialog)
 
+    @intent_handler(
+        AdaptIntent("ChangeDeviceName")
+        .require("Change")
+        .require("Device")
+        .require("Name")
+    )
+    def handle_change_device_name(self, message):
+        dialog = None
+
+        utterance = message.data.get("utterance", "").lower().strip()
+        names = self._find_names(utterance)
+        if not names:
+            # No initial name given, ask for both.
+            dialog = "what.old.new.name"
+            self.emit_start_session(dialog)
+        elif len(names) == 1:
+            # Old name given, ask for new one.
+            dialog = ("what.new.name", {"old_name": names[0]})
+            self.emit_start_session(dialog)
+        elif len(names) == 2:
+            # Old and new names given. Execute.
+            pass
+
+    # Helper functions/methods. ~~~~~~~~~~~~~~~~
+
+    def _find_names(self, utterance):
+        """
+        Unlike _find_candidates, which looks only for the list
+        of existing device names, this looks for any name that
+        the local STT can currently recognize.
+        """
+        return [
+            name for name in self.stt_vocab
+            if name in utterance
+        ]
+
     def _compare_devices(self, old_list, new_list):
         # Find changed devices.
         added_devices = list()
@@ -409,7 +483,12 @@ class DeakoSkill(MycroftSkill):
 
         # Names can be more than one word and can have overlapping words. Just in
         # case this is true, we take the longest matching name.
-        named_device = sorted(candidate_devices, key=lambda d: d["data"]["name"]).pop()
+        device_names = sorted(
+            [
+                candidate_device["data"]["name"] for candidate_device in candidate_devices
+            ],
+            key=len
+        ).pop()
 
         # If the utterance only mentions a dim value, we want to
         # keep power True.
