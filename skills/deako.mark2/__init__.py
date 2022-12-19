@@ -425,28 +425,14 @@ class DeakoSkill(MycroftSkill):
         of existing device names, this looks for any name that
         the local STT can currently recognize.
         """
+        self.current_names.extend([
+            name for name in self.stt_vocab
+            if name in utterance
+        ])
         self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
-        if not self.current_names:
-            if state and state["number_of_names"] == 2:
-                # No initial name given, ask for both.
-                dialog = "what.old.new.name"
-                self.log.debug(f"Dialog: {dialog}")
-                return self.emit_start_session(
-                    dialog,
-                    # Want to get names in their response.
-                    # This tells mycroft to send their
-                    # next utterance to the "raw_utterance"
-                    # method.
-                    expect_response=True,
-                )
-            else:
-                self.log.debug(f"Base")
-                self.current_names.extend([
-                    name for name in self.stt_vocab
-                    if name in utterance
-                ])
-                return None
-        elif len(self.current_names) == 1:
+        if len(self.current_names) >= state["number_of_names"]:
+            return None
+        elif state["number_of_names"] - len(self.current_names) == 1:
             # Old name given, ask for new one.
             dialog = ("what.new.name", {"old_name": self.current_names[0]})
             self.log.debug(f"Dialog: {dialog}")
@@ -458,12 +444,8 @@ class DeakoSkill(MycroftSkill):
                 # method.
                 expect_response=True
             )
-        elif len(self.current_names) == 2:
-            # Old and new names given. Execute.
-            pass
-        else:
-            # More than two, or something else went wrong.
-            # Try again.
+        elif state["number_of_names"] - len(self.current_names) == 2:
+            # No initial name given, ask for both.
             dialog = "what.old.new.name"
             self.log.debug(f"Dialog: {dialog}")
             return self.emit_start_session(
@@ -473,10 +455,10 @@ class DeakoSkill(MycroftSkill):
                 # next utterance to the "raw_utterance"
                 # method.
                 expect_response=True,
-                state={
-                    "number_of_names": 2
-                }
             )
+
+
+
 
 
     def _compare_devices(self, old_list, new_list):
@@ -609,6 +591,38 @@ def create_skill(skill_id: str):
     """Boilerplate to invoke the weather skill."""
     return DeakoSkill(skill_id=skill_id)
 
+
+# if not self.current_names:
+#     if state and state["number_of_names"] == 2:
+#
+#     else:
+#         self.log.debug(f"Base")
+#         self.current_names.extend([
+#             name for name in self.stt_vocab
+#             if name in utterance
+#         ])
+#         return None
+# elif len(self.current_names) == 1:
+#
+# elif len(self.current_names) == 2:
+#     # Old and new names given. Execute.
+#     pass
+# else:
+#     # More than two, or something else went wrong.
+#     # Try again.
+#     dialog = "what.old.new.name"
+#     self.log.debug(f"Dialog: {dialog}")
+#     return self.emit_start_session(
+#         dialog,
+#         # Want to get names in their response.
+#         # This tells mycroft to send their
+#         # next utterance to the "raw_utterance"
+#         # method.
+#         expect_response=True,
+#         state={
+#             "number_of_names": 2
+#         }
+#     )
 
 
 
