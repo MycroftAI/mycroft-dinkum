@@ -391,7 +391,7 @@ class DeakoSkill(MycroftSkill):
         self.current_names = list()
 
         utterance = message.data.get("utterance", "").lower().strip()
-        self._find_names(utterance)         # Populates self.current_names
+        self.raw_utterance(utterance)         # Populates self.current_names
         self.log.debug(f"Names found: {self.current_names}")
         if not self.current_names:
             # No initial name given, ask for both.
