@@ -435,14 +435,14 @@ class DeakoSkill(MycroftSkill):
         the local STT can currently recognize.
         """
         dialog = None
-        self.current_names.extend([
-            (name, name.start()) for name in self.stt_vocab
-            if name in utterance
-        ])
-        [m for m in re.finditer(name, utterance)]
+        # self.current_names.extend([
+        #     (name, name.start()) for name in self.stt_vocab
+        #     if name in utterance
+        # ])
+        # [m for m in re.finditer(name, utterance)]
         found = list()
         for name in self.stt_vocab:
-            found.expand([(m, m.start(), m.end()) for m in re.finditer(name, utterance)])
+            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
         # Sort these based on start index.
         self.current_names = [
             name[0] for name in sorted(found, key=lambda x: x[1])
@@ -454,7 +454,7 @@ class DeakoSkill(MycroftSkill):
         self.current_names.sort(key=lambda x: utterance.index(x))
         self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
         self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
-        if state["number_of_names"] >= len(self.current_names)
+        if state["number_of_names"] >= len(self.current_names):
             dialog = "need.more.names"
             return self.end_session(dialog=dialog)
         
