@@ -150,6 +150,15 @@ class DeakoSkill(MycroftSkill):
         self.stt_vocab = [
             item for slotlist in self.stt_vocab for item in slotlist
         ]
+        # Certain terms, like "light" can be redundant when we are searching for 
+        # device names. For now, we'll remove them.
+        # TODO: Instead when searching for names we should make it flexible enough
+        # to deal with things like "desk light" instead of just "desk" as a name.
+        stop_names = ["light", "lights"]
+        self.stt_vocab = [
+            term for term in self.stt_vocab
+            if term not in stop_names
+        ]
 
         # Get states.
         self.percents = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Percent.voc"))
@@ -382,8 +391,7 @@ class DeakoSkill(MycroftSkill):
 
     @intent_handler(
         AdaptIntent("ChangeDeviceName")
-        .require("Change")
-        .require("Device")
+        .require("Change") 
         .require("Name")
     )
     def handle_change_device_name(self, message):
@@ -425,37 +433,47 @@ class DeakoSkill(MycroftSkill):
         of existing device names, this looks for any name that
         the local STT can currently recognize.
         """
+        dialog = None
         self.current_names.extend([
             name for name in self.stt_vocab
             if name in utterance
         ])
+        # We assume the old name comes first, so order of appearance
+        # in the string is important.
         self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
+        self.current_names.sort(key=lambda x: utterance.index(x))
+        self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
+        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
         if len(self.current_names) >= state["number_of_names"]:
-            return None
-        elif state["number_of_names"] - len(self.current_names) == 1:
-            # Old name given, ask for new one.
-            dialog = ("what.new.name", {"old_name": self.current_names[0]})
-            self.log.debug(f"Dialog: {dialog}")
-            return self.emit_start_session(
-                dialog,
-                # Want to get names in their response.
-                # This tells mycroft to send their
-                # next utterance to the "raw_utterance"
-                # method.
-                expect_response=True
-            )
-        elif state["number_of_names"] - len(self.current_names) == 2:
-            # No initial name given, ask for both.
-            dialog = "what.old.new.name"
-            self.log.debug(f"Dialog: {dialog}")
-            return self.emit_start_session(
-                dialog,
-                # Want to get names in their response.
-                # This tells mycroft to send their
-                # next utterance to the "raw_utterance"
-                # method.
-                expect_response=True,
-            )
+            dialog = "need.more.names"
+            return self.end_session(dialog=dialog)
+        
+
+
+       # elif state["number_of_names"] - len(self.current_names) == 1:
+       #     # Old name given, ask for new one.
+       #     dialog = ("what.new.name", {"old_name": self.current_names[0]})
+       #     self.log.debug(f"Dialog: {dialog}")
+       #     return self.continue_session(
+       #         dialog,
+       #         # Want to get names in their response.
+       #         # This tells mycroft to send their
+       #         # next utterance to the "raw_utterance"
+       #         # method.
+       #         expect_response=True
+       #     )
+       # elif state["number_of_names"] - len(self.current_names) == 2:
+       #     # No initial name given, ask for both.
+       #     dialog = "what.old.new.name"
+       #     self.log.debug(f"Dialog: {dialog}")
+       #     return self.emit_start_session(
+       #         dialog,
+       #         # Want to get names in their response.
+       #         # This tells mycroft to send their
+       #         # next utterance to the "raw_utterance"
+       #         # method.
+       #         expect_response=True,
+       #     )
 
 
 
