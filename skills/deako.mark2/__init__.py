@@ -389,9 +389,10 @@ class DeakoSkill(MycroftSkill):
     def handle_change_device_name(self, message):
         dialog = None
         self.current_names = list()
-
+        # self.emit_start_session(dialog=dialog)
         utterance = message.data.get("utterance", "").lower().strip()
         # Populates self.current_names
+        self.log.debug(f"Utterance: {utterance}")
         self.raw_utterance(
             utterance,
             state={
@@ -424,23 +425,22 @@ class DeakoSkill(MycroftSkill):
         of existing device names, this looks for any name that
         the local STT can currently recognize.
         """
-
+        self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
         if not self.current_names:
             if state and state["number_of_names"] == 2:
                 # No initial name given, ask for both.
                 dialog = "what.old.new.name"
-                return self.continue_session(
+                self.log.debug(f"Dialog: {dialog}")
+                return self.emit_start_session(
                     dialog,
                     # Want to get names in their response.
                     # This tells mycroft to send their
                     # next utterance to the "raw_utterance"
                     # method.
                     expect_response=True,
-                    state={
-                        "number_of_names": 2
-                    }
                 )
             else:
+                self.log.debug(f"Base")
                 self.current_names.extend([
                     name for name in self.stt_vocab
                     if name in utterance
@@ -449,7 +449,8 @@ class DeakoSkill(MycroftSkill):
         elif len(self.current_names) == 1:
             # Old name given, ask for new one.
             dialog = ("what.new.name", {"old_name": self.current_names[0]})
-            return self.continue_session(
+            self.log.debug(f"Dialog: {dialog}")
+            return self.emit_start_session(
                 dialog,
                 # Want to get names in their response.
                 # This tells mycroft to send their
@@ -464,7 +465,8 @@ class DeakoSkill(MycroftSkill):
             # More than two, or something else went wrong.
             # Try again.
             dialog = "what.old.new.name"
-            return self.continue_session(
+            self.log.debug(f"Dialog: {dialog}")
+            return self.emit_start_session(
                 dialog,
                 # Want to get names in their response.
                 # This tells mycroft to send their
