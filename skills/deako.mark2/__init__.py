@@ -107,7 +107,7 @@ class DeakoSkill(MycroftSkill):
         self.furniture = None
         self.lights = None
         self.names = None
-        self.name_map = None
+        self.name_map = dict()
         self.stt_vocab = None
 
         # States
@@ -387,6 +387,7 @@ class DeakoSkill(MycroftSkill):
 
         utterance = message.data.get("utterance", "").lower().strip()
         names = self._find_names(utterance)
+        self.log.debug(f"Names found: {names}")
         if not names:
             # No initial name given, ask for both.
             dialog = "what.old.new.name"
