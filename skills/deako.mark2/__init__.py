@@ -36,6 +36,7 @@ Note that this can also control the smart plug in the same way as
 other switches.
 """
 
+import re
 import json
 import time
 from pathlib import Path
@@ -231,7 +232,7 @@ class DeakoSkill(MycroftSkill):
             if uuid not in [result["data"]["uuid"] for result in result_dicts]:
                 self.name_map.pop(name)
 
-    def _change_device_name(self, new_name, old_name):
+    def _change_device_name(self, old_name, new_name):
         dialog = None
         if new_name in self.name_map:
             dialog = ("name.exists", {"name": new_name})
@@ -435,16 +436,25 @@ class DeakoSkill(MycroftSkill):
         """
         dialog = None
         self.current_names.extend([
-            name for name in self.stt_vocab
+            (name, name.start()) for name in self.stt_vocab
             if name in utterance
         ])
+        [m for m in re.finditer(name, utterance)]
+        found = list()
+        for name in self.stt_vocab:
+            found.expand([(m, m.start(), m.end()) for m in re.finditer(name, utterance)])
+        # Sort these based on start index.
+        self.current_names = [
+            name[0] for name in sorted(found, key=lambda x: x[1])
+        ]
+        self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
+
         # We assume the old name comes first, so order of appearance
         # in the string is important.
-        self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
         self.current_names.sort(key=lambda x: utterance.index(x))
         self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
         self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
-        if len(self.current_names) >= state["number_of_names"]:
+        if state["number_of_names"] >= len(self.current_names)
             dialog = "need.more.names"
             return self.end_session(dialog=dialog)
         
