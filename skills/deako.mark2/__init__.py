@@ -39,7 +39,7 @@ other switches.
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Union, Optional, Tuple
+from typing import Dict, List, Union, Optional, Tuple, Any
 
 # import zeroconf
 import telnetlib
@@ -109,6 +109,7 @@ class DeakoSkill(MycroftSkill):
         self.names = None
         self.name_map = dict()
         self.stt_vocab = None
+        self.current_names = None
 
         # States
         self.percents = None
@@ -297,6 +298,7 @@ class DeakoSkill(MycroftSkill):
             "Turn on desk light."
         """
         dialog = None
+        self.current_names = list()
 
         self.log.info("Deako skill handler triggered.")
 
@@ -328,6 +330,8 @@ class DeakoSkill(MycroftSkill):
     )
     def handle_scan_devices(self, message): 
         dialog = None
+        self.current_names = list()
+
         self.emit_start_session(dialog) 
         new_device_list = self.get_device_list()
         self.log.debug(f"New device list: {new_device_list}")
@@ -384,34 +388,75 @@ class DeakoSkill(MycroftSkill):
     )
     def handle_change_device_name(self, message):
         dialog = None
+        self.current_names = list()
 
         utterance = message.data.get("utterance", "").lower().strip()
-        names = self._find_names(utterance)
-        self.log.debug(f"Names found: {names}")
-        if not names:
+        self._find_names(utterance)         # Populates self.current_names
+        self.log.debug(f"Names found: {self.current_names}")
+        if not self.current_names:
             # No initial name given, ask for both.
             dialog = "what.old.new.name"
-            self.emit_start_session(dialog)
-        elif len(names) == 1:
+            self.emit_start_session(
+                dialog,
+                # Want to get names in their response.
+                # This tells mycroft to send their
+                # next utterance to the "raw_utterance"
+                # method.
+                expect_response=True
+            )
+        elif len(self.current_names) == 1:
             # Old name given, ask for new one.
-            dialog = ("what.new.name", {"old_name": names[0]})
-            self.emit_start_session(dialog)
-        elif len(names) == 2:
+            dialog = ("what.new.name", {"old_name": self.current_names[0]})
+            self.emit_start_session(
+                dialog,
+                # Want to get names in their response.
+                # This tells mycroft to send their
+                # next utterance to the "raw_utterance"
+                # method.
+                expect_response=True
+            )
+        elif len(self.current_names) == 2:
             # Old and new names given. Execute.
             pass
+        else:
+            # More than two, or something else went wrong.
+            # Try again.
+            dialog = "what.old.new.name"
+            self.emit_start_session(
+                dialog,
+                # Want to get names in their response.
+                # This tells mycroft to send their
+                # next utterance to the "raw_utterance"
+                # method.
+                expect_response=True
+            )
+        # Now we should have everything needed.
+        # Make the change.
+        
+        dialog = (
+            "renamed.device",
+            {
+                "old_name": self.current_names[0],
+                "new_name": self.current_names[1]
+            }
+        )
+        return self.end_session(dialog=dialog)
 
     # Helper functions/methods. ~~~~~~~~~~~~~~~~
 
-    def _find_names(self, utterance):
-        """
+    def raw_utterance(
+        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+    ) -> Optional[Message]:
+        """Callback when expect_response=True in continue_session
+
         Unlike _find_candidates, which looks only for the list
         of existing device names, this looks for any name that
         the local STT can currently recognize.
         """
-        return [
+        self.current_names.extend([
             name for name in self.stt_vocab
             if name in utterance
-        ]
+        ])
 
     def _compare_devices(self, old_list, new_list):
         # Find changed devices.
