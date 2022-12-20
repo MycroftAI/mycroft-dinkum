@@ -235,6 +235,9 @@ class DeakoSkill(MycroftSkill):
     def _update_names(self, new_result_dicts):
         # Since devices can be renamed, we need to keep them when
         # we get a new device list.
+        # First, the api allows caps in names, which we never want.
+        for i, new_result in enumerate(new_result_dicts):
+            new_result_dicts[i]["data"]["name"] = new_result["data"]["name"].lower()
         if not self.devices:
             return new_result_dicts
         for i, new_result in enumerate(new_result_dicts):
