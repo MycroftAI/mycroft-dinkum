@@ -111,6 +111,7 @@ class DeakoSkill(MycroftSkill):
         self.name_map = dict()
         self.stt_vocab = None
         self.current_names = None
+        self.last_used_device = None
 
         # States
         self.percents = None
@@ -305,12 +306,13 @@ class DeakoSkill(MycroftSkill):
 
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Utterance: {utterance}")
-        target_id, power, dim_value = self._parse_utterance(utterance)
+        target_id, power, dim_value, target_device = self._parse_utterance(utterance)
         
         if not target_id:
             dialog = "cant.find.device"
             return self.end_session(dialog=dialog)
 
+        self._register_last_used_device(target_device)
         self.change_device_state(target_id, power, dim_value)
         # We expect two messages from the api. First a confirmation,
         # then a message indicating that the event has taken place.
@@ -407,8 +409,14 @@ class DeakoSkill(MycroftSkill):
         # self._change_device_name(self.current_names[0], self.current_names[1])
         for device in self.devices:
             if device["data"]["name"] == self.current_names[0]:
+                # Plase this here first so that we remember the device
+                # requested even if there should be an error.
+                self._register_last_used_device(device)
                 device["data"]["deako_name"] = device["data"]["name"]
                 device["data"]["name"] = self.current_names[1]
+                # Call this again to have the correctly updated version
+                # if nothing goes wrong.
+                self._register_last_used_device(device)
         
         dialog = (
             "renamed.device",
@@ -442,6 +450,9 @@ class DeakoSkill(MycroftSkill):
             return self.end_session(dialog=dialog)
 
     # Helper functions/methods. ~~~~~~~~~~~~~~~~
+
+    def _register_last_used_device(self, last_device):
+        self.last_used_device = last_device
 
     def raw_utterance(
         self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
@@ -552,7 +563,7 @@ class DeakoSkill(MycroftSkill):
             if device["data"]["name"] in utterance
         ]
 
-    def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int]:
+    def _parse_utterance(self, utterance: str) -> Tuple[str, bool, int, Device_message]:
         target_id = None
         power = None
         dim_value = None
@@ -571,12 +582,14 @@ class DeakoSkill(MycroftSkill):
 
         # Names can be more than one word and can have overlapping words. Just in
         # case this is true, we take the longest matching name.
-        target_id = sorted(
+        target_device = sorted(
             [
-                candidate_device["data"]["uuid"] for candidate_device in candidate_devices
+                candidate_device for candidate_device in candidate_devices
             ],
             key=len
         ).pop()
+
+        target_id = target_device["data"]["uuid"]
 
         # If the utterance only mentions a dim value, we want to
         # keep power True.
@@ -591,7 +604,7 @@ class DeakoSkill(MycroftSkill):
             dim_value = self._convert_to_int(utterance)
 
         # target_id = named_device["data"]["uuid"]
-        return target_id, power, dim_value
+        return target_id, power, dim_value, target_device
 
     def _find_target_id(self, device_name):
         known_devices = {
