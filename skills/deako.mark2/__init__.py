@@ -224,6 +224,8 @@ class DeakoSkill(MycroftSkill):
     def _update_names(self, new_result_dicts):
         # Since devices can be renamed, we need to keep them when
         # we get a new device list.
+        if not self.devices:
+            return new_result_dicts
         for i, new_result in enumerate(new_result_dicts):
             for old_device in self.devices:
                 if new_result["data"]["uuid"] == old_device["data"]["uuid"]:
