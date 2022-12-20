@@ -598,7 +598,7 @@ class DeakoSkill(MycroftSkill):
         if not candidate_devices:
             # Nothing worked, still no device matches.
             dialog = "cant.find.device"
-            return "", "", ""
+            return "", "", "", ""
 
         # Names can be more than one word and can have overlapping words. Just in
         # case this is true, we take the longest matching name.
