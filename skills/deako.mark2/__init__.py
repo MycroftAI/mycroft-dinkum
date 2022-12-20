@@ -113,6 +113,10 @@ class DeakoSkill(MycroftSkill):
         self.current_names = None
         self.last_used_device = None
 
+        # Pronouns and determiners
+        self.pronouns = None
+        self.determiners = None
+
         # States
         self.percents = None
         self.powers = None
@@ -139,6 +143,12 @@ class DeakoSkill(MycroftSkill):
         # Names can potentially be more than one word and can overlap. We want to get
         # the longest matching name so that we dont erroneously have a partial match.
         self.names.sort(key=len, reverse=True)
+
+        # Get pronouns and determiners.
+        self.pronouns = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Pronouns.voc"))
+        self.determiners = self.load_names(
+            Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Determiners.voc")
+        )
 
         # Get possible names from STT slot files. The slot files define all possible names
         # that local STT (Grokotron) can recognize -- assuming that the most recent STT
@@ -292,7 +302,7 @@ class DeakoSkill(MycroftSkill):
         AdaptIntent("SwitchStateChange")
         .one_of("Turn", "Dim")
         .one_of("Power", "Percent", "Fraction")
-        .one_of("Lights", "Furniture", "Rooms", "Appliances")
+        .one_of("Lights", "Furniture", "Rooms", "Appliances", "Pronouns", "Determiners")
     )
     def handle_change_device_state(self, message):
         """
@@ -573,9 +583,12 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Candidates: {candidate_devices}")
 
         if not candidate_devices:
-            self.devices = self.get_device_list()
-            candidate_devices = self._find_candidate_devices(utterance)
-            self.log.debug(f"Candidates: {candidate_devices}")
+            if self.pronouns in utterance or self.determiners in utterance:
+                candidate_devices = [self.last_used_device]
+            else:
+                self.devices = self.get_device_list()
+                candidate_devices = self._find_candidate_devices(utterance)
+                self.log.debug(f"Candidates: {candidate_devices}")
         if not candidate_devices:
             dialog = "cant.find.device"
             return "", "", ""
