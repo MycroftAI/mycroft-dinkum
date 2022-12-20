@@ -219,11 +219,13 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
-        self._update_name_map(result_dicts)
+        # self._update_name_map(result_dicts)
         return result_dicts
 
     def _update_name_map(self, result_dicts):
         # Add new devices.
+        # TODO: I think this needs to be updated before it will work, leaving it
+        # out for now as it doesn't seem essential.
         for result in result_dicts:
             if result["data"]["uuid"] not in self.name_map.values():
                 self.name_map[result["data"]["name"]] = result["data"]["uuid"]
@@ -554,9 +556,9 @@ class DeakoSkill(MycroftSkill):
 
         # Names can be more than one word and can have overlapping words. Just in
         # case this is true, we take the longest matching name.
-        device_names = sorted(
+        target_id = sorted(
             [
-                candidate_device["data"]["name"] for candidate_device in candidate_devices
+                candidate_device["data"]["uuid"] for candidate_device in candidate_devices
             ],
             key=len
         ).pop()
@@ -573,7 +575,7 @@ class DeakoSkill(MycroftSkill):
         if not dim_value:
             dim_value = self._convert_to_int(utterance)
 
-        target_id = named_device["data"]["uuid"]
+        # target_id = named_device["data"]["uuid"]
         return target_id, power, dim_value
 
     def _find_target_id(self, device_name):
