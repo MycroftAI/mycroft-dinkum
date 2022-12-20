@@ -219,30 +219,16 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
-        # self._update_name_map(result_dicts)
-        return result_dicts
+        return self._update_names(result_dicts)
 
-    def _update_name_map(self, result_dicts):
-        # Add new devices.
-        # TODO: I think this needs to be updated before it will work, leaving it
-        # out for now as it doesn't seem essential.
-        for result in result_dicts:
-            if result["data"]["uuid"] not in self.name_map.values():
-                self.name_map[result["data"]["name"]] = result["data"]["uuid"]
-        # Remove devices.
-        for name, uuid in self.name_map.items():
-            if uuid not in [result["data"]["uuid"] for result in result_dicts]:
-                self.name_map.pop(name)
-
-    def _change_device_name(self, old_name, new_name):
-        dialog = None
-        if new_name in self.name_map:
-            dialog = ("name.exists", {"name": new_name})
-            return self.end_session(dialog=dialog)
-        uuid = self.name_map[old_name]
-        self.name_map[new_name] = uuid
-        self.name_map.pop(old_name)
-        self.log.debug(f"Name map: {self.name_map}")
+    def _update_names(self, new_result_dicts):
+        # Since devices can be renamed, we need to keep them when
+        # we get a new device list.
+        for i, new_result in enumerate(new_result_dicts):
+            for old_device in self.devices:
+                if new_result["data"]["uuid"] == old_device["data"]["uuid"]:
+                    new_result_dicts[i]["data"]["name"] == old_device["data"]["name"]
+        return new_result_dicts
 
     def change_device_state(self, target: str, power: Optional[bool] = None, dim: Optional[int] = None) -> None:
         """
@@ -403,8 +389,9 @@ class DeakoSkill(MycroftSkill):
         self.current_names = list()
         # self.emit_start_session(dialog=dialog)
         utterance = message.data.get("utterance", "").lower().strip()
-        # Populates self.current_names
+
         self.log.debug(f"Utterance: {utterance}")
+        # Populates self.current_names
         self.raw_utterance(
             utterance,
             state={
@@ -415,7 +402,11 @@ class DeakoSkill(MycroftSkill):
 
         # Now we should have everything needed.
         # Make the change.
-        self._change_device_name(self.current_names[0], self.current_names[1])
+        # self._change_device_name(self.current_names[0], self.current_names[1])
+        for device in self.devices:
+            if device["data"]["name"] == self.current_names[0]:
+                device["data"]["deako_name"] = device["data"]["name"]
+                device["data"]["name"] = self.current_names[1]
         
         dialog = (
             "renamed.device",
