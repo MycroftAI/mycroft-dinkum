@@ -583,13 +583,20 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Candidates: {candidate_devices}")
 
         if not candidate_devices:
-            if self.pronouns in utterance or self.determiners in utterance:
-                candidate_devices = [self.last_used_device]
-            else:
-                self.devices = self.get_device_list()
-                candidate_devices = self._find_candidate_devices(utterance)
-                self.log.debug(f"Candidates: {candidate_devices}")
+            # Found no name matches. Check for pronouns or determiners
+            # which can refer back to the previously used device.
+            for word in utterance.split(" "):
+                if word in self.pronouns or word in self.determiners:
+                    candidate_devices = [self.last_used_device]
+                    break
         if not candidate_devices:
+            # No names and no pronouns/determiners: maybe our device
+            # list is out of date. Get it again and try again.
+            self.devices = self.get_device_list()
+            candidate_devices = self._find_candidate_devices(utterance)
+            self.log.debug(f"Candidates: {candidate_devices}")
+        if not candidate_devices:
+            # Nothing worked, still no device matches.
             dialog = "cant.find.device"
             return "", "", ""
 
