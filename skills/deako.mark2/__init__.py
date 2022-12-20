@@ -419,6 +419,21 @@ class DeakoSkill(MycroftSkill):
         )
         return self.end_session(dialog=dialog)
 
+    @intent_handler(
+        AdaptIntent("SpeakDeviceNames")
+        .require("List")
+        .require("Device")
+        .require("Name")
+    )
+    def handle_speak_device_names(self, message):
+        dialog = None
+        names = ", ".join([
+            device["data"]["name"] for device in self.devices
+        ])
+        if names:
+            dialog = ("list.devices", {"names": names})
+            return self.end_session(dialog=dialog)
+
     # Helper functions/methods. ~~~~~~~~~~~~~~~~
 
     def raw_utterance(
