@@ -427,11 +427,18 @@ class DeakoSkill(MycroftSkill):
     )
     def handle_speak_device_names(self, message):
         dialog = None
-        names = ", ".join([
+        names = [
             device["data"]["name"] for device in self.devices
-        ])
+        ]
         if names:
-            dialog = ("list.devices", {"names": names})
+            if len(names) > 1:
+                last = names.pop()
+                names = names + ["and"]
+                names_string = ", ".join(names)
+                names_string = names_string + " " + last
+            else:
+                names_string = names[0]
+            dialog = ("list.devices", {"names": names_string})
             return self.end_session(dialog=dialog)
 
     # Helper functions/methods. ~~~~~~~~~~~~~~~~
