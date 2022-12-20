@@ -585,7 +585,7 @@ class DeakoSkill(MycroftSkill):
         candidate_devices = self._find_candidate_devices(utterance)
         self.log.debug(f"Candidates: {candidate_devices}")
 
-        if not candidate_devices:
+        if not candidate_devices and self.last_used_device:
             # Found no name matches. Check for pronouns or determiners
             # which can refer back to the previously used device.
             for word in utterance.split(" "):
