@@ -669,6 +669,9 @@ class DeakoSkill(MycroftSkill):
     def _extract_power_and_dim(self, utterance):
         # If the utterance only mentions a dim value, we want to
         # keep power True.
+        power = None
+        dim_value = None
+
         power = False if "off" in utterance else True
 
         for percent in self.percents:
