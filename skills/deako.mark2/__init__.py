@@ -306,6 +306,42 @@ class DeakoSkill(MycroftSkill):
     # Intent handlers. ~~~~~~~~~~~~~~~~
 
     @intent_handler(
+        AdaptIntent("MultiSwitchStateChange")
+        .one_of("Turn", "Dim")
+        .one_of("Power", "Percent", "Fraction")
+        .require("Quantifier")
+    )
+    def handle_change_multi_device_state(self, message):
+        """
+        We should be able to handle multiple switches with one
+        command. For now, since we have no access to "zones", i.e.,
+        arbitrary collections of switches, all we can do is affect
+        all switches.
+        """
+        dialog = None
+
+        utterance = message.data.get("utterance", "").lower().strip()
+        self.log.debug(f"Utterance: {utterance}")
+        target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
+
+        if not target_ids:
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
+
+        for target_id in target_ids:
+            self.change_device_state(target_id, power, dim_value)
+            # We expect two messages from the api. First a confirmation,
+            # then a message indicating that the event has taken place.
+            conf_msg = self.read_result()
+            event_msg = self.read_result()
+            self.log.debug(f"Confirmation: {conf_msg}")
+            self.log.debug(f"Event: {event_msg}")
+
+        return self.end_session(
+            dialog=dialog
+        )
+
+    @intent_handler(
         AdaptIntent("SwitchStateChange")
         .one_of("Turn", "Dim")
         .one_of("Power", "Percent", "Fraction")
@@ -343,41 +379,6 @@ class DeakoSkill(MycroftSkill):
             dialog=dialog
         )
 
-    @intent_handler(
-        AdaptIntent("MultiSwitchStateChange")
-        .one_of("Turn", "Dim")
-        .one_of("Power", "Percent", "Fraction")
-        .require("Quantifier")
-    )
-    def handle_change_multi_device_state(self, message):
-        """
-        We should be able to handle multiple switches with one
-        command. For now, since we have no access to "zones", i.e.,
-        arbitrary collections of switches, all we can do is affect
-        all switches.
-        """
-        dialog = None
-
-        utterance = message.data.get("utterance", "").lower().strip()
-        self.log.debug(f"Utterance: {utterance}")
-        target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
-
-        if not target_ids:
-            dialog = "cant.find.device"
-            return self.end_session(dialog=dialog)
-
-        for target_id in target_ids:
-            self.change_device_state(target_id, power, dim_value)
-            # We expect two messages from the api. First a confirmation,
-            # then a message indicating that the event has taken place.
-            conf_msg = self.read_result()
-            event_msg = self.read_result()
-            self.log.debug(f"Confirmation: {conf_msg}")
-            self.log.debug(f"Event: {event_msg}")
-
-        return self.end_session(
-            dialog=dialog
-        )
 
     def _parse_utterance_multiple(self, utterance):
         power, dim_value = self._extract_power_and_dim(utterance)
