@@ -337,7 +337,7 @@ class DeakoSkill(MycroftSkill):
     @intent_handler(
         AdaptIntent("SwitchStateChange")
         .one_of("Turn", "Dim")
-        .one_of("Power", "Percent", "Fraction")
+        # .one_of("Power", "Percent", "Fraction", "Dim")
         .one_of("Lights", "Furniture", "Rooms", "Appliances", "Pronouns", "Determiners")
     )
     def handle_change_device_state(self, message):
