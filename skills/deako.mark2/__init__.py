@@ -121,7 +121,7 @@ class DeakoSkill(MycroftSkill):
         # States
         self.percents = None
         self.powers = None
-        self.states = None
+        self.dim_terms = None
 
         # Sound
         self.success_sound = None
@@ -184,6 +184,7 @@ class DeakoSkill(MycroftSkill):
         ]
         self.percents.sort(reverse=True)
         self.powers = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Power.voc"))
+        self.dim_terms = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Dim.voc"))
 
         # Connect and get device info.
         self.host = self.discover_host()
@@ -667,21 +668,26 @@ class DeakoSkill(MycroftSkill):
         return target_id, power, dim_value, target_device
 
     def _extract_power_and_dim(self, utterance):
-        # If the utterance only mentions a dim value, we want to
-        # keep power True.
         power = None
         dim_value = None
 
+        # If the utterance only mentions a dim value, we want to
+        # keep power True.
         power = False if "off" in utterance else True
 
         for percent in self.percents:
             if str(percent) in utterance:
                 dim_value = percent
                 break
-
         if not dim_value:
             # Check for fractions or other representations.
             dim_value = self._convert_to_int(utterance)
+        if not dim_value:
+            for word in utterance.split(" "):
+                if word in self.dim_terms:
+                    # We presumably have an unspecified dim command,
+                    # so use default.
+                    dim_value = 50
 
         return power, dim_value
 
