@@ -220,6 +220,7 @@ class DeakoSkill(MycroftSkill):
         return self.read_result()
 
     def get_device_list(self) -> List[Device_message]:
+        dialog = None
         result_dicts = None
         self._execute_command(DEVICE_LIST)
         time.sleep(.5)
@@ -228,7 +229,8 @@ class DeakoSkill(MycroftSkill):
         if not results or len(results) < 2:
             # TODO: Something here.
             # Things didn't work.
-            pass
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
         result_dicts = [
             json.loads(result) for result in results.strip().split("\n")
         ]
