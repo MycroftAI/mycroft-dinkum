@@ -278,7 +278,7 @@ class DeakoSkill(MycroftSkill):
         # message that is actually responding to the last command, we
         # need to flush the buffer by reading anything already sitting
         # in it.
-        self.read_result()
+        self.read_result(flush=True)
         try:
             self.connection.write(json.dumps(command).encode() + b"x\r")
             self.log.debug(f"Sent: {json.dumps(command)}")
@@ -287,10 +287,12 @@ class DeakoSkill(MycroftSkill):
             return False
         return True
 
-    def read_result(self) -> str:
+    def read_result(self, flush=False) -> str:
         output = None
-        time.sleep(.25)
-        i = 300000
+        i = 1
+        if not flush:
+            time.sleep(.25)
+            i = 300000
         while not output and i > 0:
             try:
                 output = self.connection.read_very_eager().decode("utf-8")
