@@ -305,13 +305,7 @@ class DeakoSkill(MycroftSkill):
 
     # Intent handlers. ~~~~~~~~~~~~~~~~
 
-    @intent_handler(
-        AdaptIntent("MultiSwitchStateChange")
-        .one_of("Turn", "Dim")
-        .one_of("Power", "Percent", "Fraction")
-        .require("Quantifier")
-    )
-    def handle_change_multi_device_state(self, message):
+    def handle_change_multi_device_state(self, utterance):
         """
         We should be able to handle multiple switches with one
         command. For now, since we have no access to "zones", i.e.,
@@ -320,8 +314,6 @@ class DeakoSkill(MycroftSkill):
         """
         dialog = None
 
-        utterance = message.data.get("utterance", "").lower().strip()
-        self.log.debug(f"Utterance: {utterance}")
         target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
 
         if not target_ids:
@@ -359,6 +351,11 @@ class DeakoSkill(MycroftSkill):
 
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Utterance: {utterance}")
+        for word in utterance.split(" "):
+            if word in self.quantifiers:
+                self.handle_change_multi_device_state(utterance)
+                return None
+
         target_id, power, dim_value, target_device = self._parse_utterance(utterance)
         
         if not target_id:
