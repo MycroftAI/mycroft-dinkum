@@ -479,7 +479,13 @@ class DeakoSkill(MycroftSkill):
         # Now we should have everything needed.
         # Make the change.
         self._rename()
-                
+        dialog = (
+            "renamed.device",
+            {
+                "old_name": self.current_names[0],
+                "new_name": self.current_names[1]
+            }
+        )
         return self.end_session(dialog=dialog)
 
     def _rename(self):
