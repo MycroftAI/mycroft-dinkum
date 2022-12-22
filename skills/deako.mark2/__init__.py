@@ -490,6 +490,41 @@ class DeakoSkill(MycroftSkill):
         )
         return self.end_session(dialog=dialog)
 
+    def ask_for_names(self, utterance, name=None):
+        self.log.debug(f"Didn't get two names, asking for more info: utterance {utterance}")
+        return self.continue_session(
+            dialog="what.old.new.name",
+            expect_response=True,
+            state={"missing": 2},
+        )
+
+    def raw_utterance(
+        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+    ) -> Optional[Message]:
+        """Callback when expect_response=True in continue_session
+
+        Unlike _find_candidates, which looks only for the list
+        of existing device names, this looks for any name that
+        the local STT can currently recognize.
+        """
+        dialog = None
+        self.log.debug(f"Processing follow up utterance: {utterance}")
+        found = list()
+        for name in self.stt_vocab:
+            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
+        self.log.debug(f"Found namnes: {found}")
+        # Sort these based on start index.
+        # TODO: Use end value to find overlapping matches.
+        self.current_names = [
+            name[0] for name in sorted(found, key=lambda x: x[1])
+        ]
+
+        self.log.debug(f"Follow up utterance: {utterance}, state: {state}, current names found: {self.current_names}")
+        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["missing"]: {state["missing"]} = {len(self.current_names) >= state["missing"]}')
+        if state["missing"] >= len(self.current_names):
+            dialog = "need.more.names"
+            return self.end_session(dialog=dialog)
+
     @intent_handler(
         AdaptIntent("SpeakDeviceNames")
         .require("List")
@@ -517,30 +552,7 @@ class DeakoSkill(MycroftSkill):
     def _register_last_used_device(self, last_device):
         self.last_used_device = last_device
 
-    def raw_utterance(
-        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
-    ) -> Optional[Message]:
-        """Callback when expect_response=True in continue_session
 
-        Unlike _find_candidates, which looks only for the list
-        of existing device names, this looks for any name that
-        the local STT can currently recognize.
-        """
-        dialog = None
-        found = list()
-        for name in self.stt_vocab:
-            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
-        # Sort these based on start index.
-        # TODO: Use end value to find overlapping matches.
-        self.current_names = [
-            name[0] for name in sorted(found, key=lambda x: x[1])
-        ]
-
-        self.log.debug(f"Utterance: {utterance}, state: {state}, current names: {self.current_names}")
-        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
-        if state["number_of_names"] >= len(self.current_names):
-            dialog = "need.more.names"
-            return self.end_session(dialog=dialog)
 
         
 
