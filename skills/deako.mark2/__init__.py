@@ -360,7 +360,7 @@ class DeakoSkill(MycroftSkill):
                 return None
 
         target_id, power, dim_value, target_device = self._parse_utterance(utterance)
-        
+        self.log.debug(f"target_id: {target_id}\npower: {power}\ndim_value: {dim_value}") 
         if not target_id:
             dialog = "cant.find.device"
             return self.end_session(dialog=dialog)
