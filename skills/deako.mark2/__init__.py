@@ -459,12 +459,14 @@ class DeakoSkill(MycroftSkill):
 
         self.log.debug(f"Utterance: {utterance}")
         # Populates self.current_names
-        self.raw_utterance(
-            utterance,
-            state={
-                "number_of_names": 2
-            }
-        )
+        # self.raw_utterance(
+        #     utterance,
+        #     state={
+        #         "number_of_names": 2
+        #     }
+        # )
+
+        self.ask_for_names(utterance)
         self.log.debug(f"Names found: {self.current_names}")
 
         # Now we should have everything needed.
@@ -495,7 +497,7 @@ class DeakoSkill(MycroftSkill):
         return self.continue_session(
             dialog="what.old.new.name",
             expect_response=True,
-            state={"missing": 2},
+            state={"number_of_names": 2},
         )
 
     def raw_utterance(
@@ -508,7 +510,7 @@ class DeakoSkill(MycroftSkill):
         the local STT can currently recognize.
         """
         dialog = None
-        self.log.debug(f"Processing follow up utterance: {utterance}")
+        self.log.debug(f"Processing follow up utterance: {utterance} with state {state}")
         found = list()
         for name in self.stt_vocab:
             found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
@@ -520,10 +522,11 @@ class DeakoSkill(MycroftSkill):
         ]
 
         self.log.debug(f"Follow up utterance: {utterance}, state: {state}, current names found: {self.current_names}")
-        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["missing"]: {state["missing"]} = {len(self.current_names) >= state["missing"]}')
-        if state["missing"] >= len(self.current_names):
+        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
+        if state["number_of_names"] >= len(self.current_names):
             dialog = "need.more.names"
             return self.end_session(dialog=dialog)
+        return self.end_session()
 
     @intent_handler(
         AdaptIntent("SpeakDeviceNames")
