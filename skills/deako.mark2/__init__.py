@@ -449,7 +449,7 @@ class DeakoSkill(MycroftSkill):
     @intent_handler(
         AdaptIntent("ChangeDeviceName")
         .require("Change") 
-        .require("Name")
+        .one_of("Name", "Furniture", "Appliances", "Rooms")
     )
     def handle_change_device_name(self, message):
         dialog = None
@@ -485,39 +485,68 @@ class DeakoSkill(MycroftSkill):
         # Now we should have everything needed.
         # Make the change.
         # self._change_device_name(self.current_names[0], self.current_names[1])
+                
+        return self.end_session(dialog=dialog)
+
+    def _rename(self):
         for device in self.devices:
             if device["data"]["name"] == self.current_names[0]:
-                # Plase this here first so that we remember the device
+                # Place this here first so that we remember the device
                 # requested even if there should be an error.
                 self._register_last_used_device(device)
-                device["data"]["deako_name"] = device["data"]["name"]
+                if not device["data"].get("deako_name", None):
+                    device["data"]["deako_name"] = device["data"]["name"]
                 device["data"]["name"] = self.current_names[1]
                 # Call this again to have the correctly updated version
                 # if nothing goes wrong.
                 self._register_last_used_device(device)
-        
-        dialog = (
-            "renamed.device",
-            {
-                "old_name": self.current_names[0],
-                "new_name": self.current_names[1]
-            }
-        )
-        return self.end_session(dialog=dialog)
-
-    def ask_for_names(self, utterance, name=None):
-        self.log.debug(f"Didn't get two names, asking for more info: utterance {utterance}")
-        return self.continue_session(
-            dialog="what.old.new.name",
-            expect_response=True,
-            state={"number_of_names": 2},
-        )
 
     def raw_utterance(
             self, utterance: Optional[str], state: Optional[Dict[str, Any]]
     ) -> Optional[Message]:
+        
         self.log.debug(f"Raw utterance: {utterance} with state {state}")
+        
+        found = list()
 
+        for name in self.stt_vocab:
+            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
+        self.log.debug(f"Found namnes: {found}")
+        # Sort these based on start index.
+        # TODO: Use end value to find overlapping matches.
+        self.current_names.extend([
+            name[0] for name in sorted(found, key=lambda x: x[1])
+        ])
+        self.log.debug(f"Sorted names: {self.current_names}")
+
+        if not self.current_names:
+            dialog = "cant.find.device"
+            return self.end_session(dialog=dialog)
+
+        if len(self.current_names) == 1:
+            dialog = (
+                "what.new.name",
+                {
+                    "old_name": self.current_names[0],
+                }
+            )            
+            return self.continue_session(
+                dialog=dialog,
+                expect_response=True,
+                state={"number_of_names": 1},
+            )
+
+        if len(self.current_names) == 2:
+            self._rename()
+            dialog = (
+                "renamed.device",
+                {
+                    "old_name": self.current_names[0],
+                    "new_name": self.current_names[1]
+                }
+            )
+            return self.end_session(dialog=dialog)
+ 
 
     # def raw_utterance(
     #     self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
