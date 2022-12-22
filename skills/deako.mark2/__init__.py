@@ -488,7 +488,23 @@ class DeakoSkill(MycroftSkill):
 
         # Now we should have everything needed.
         # Make the change.
-        self._rename()
+        if self._rename():
+            # dialog = (
+            #     "cant.find.device.name",
+            #     {
+            #         "name": self.current_names[0]
+            #     },
+            # )
+            return self.end_session(dialog="cant.find.device")
+        else:
+            dialog = (
+                "renamed.device",
+                {
+                    "old_name": self.current_names[0],
+                    "new_name": self.current_names[1]
+                }
+            )
+            return self.end_session(dialog=dialog)
         
     def _rename(self):
         self.log.debug("Renaming")
@@ -511,22 +527,9 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Found? {device_found}")
         if not device_found:
             self.log.debug(f"Couldn't find a device by that name. {self.current_names[0]}")
-            # dialog = (
-            #     "cant.find.device.name",
-            #     {
-            #         "name": self.current_names[0]
-            #     },
-            # )
-            return self.end_session(dialog="cant.find.device")
+            return False
         else:
-            dialog = (
-                "renamed.device",
-                {
-                    "old_name": self.current_names[0],
-                    "new_name": self.current_names[1]
-                }
-            )
-            return self.end_session(dialog=dialog)
+            return True
 
 
     def _extract_names(self, utterance):
@@ -568,7 +571,24 @@ class DeakoSkill(MycroftSkill):
             )
 
         if len(self.current_names) == 2:
-            self._rename()
+            if self._rename():
+                # dialog = (
+                #     "cant.find.device.name",
+                #     {
+                #         "name": self.current_names[0]
+                #     },
+                # )
+                return self.end_session(dialog="cant.find.device")
+            else:
+                dialog = (
+                    "renamed.device",
+                    {
+                        "old_name": self.current_names[0],
+                        "new_name": self.current_names[1]
+                    }
+                )
+                return self.end_session(dialog=dialog)
+
         #     dialog = (
         #         "renamed.device",
         #         {
