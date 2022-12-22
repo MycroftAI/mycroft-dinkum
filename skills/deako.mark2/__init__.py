@@ -571,7 +571,8 @@ class DeakoSkill(MycroftSkill):
             )
 
         if len(self.current_names) == 2:
-            if self._rename():
+            result = self._rename()
+            if not result:
                 # dialog = (
                 #     "cant.find.device.name",
                 #     {
