@@ -511,13 +511,13 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Found? {device_found}")
         if not device_found:
             self.log.debug(f"Couldn't find a device by that name. {self.current_names[0]}")
-            dialog = (
-                "cant.find.device.name",
-                {
-                    "name": self.current_names[0]
-                },
-            )
-            return self.end_session(dialog=dialog)
+            # dialog = (
+            #     "cant.find.device.name",
+            #     {
+            #         "name": self.current_names[0]
+            #     },
+            # )
+            return self.end_session(dialog="cant.find.device")
         else:
             dialog = (
                 "renamed.device",
