@@ -458,6 +458,19 @@ class DeakoSkill(MycroftSkill):
         utterance = message.data.get("utterance", "").lower().strip()
 
         self.log.debug(f"Utterance: {utterance}")
+
+        found = list()
+        for name in self.stt_vocab:
+            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
+        self.log.debug(f"Found namnes: {found}")
+
+        if not found:
+            return self.continue_session(
+                dialog="what.old.new.name",
+                expect_response=True,
+                state={"number_of_names": 2},
+            )
+
         # Populates self.current_names
         # self.raw_utterance(
         #     utterance,
@@ -466,7 +479,7 @@ class DeakoSkill(MycroftSkill):
         #     }
         # )
 
-        self.ask_for_names(utterance)
+        # self.ask_for_names(utterance)
         self.log.debug(f"Names found: {self.current_names}")
 
         # Now we should have everything needed.
@@ -501,32 +514,38 @@ class DeakoSkill(MycroftSkill):
         )
 
     def raw_utterance(
-        self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+            self, utterance: Optional[str], state: Optional[Dict[str, Any]]
     ) -> Optional[Message]:
-        """Callback when expect_response=True in continue_session
+        self.log.debug(f"Raw utterance: {utterance} with state {state}")
 
-        Unlike _find_candidates, which looks only for the list
-        of existing device names, this looks for any name that
-        the local STT can currently recognize.
-        """
-        dialog = None
-        self.log.debug(f"Processing follow up utterance: {utterance} with state {state}")
-        found = list()
-        for name in self.stt_vocab:
-            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
-        self.log.debug(f"Found namnes: {found}")
-        # Sort these based on start index.
-        # TODO: Use end value to find overlapping matches.
-        self.current_names = [
-            name[0] for name in sorted(found, key=lambda x: x[1])
-        ]
 
-        self.log.debug(f"Follow up utterance: {utterance}, state: {state}, current names found: {self.current_names}")
-        self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
-        if state["number_of_names"] >= len(self.current_names):
-            dialog = "need.more.names"
-            return self.end_session(dialog=dialog)
-        return self.end_session()
+    # def raw_utterance(
+    #     self, utterance: Optional[str], state: Optional[Dict[str, Any]] = None
+    # ) -> Optional[Message]:
+    #     """Callback when expect_response=True in continue_session
+    #
+    #     Unlike _find_candidates, which looks only for the list
+    #     of existing device names, this looks for any name that
+    #     the local STT can currently recognize.
+    #     """
+    #     dialog = None
+    #     self.log.debug(f"Processing follow up utterance: {utterance} with state {state}")
+    #     found = list()
+    #     for name in self.stt_vocab:
+    #         found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
+    #     self.log.debug(f"Found namnes: {found}")
+    #     # Sort these based on start index.
+    #     # TODO: Use end value to find overlapping matches.
+    #     self.current_names = [
+    #         name[0] for name in sorted(found, key=lambda x: x[1])
+    #     ]
+    #
+    #     self.log.debug(f"Follow up utterance: {utterance}, state: {state}, current names found: {self.current_names}")
+    #     self.log.debug(f'len(self.current_names): {len(self.current_names)} - state["number_of_names"]: {state["number_of_names"]} = {len(self.current_names) >= state["number_of_names"]}')
+    #     if state["number_of_names"] >= len(self.current_names):
+    #         dialog = "need.more.names"
+    #         return self.end_session(dialog=dialog)
+    #     return self.end_session()
 
     @intent_handler(
         AdaptIntent("SpeakDeviceNames")
