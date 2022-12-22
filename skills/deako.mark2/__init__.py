@@ -459,32 +459,26 @@ class DeakoSkill(MycroftSkill):
 
         self.log.debug(f"Utterance: {utterance}")
 
-        found = list()
-        for name in self.stt_vocab:
-            found.extend([(m.group(), m.start(), m.end()) for m in re.finditer(name, utterance)])
-        self.log.debug(f"Found namnes: {found}")
+        self._extract_names(utterance)  # Populates self.current_names
 
-        if not found:
+        if not self.current_names:
             return self.continue_session(
                 dialog="what.old.new.name",
                 expect_response=True,
                 state={"number_of_names": 2},
             )
+        elif len(self.current_names) == 1:
+            return self.continue_session(
+                dialog="what.old.new.name",
+                expect_response=True,
+                state={"number_of_names": 1},
+            )
 
-        # Populates self.current_names
-        # self.raw_utterance(
-        #     utterance,
-        #     state={
-        #         "number_of_names": 2
-        #     }
-        # )
-
-        # self.ask_for_names(utterance)
         self.log.debug(f"Names found: {self.current_names}")
 
         # Now we should have everything needed.
         # Make the change.
-        # self._change_device_name(self.current_names[0], self.current_names[1])
+        self._rename()
                 
         return self.end_session(dialog=dialog)
 
@@ -501,12 +495,7 @@ class DeakoSkill(MycroftSkill):
                 # if nothing goes wrong.
                 self._register_last_used_device(device)
 
-    def raw_utterance(
-            self, utterance: Optional[str], state: Optional[Dict[str, Any]]
-    ) -> Optional[Message]:
-        
-        self.log.debug(f"Raw utterance: {utterance} with state {state}")
-        
+    def _extract_names(self, utterance):
         found = list()
 
         for name in self.stt_vocab:
@@ -518,6 +507,14 @@ class DeakoSkill(MycroftSkill):
             name[0] for name in sorted(found, key=lambda x: x[1])
         ])
         self.log.debug(f"Sorted names: {self.current_names}")
+
+    def raw_utterance(
+            self, utterance: Optional[str], state: Optional[Dict[str, Any]]
+    ) -> Optional[Message]:
+        
+        self.log.debug(f"Raw utterance: {utterance} with state {state}")
+
+        self._extract_names(utterance)  # Populates self.current_names
 
         if not self.current_names:
             dialog = "cant.find.device"
