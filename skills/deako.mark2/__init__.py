@@ -472,8 +472,14 @@ class DeakoSkill(MycroftSkill):
                 state={"number_of_names": 2},
             )
         elif len(self.current_names) == 1:
+            dialog = (
+                "what.new.name",
+                {
+                    "old_name": self.current_names[0]
+                }
+            )
             return self.continue_session(
-                dialog="what.old.new.name",
+                dialog=dialog,
                 expect_response=True,
                 state={"number_of_names": 1},
             )
@@ -483,18 +489,16 @@ class DeakoSkill(MycroftSkill):
         # Now we should have everything needed.
         # Make the change.
         self._rename()
-        dialog = (
-            "renamed.device",
-            {
-                "old_name": self.current_names[0],
-                "new_name": self.current_names[1]
-            }
-        )
-        return self.end_session(dialog=dialog)
-
+        
     def _rename(self):
+        self.log.debug("Renaming")
+        dialog = None
+        device_found = False
         for device in self.devices:
+            self.log.debug(f"Checking device {device}")
             if device["data"]["name"] == self.current_names[0]:
+                device_found = True
+                self.log.debug("Match found for old device name.")
                 # Place this here first so that we remember the device
                 # requested even if there should be an error.
                 self._register_last_used_device(device)
@@ -504,6 +508,26 @@ class DeakoSkill(MycroftSkill):
                 # Call this again to have the correctly updated version
                 # if nothing goes wrong.
                 self._register_last_used_device(device)
+        self.log.debug(f"Found? {device_found}")
+        if not device_found:
+            self.log.debug(f"Couldn't find a device by that name. {self.current_names[0]}")
+            dialog = (
+                "cant.find.device.name",
+                {
+                    "name": self.current_names[0]
+                },
+            )
+            return self.end_session(dialog=dialog)
+        else:
+            dialog = (
+                "renamed.device",
+                {
+                    "old_name": self.current_names[0],
+                    "new_name": self.current_names[1]
+                }
+            )
+            return self.end_session(dialog=dialog)
+
 
     def _extract_names(self, utterance):
         found = list()
@@ -545,14 +569,14 @@ class DeakoSkill(MycroftSkill):
 
         if len(self.current_names) == 2:
             self._rename()
-            dialog = (
-                "renamed.device",
-                {
-                    "old_name": self.current_names[0],
-                    "new_name": self.current_names[1]
-                }
-            )
-            return self.end_session(dialog=dialog)
+        #     dialog = (
+        #         "renamed.device",
+        #         {
+        #             "old_name": self.current_names[0],
+        #             "new_name": self.current_names[1]
+        #         }
+        #     )
+        #     return self.end_session(dialog=dialog)
  
 
     # def raw_utterance(
