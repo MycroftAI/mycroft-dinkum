@@ -240,17 +240,21 @@ class DeakoSkill(MycroftSkill):
         return self._update_names(result_dicts)
 
     def _update_names(self, new_result_dicts):
+        self.log.debug("Updating names.")
         # Since devices can be renamed, we need to keep them when
         # we get a new device list.
         # First, the api allows caps in names, which we never want.
         for i, new_result in enumerate(new_result_dicts):
             new_result_dicts[i]["data"]["name"] = new_result["data"]["name"].lower()
+        self.log.debug(f"Names lowercased {new_result_dicts}")
         if not self.devices:
             return new_result_dicts
         for i, new_result in enumerate(new_result_dicts):
             for old_device in self.devices:
                 if new_result["data"]["uuid"] == old_device["data"]["uuid"]:
+                    self.log.debug(f"New result {new_result}\nmatches old: {old_device}")
                     new_result_dicts[i]["data"]["name"] == old_device["data"]["name"]
+                    self.log.debug(f"New result {new_result_dicts}\nmatches old: {self.devices}")
         return new_result_dicts
 
     def change_device_state(self, target: str, power: Optional[bool] = None, dim: Optional[int] = None) -> None:
