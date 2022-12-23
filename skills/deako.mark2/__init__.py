@@ -488,7 +488,7 @@ class DeakoSkill(MycroftSkill):
 
         # Now we should have everything needed.
         # Make the change.
-        if self._rename():
+        if not self._rename():
             # dialog = (
             #     "cant.find.device.name",
             #     {
@@ -543,6 +543,8 @@ class DeakoSkill(MycroftSkill):
         self.current_names.extend([
             name[0] for name in sorted(found, key=lambda x: x[1])
         ])
+        if len(self.current_names) > 2:
+            self.current_names = self.current_names[:2]
         self.log.debug(f"Sorted names: {self.current_names}")
 
     def raw_utterance(
