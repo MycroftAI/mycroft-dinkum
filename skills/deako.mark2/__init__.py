@@ -357,6 +357,7 @@ class DeakoSkill(MycroftSkill):
         power, dim_value = self._extract_power_and_dim(utterance)
 
         # Get all device IDs that are not the last used device ID.
+        self.log.debug(f"Last used device is: {self.last_used_device}")
         target_ids = [
             device["data"]["uuid"] for device in self.devices
             if device["data"]["uuid"] != self.last_used_device["data"]["uuid"]
@@ -405,6 +406,7 @@ class DeakoSkill(MycroftSkill):
             return self.end_session(dialog=dialog)
 
         self._register_last_used_device(target_device)
+        self.log.debug(f"Last used device is now: {self.last_used_device}")
         self.change_device_state(target_id, power, dim_value)
         # We expect two messages from the api. First a confirmation,
         # then a message indicating that the event has taken place.
