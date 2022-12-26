@@ -313,16 +313,17 @@ class DeakoSkill(MycroftSkill):
 
     # Intent handlers. ~~~~~~~~~~~~~~~~
 
-    def handle_change_multi_device_state(self, utterance):
+    def change_multi_device_state(self, utterance, target_ids=None, power=None, dim_value=None):
         """
         We should be able to handle multiple switches with one
         command. For now, since we have no access to "zones", i.e.,
-        arbitrary collections of switches, all we can do is affect
-        all switches.
+        arbitrary collections of switches, we can affect all swtiches
+        at once, or we can affect the complement of a previously
+        selected switch.
         """
         dialog = None
-
-        target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
+        if not all([target_ids, power, dim_value]):
+            target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
 
         if not target_ids:
             dialog = "cant.find.device"
@@ -339,6 +340,36 @@ class DeakoSkill(MycroftSkill):
 
         return self.end_session(
             dialog=dialog
+        )
+
+    def change_other_device_state(self, utterance):
+        """
+        We should now have a request to turn "other" switches on
+        or off (or dim). We'll check which state we are changing to,
+        which device(s) -- TODO: more than one to be implemented --
+        were used last, and apply the change to all other devices.
+        """
+        power = None
+        dim_value = None
+        dialog = None
+
+        # Get state values
+        power, dim_value = self._extract_power_and_dim(utterance)
+
+        # Get all device IDs that are not the last used device ID.
+        target_ids = [
+            device["data"]["uuid"] for device in self.devices
+            if device["data"]["uuid"] != self.last_used_device["data"]["uuid"]
+        ]
+        if not target_ids:
+            dialog = "cant.find.device"
+            self.end_session(dialog=dialog)
+
+        self.change_multi_device_state(
+            utterance,
+            target_ids=target_ids,
+            power=power,
+            dim_value=dim_value
         )
 
     @intent_handler(
@@ -361,7 +392,10 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Utterance: {utterance}")
         for word in utterance.split(" "):
             if word in self.quantifiers:
-                self.handle_change_multi_device_state(utterance)
+                if "other" in utterance:
+                    self.change_other_device_state(utterance)
+                else:
+                    self.change_multi_device_state(utterance)
                 return None
 
         target_id, power, dim_value, target_device = self._parse_utterance(utterance)
