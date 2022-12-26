@@ -253,7 +253,8 @@ class DeakoSkill(MycroftSkill):
             for old_device in self.devices:
                 if new_result["data"]["uuid"] == old_device["data"]["uuid"]:
                     self.log.debug(f"New result {new_result}\nmatches old: {old_device}")
-                    new_result_dicts[i]["data"]["name"] == old_device["data"]["name"]
+                    new_result_dicts[i]["data"]["deako_name"] = new_result_dicts[i]["data"]["name"]
+                    new_result_dicts[i]["data"]["name"] = old_device["data"]["name"]
                     self.log.debug(f"New result {new_result_dicts}\nmatches old: {self.devices}")
         return new_result_dicts
 
