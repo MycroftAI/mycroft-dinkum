@@ -331,6 +331,10 @@ class DeakoSkill(MycroftSkill):
         arbitrary collections of switches, we can affect all swtiches
         at once, or we can affect the complement of a previously
         selected switch.
+
+        Since most often people probably use such commands for lights,
+        we will restrict the scope of these to not being appliances
+        whenever "light(s)" shows up in the utterance.
         """
         dialog = None
 
@@ -469,14 +473,19 @@ class DeakoSkill(MycroftSkill):
             dialog=dialog
         )
 
-
     def _parse_utterance_multiple(self, utterance):
         power, dim_value = self._extract_power_and_dim(utterance)
         target_ids = list()
         target_devices = list()
-        for device in self.devices:
-            target_ids.append(device["data"]["uuid"])
-            target_devices.append(device)
+        if "light" in utterance or "lamp" in utterance:
+            for device in self.devices:
+                if device["data"]["name"] not in self.appliances:
+                    target_ids.append(device["data"]["uuid"])
+                    target_devices.append(device)
+        else:
+            for device in self.devices:
+                target_ids.append(device["data"]["uuid"])
+                target_devices.append(device)
         return target_ids, power, dim_value, target_devices
 
     @intent_handler(
