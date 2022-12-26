@@ -322,8 +322,12 @@ class DeakoSkill(MycroftSkill):
         selected switch.
         """
         dialog = None
+        self.log.debug(f"Target_ids: {target_ids}")
+        self.log.debug(f"Power: {power}")
         if not all([target_ids, power]):
             target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
+        self.log.debug(f"Target_ids: {target_ids}")
+        self.log.debug(f"Power: {power}")
 
         if not target_ids:
             dialog = "cant.find.device"
@@ -366,6 +370,8 @@ class DeakoSkill(MycroftSkill):
             dialog = "cant.find.device"
             self.end_session(dialog=dialog)
 
+        self.log.debug(f"Target_ids: {target_ids}")
+        self.log.debug(f"Power: {power}")
         self.change_multi_device_state(
             utterance,
             target_ids=target_ids,
