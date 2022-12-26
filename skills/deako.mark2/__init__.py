@@ -84,6 +84,15 @@ CHANGE_DEVICE_STATE = {
     }
 }
 
+SCENE_TYPES = {
+    "night mode": "off",
+    "good night": "off",
+    "lights out": "off",
+    "wind down mode": "dim",
+    "wake up mode": "dim",
+    "morning mode": "on",
+}
+
 # Type alias for the command / response dicts.
 Device_message = Dict[str, Union[str, Dict[str, Union[str, bool, int]]]]
 
@@ -112,6 +121,7 @@ class DeakoSkill(MycroftSkill):
         self.stt_vocab = None
         self.current_names = None
         self.last_used_device = None
+        self.scenes = None
 
         # Pronouns, determiners, etc.
         self.pronouns = None
@@ -141,6 +151,7 @@ class DeakoSkill(MycroftSkill):
         self.appliances = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Appliances.voc"))
         self.lights = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Lights.voc"))
         self.names = self.rooms + self.furniture + self.appliances + self.lights
+        self.scenes = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Scenes.voc"))
         # Names can potentially be more than one word and can overlap. We want to get
         # the longest matching name so that we dont erroneously have a partial match.
         self.names.sort(key=len, reverse=True)
@@ -372,6 +383,44 @@ class DeakoSkill(MycroftSkill):
             power=power,
             dim_value=dim_value
         )
+
+    @intent_handler(
+        AdaptIntent("HandleScenes")
+        .one_of("Scenes")
+    )
+    def handle_scene(self, message):
+        dialog = None
+        power = None
+        dim_value = None
+
+        utterance = message.data.get("utterance", "").lower().strip()
+        scene_name = str()
+        for scene in self.scenes:
+            if scene in utterance:
+                scene_name = scene
+        # For now scenes are assumed to only be about lights, not
+        # appliances. For instance, you wouldn't necessarily want
+        # "morning mode" to turn on a washing machine or all the
+        # fans in a house. Ultimately this will all be configurable,
+        # but for now we'll make this assumption.
+        target_ids = [
+            device["data"]["uuid"] for device in self.devices
+            if device["data"]["name"] not in self.appliances
+        ]
+        if SCENE_TYPES[scene_name] == "off":
+            power = False
+        elif SCENE_TYPES[scene_name] == "on":
+            power = True
+        elif SCENE_TYPES[scene_name] == "dim":
+            power = True
+            # This will also ultimately be configurable, of course.
+            dim_value = 50
+        else:
+            # This shouldn't happen.
+            pass
+        
+        self.change_multi_device_state(self, utterance, target_ids=target_ids, power=power, dim_value=dim_value)
+
 
     @intent_handler(
         AdaptIntent("SwitchStateChange")
