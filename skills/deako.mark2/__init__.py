@@ -390,12 +390,12 @@ class DeakoSkill(MycroftSkill):
 
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Utterance: {utterance}")
+        if "other" in utterance:
+            self.change_other_device_state(utterance)
+            return None
         for word in utterance.split(" "):
             if word in self.quantifiers:
-                if "other" in utterance:
-                    self.change_other_device_state(utterance)
-                else:
-                    self.change_multi_device_state(utterance)
+                self.change_multi_device_state(utterance)
                 return None
 
         target_id, power, dim_value, target_device = self._parse_utterance(utterance)
