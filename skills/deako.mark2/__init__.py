@@ -378,7 +378,7 @@ class DeakoSkill(MycroftSkill):
             self.end_session(dialog=dialog)
 
         self.change_multi_device_state(
-            utterance,
+            utterance=utterance,
             target_ids=target_ids,
             power=power,
             dim_value=dim_value
@@ -419,7 +419,7 @@ class DeakoSkill(MycroftSkill):
             # This shouldn't happen.
             pass
         
-        self.change_multi_device_state(self, utterance, target_ids=target_ids, power=power, dim_value=dim_value)
+        self.change_multi_device_state(utterance=utterance, target_ids=target_ids, power=power, dim_value=dim_value)
 
 
     @intent_handler(
