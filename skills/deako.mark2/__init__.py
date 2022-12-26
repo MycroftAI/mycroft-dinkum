@@ -322,7 +322,7 @@ class DeakoSkill(MycroftSkill):
         selected switch.
         """
         dialog = None
-        if not all([target_ids, power, dim_value]):
+        if not all([target_ids, power]):
             target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
 
         if not target_ids:
