@@ -547,20 +547,33 @@ class DeakoSkill(MycroftSkill):
 
     @intent_handler(
         AdaptIntent("ChangeDeviceName")
-        .("Change")
-        .one_of("Name", "Furniture", "Appliances", "Rooms")
+        .required("Change")
+        .one_of("Name", "Furniture", "Appliances", "Rooms", "Pronouns")
     )
     def handle_change_device_name(self, message):
         dialog = None
+        pronoun = None
         self.current_names = list()
-        # self.emit_start_session(dialog=dialog)
+
         utterance = message.data.get("utterance", "").lower().strip()
 
         self.log.debug(f"Utterance: {utterance}")
 
         self._extract_names(utterance)  # Populates self.current_names
+        for word in utterance.split(" "):
+            if word in self.pronouns:
+                pronoun = word
+                continue
 
-        if not self.current_names:
+        if pronoun and self.current_names:
+            # We have a special case where the user
+            # is assumed to be referring to a device
+            # which they just used, e.g.: "Name this
+            # switch kitchen counter light
+            self.log.debug(f"Names found: {self.current_names}")
+            self.current_names.insert(0, self.last_used_device["data"]["name"])
+            
+        elif not self.current_names:
             return self.continue_session(
                 dialog="what.old.new.name",
                 expect_response=True,
@@ -600,7 +613,7 @@ class DeakoSkill(MycroftSkill):
                 }
             )
             return self.end_session(dialog=dialog)
-        
+
     def _rename(self):
         self.log.debug("Renaming")
         dialog = None
