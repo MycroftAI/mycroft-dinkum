@@ -547,7 +547,7 @@ class DeakoSkill(MycroftSkill):
 
     @intent_handler(
         AdaptIntent("ChangeDeviceName")
-        .required("Change")
+        .require("Change")
         .one_of("Name", "Furniture", "Appliances", "Rooms", "Pronouns")
     )
     def handle_change_device_name(self, message):
