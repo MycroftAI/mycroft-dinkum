@@ -597,6 +597,7 @@ class DeakoSkill(MycroftSkill):
             # is assumed to be referring to a device
             # which they just used, e.g.: "Name this
             # switch kitchen counter light
+            self.read_result(flush=True)
             self.log.debug(f"Names found: {self.current_names}")
             self.current_names.insert(0, self.last_used_device["data"]["name"])
 
