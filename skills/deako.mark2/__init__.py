@@ -342,7 +342,7 @@ class DeakoSkill(MycroftSkill):
                     break
             if last_id:
                 for device in self.devices:
-                    if device["data"]["uuid"] == last_id
+                    if device["data"]["uuid"] == last_id:
                         self._register_last_used_device(device)
                         break
         return output
