@@ -242,13 +242,16 @@ class DeakoSkill(MycroftSkill):
             # Things didn't work.
             dialog = "cant.find.device"
             return self.end_session(dialog=dialog)
-        result_dicts = [
-            json.loads(result) for result in results.strip().split("\n")
-        ]
+        result_dicts = self._decode_results
         self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
         return self._update_names(result_dicts)
+
+    def _decode_results(self, results):
+        return [
+            json.loads(result) for result in results.strip().split("\n")
+        ]
 
     def _update_names(self, new_result_dicts):
         self.log.debug("Updating names.")
@@ -320,6 +323,28 @@ class DeakoSkill(MycroftSkill):
             i -= 1
         tries = 300000 - i
         self.log.info(f"Tried read {tries}")
+        if flush:
+            # In this case we are reading in any
+            # event msgs that can accumulate because
+            # of physical button presses, or changes
+            # made from phone app (presumably).
+            # These should count as the last used
+            # device.
+            last_id = None
+            results_dicts = self._decode_results(output)
+            # We want the latest event, if there are
+            # multiple. We assume the latest is the
+            # last that appears. TODO: use timecodes instead.
+            results_dicts.reverse()
+            for results_dict in results_dicts:
+                if results_dict["type"] == "EVENT":
+                    last_id = results_dict["data"]["target"]
+                    break
+            if last_id:
+                for device in self.devices:
+                    if device["data"]["uuid"] == last_id
+                        self._register_last_used_device(device)
+                        break
         return output
 
     # Intent handlers. ~~~~~~~~~~~~~~~~
@@ -572,7 +597,7 @@ class DeakoSkill(MycroftSkill):
             # switch kitchen counter light
             self.log.debug(f"Names found: {self.current_names}")
             self.current_names.insert(0, self.last_used_device["data"]["name"])
-            
+
         elif not self.current_names:
             return self.continue_session(
                 dialog="what.old.new.name",
