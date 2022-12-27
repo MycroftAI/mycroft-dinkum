@@ -242,7 +242,7 @@ class DeakoSkill(MycroftSkill):
             # Things didn't work.
             dialog = "cant.find.device"
             return self.end_session(dialog=dialog)
-        result_dicts = self._decode_results
+        result_dicts = self._decode_results(results)
         self.log.info(f"result_dicts: {result_dicts}")
         confirm_message = result_dicts.pop(0)
         self.log.info(f'{confirm_message["data"]["number_of_devices"]} devices found.')
@@ -331,13 +331,12 @@ class DeakoSkill(MycroftSkill):
             # These should count as the last used
             # device.
             last_id = None
+            if not output:
+                return output 
             results_dicts = self._decode_results(output)
             # We want the latest event, if there are
             # multiple. We assume the latest is the
-            # last that appears. TODO: use timecodes instead.
-            self.log.debug(f"Results: {results_dicts}")
-            if not results_dicts:
-                return output
+            # last that appears. TODO: use timecodes instead. 
             results_dicts.reverse()
             for results_dict in results_dicts:
                 if results_dict["type"] == "EVENT":
