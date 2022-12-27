@@ -335,6 +335,8 @@ class DeakoSkill(MycroftSkill):
             # We want the latest event, if there are
             # multiple. We assume the latest is the
             # last that appears. TODO: use timecodes instead.
+            if not results_dicts:
+                return output
             results_dicts.reverse()
             for results_dict in results_dicts:
                 if results_dict["type"] == "EVENT":
