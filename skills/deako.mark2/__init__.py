@@ -464,6 +464,13 @@ class DeakoSkill(MycroftSkill):
         
         self.change_multi_device_state(utterance=utterance, target_ids=target_ids, power=power, dim_value=dim_value)
 
+    @intent_handler(
+        AdaptIntent("ScheduleStateChange")
+        .one_of("Turn", "Dim")
+        .require("Schedule")
+    )
+    def handle_schedule_state_change(self, message):
+        pass
 
     @intent_handler(
         AdaptIntent("SwitchStateChange")
