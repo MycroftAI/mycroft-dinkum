@@ -476,12 +476,15 @@ class DeakoSkill(MycroftSkill):
         E.g.:
             "Turn on desk light."
         """
-        dialog = None
         self.current_names = list()
 
         self.log.info("Deako skill handler triggered.")
 
         utterance = message.data.get("utterance", "").lower().strip()
+
+    def _prepare_change_device_state(self, utterance):
+        dialog = None
+
         self.log.debug(f"Utterance: {utterance}")
         if "other" in utterance:
             self.change_other_device_state(utterance)
@@ -509,9 +512,15 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Confirmation: {conf_msg}")
         self.log.debug(f"Event: {event_msg}")
 
-        return self.end_session(
-            dialog=dialog
-        )
+        if not dim_value or "more" in utterance:
+            # Very hacky condition, to be improved.
+            return self.end_session(
+                dialog=dialog
+            )
+        else:
+            # If a dim request, keep it open for a few seconds
+            # for followup.
+            self.bus.emit(self.continue_session(expect_response=True))
 
     def _set_default_dim_value(self, target_id):
         selected_dim_value = None
@@ -730,9 +739,13 @@ class DeakoSkill(MycroftSkill):
             self, utterance: Optional[str], state: Optional[Dict[str, Any]]
     ) -> Optional[Message]:
         
-        self.log.debug(f"Raw utterance: {utterance} with state {state}")
+        self.log.debug(f"raw utterance: {utterance} with state {state}")
 
-        self._extract_names(utterance)  # Populates self.current_names
+        self._extract_names(utterance)  # populates self.current_names
+
+        # Super hacky just to get it working.
+        if "dim it more" in utterance:
+            self._prepare_change_device_state(utterance)
 
         if not self.current_names:
             dialog = "cant.find.device"
@@ -744,10 +757,10 @@ class DeakoSkill(MycroftSkill):
                 {
                     "old_name": self.current_names[0],
                 }
-            )            
+            )
             return self.continue_session(
                 dialog=dialog,
-                expect_response=True,
+                expect_response=true,
                 state={"number_of_names": 1},
             )
 
