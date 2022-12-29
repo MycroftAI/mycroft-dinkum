@@ -93,6 +93,8 @@ SCENE_TYPES = {
     "morning mode": "on",
 }
 
+DIM_DEFAULTS = [70, 30]
+
 # Type alias for the command / response dicts.
 Device_message = Dict[str, Union[str, Dict[str, Union[str, bool, int]]]]
 
@@ -186,6 +188,16 @@ class DeakoSkill(MycroftSkill):
             term for term in self.stt_vocab
             if term not in stop_names
         ]
+        # Purely as a kludge, because Grokotron randomly errors out if certain
+        # things are added to the slots lists which these are based on, we need to 
+        # add at least one term.
+        # Until we can resolve these errors, we will undoubtedly have more to 
+        # add here.
+        # Until then, can can consider combining lists here and including
+        # in the stt vocab. For instance, combine room and furniture lists
+        # to make items like "kitchen counter" or "livingroom t.v.".
+        # TODO: Until we resolve the errors, do the above.
+        self.stt_vocab.append("kitchen counter")
 
         # Get states.
         self.percents = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Percent.voc"))
@@ -487,6 +499,7 @@ class DeakoSkill(MycroftSkill):
 
         self._register_last_used_device(target_device)
         self.log.debug(f"Last used device is now: {self.last_used_device}")
+
         self.change_device_state(target_id, power, dim_value)
         # We expect two messages from the api. First a confirmation,
         # then a message indicating that the event has taken place.
@@ -499,6 +512,21 @@ class DeakoSkill(MycroftSkill):
         return self.end_session(
             dialog=dialog
         )
+
+    def _set_default_dim_value(self, target_id):
+        selected_dim_value = None
+
+        # The device list might have outdated dim values, so update now.
+        self.devices = self.get_device_list()
+        for device in self.devices:
+            if device["data"]["uuid"] == target_id:
+                if DIM_DEFAULTS[0] < device["data"]["state"]["dim"]:
+                    selected_dim_value = DIM_DEFAULTS[0]
+                elif DIM_DEFAULTS[1] < device["data"]["state"]["dim"]:
+                    selected_dim_value = DIM_DEFAULTS[1]
+                else:
+                    selected_dim_value = 5
+        return selected_dim_value
 
     def _parse_utterance_multiple(self, utterance):
         power, dim_value = self._extract_power_and_dim(utterance)
@@ -679,6 +707,21 @@ class DeakoSkill(MycroftSkill):
         self.current_names.extend([
             name[0] for name in sorted(found, key=lambda x: x[1])
         ])
+
+        # embedded_indexes = list()
+        # for i, current_name in self.current_names:
+        #     for j, other_current_name in self.current_names:
+        #         if i != j and current_name in other_current_name:
+        #             embedded_indexes.append(i)
+        # for embedded_indexes:
+        
+        for i, current_name in enumerate(self.current_names):
+            if ' ' in current_name:
+                name_parts = current_name.split(" ")
+                for name_part in name_parts:
+                    if name_part in self.current_names:
+                        self.current_names.remove(name_part)
+        
         if len(self.current_names) > 2:
             self.current_names = self.current_names[:2]
         self.log.debug(f"Sorted names: {self.current_names}")
@@ -917,12 +960,12 @@ class DeakoSkill(MycroftSkill):
 
         target_id = target_device["data"]["uuid"]
 
-        power, dim_value = self._extract_power_and_dim(utterance)
+        power, dim_value = self._extract_power_and_dim(utterance, target_id)
 
         # target_id = named_device["data"]["uuid"]
         return target_id, power, dim_value, target_device
 
-    def _extract_power_and_dim(self, utterance):
+    def _extract_power_and_dim(self, utterance, target_id):
         power = None
         dim_value = None
 
@@ -940,10 +983,10 @@ class DeakoSkill(MycroftSkill):
         if not dim_value:
             for word in utterance.split(" "):
                 if word in self.dim_terms:
-                    # We presumably have an unspecified dim command,
-                    # so use default.
-                    dim_value = 50
-
+                    # We have a default dimming. Since there are two default levels,
+                    # we have to choose the next lowest level based on the current level.
+                    dim_value = self._set_default_dim_value(target_id)
+                    
         return power, dim_value
 
     def _find_target_id(self, device_name):
