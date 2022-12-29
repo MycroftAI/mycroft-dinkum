@@ -481,6 +481,7 @@ class DeakoSkill(MycroftSkill):
         self.log.info("Deako skill handler triggered.")
 
         utterance = message.data.get("utterance", "").lower().strip()
+        self._prepare_change_device_state(utterance)
 
     def _prepare_change_device_state(self, utterance):
         dialog = None
