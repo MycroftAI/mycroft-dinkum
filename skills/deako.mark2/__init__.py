@@ -979,7 +979,7 @@ class DeakoSkill(MycroftSkill):
         # target_id = named_device["data"]["uuid"]
         return target_id, power, dim_value, target_device
 
-    def _extract_power_and_dim(self, utterance, target_id):
+    def _extract_power_and_dim(self, utterance, target_id=None):
         power = None
         dim_value = None
 
@@ -994,7 +994,7 @@ class DeakoSkill(MycroftSkill):
         if not dim_value:
             # Check for fractions or other representations.
             dim_value = self._convert_to_int(utterance)
-        if not dim_value:
+        if not dim_value and target_id:
             for word in utterance.split(" "):
                 if word in self.dim_terms:
                     # We have a default dimming. Since there are two default levels,
