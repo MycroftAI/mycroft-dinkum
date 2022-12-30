@@ -442,6 +442,10 @@ class DeakoSkill(MycroftSkill):
         dim_value = None
 
         utterance = message.data.get("utterance", "").lower().strip()
+
+        # If this is a schedule request, handle it.
+        self._schedule_state_change(utterance, self.handle_scene)
+
         scene_name = str()
         for scene in self.scenes:
             if scene in utterance:
@@ -485,24 +489,16 @@ class DeakoSkill(MycroftSkill):
         self.log.info("Deako skill handler triggered.")
 
         utterance = message.data.get("utterance", "").lower().strip()
+
+        # If this is a schedule request, handle it.
+        self._schedule_state_change(utterance, self.handle_change_device_state)
+
         self._prepare_change_device_state(utterance)
 
     def _prepare_change_device_state(self, utterance):
         dialog = None
 
         self.log.debug(f"Utterance: {utterance}")
-        schedule_time, remaining_utterance = extract_datetime(utterance)
-        if schedule_time:
-            self._schedule_state_change(schedule_time, remaining_utterance)
-            # TODO: Have it speak something.
-            dialog = (
-                "schedule.event",
-                {
-                    "schedule_time": schedule_time,
-                    "remaining_utterance": remaining_utterance,
-                }
-            )
-            return self.end_session(dialog=dialog)
 
         if "other" in utterance:
             self.change_other_device_state(utterance)
@@ -541,16 +537,30 @@ class DeakoSkill(MycroftSkill):
             # for followup.
             self.bus.emit(self.continue_session(expect_response=True))
 
-    def _schedule_state_change(self, schedule_time, remaining_utterance):
-        local_date_time = now_local()
-        if schedule_time > local_date_time:
-            self.log.info(f"Scheduling event on {schedule_time}: {remaining_utterance}")
-            self.schedule_event(
-                handler=self.handle_change_device_state,
-                when=schedule_time,
-                data={"utterance": remaining_utterance},
-                name="device_state_change",
-            )
+    def _schedule_state_change(self, utterance, handler):
+        dialog = None
+        schedule_time, remaining_utterance = extract_datetime(utterance)
+        if schedule_time:
+            local_date_time = now_local()
+            if schedule_time > local_date_time:
+                self.log.info(f"Scheduling event on {schedule_time}: {remaining_utterance}")
+                self.schedule_event(
+                    handler=handler,
+                    when=schedule_time,
+                    data={"utterance": remaining_utterance},
+                    name="device_state_change",
+                )
+
+                dialog = (
+                    "schedule.event",
+                    {
+                        "schedule_time": schedule_time,
+                        "remaining_utterance": remaining_utterance,
+                    }
+                )
+                return self.end_session(dialog=dialog)
+
+
 
 
     def _set_default_dim_value(self, target_id):
