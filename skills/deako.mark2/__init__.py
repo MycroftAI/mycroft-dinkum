@@ -552,7 +552,7 @@ class DeakoSkill(MycroftSkill):
                 )
 
                 dialog = (
-                    "schedule.event",
+                    "scheduled.event",
                     {
                         "schedule_time": schedule_time,
                         "remaining_utterance": remaining_utterance,
