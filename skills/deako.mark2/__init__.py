@@ -50,6 +50,9 @@ from mycroft.messagebus.message import Message
 from mycroft.skills import MycroftSkill, intent_handler
 from mycroft.skills.intent_service import AdaptIntent
 from mycroft.util.file_utils import resolve_resource_file
+from mycroft.util.format import date_time_format
+from mycroft.util.time import now_local, to_system
+from mycroft.util.parse import extract_datetime
 
 # This is hardcoded here just for testing.
 HOST = "10.0.0.252"
@@ -124,6 +127,7 @@ class DeakoSkill(MycroftSkill):
         self.current_names = None
         self.last_used_device = None
         self.scenes = None
+        self.schedule_words = None
 
         # Pronouns, determiners, etc.
         self.pronouns = None
@@ -154,6 +158,7 @@ class DeakoSkill(MycroftSkill):
         self.lights = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Lights.voc"))
         self.names = self.rooms + self.furniture + self.appliances + self.lights
         self.scenes = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Scenes.voc"))
+        self.schedule_words = self.resources.load_vocabulary_file("Schedule")
         # Names can potentially be more than one word and can overlap. We want to get
         # the longest matching name so that we dont erroneously have a partial match.
         self.names.sort(key=len, reverse=True)
@@ -378,7 +383,7 @@ class DeakoSkill(MycroftSkill):
         dialog = None
 
         if not target_ids:
-            target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
+            target_ids, power, dim_value, target_devices, schedule_time = self._parse_utterance_multiple(utterance)
 
         if not target_ids:
             dialog = "cant.find.device"
@@ -465,14 +470,6 @@ class DeakoSkill(MycroftSkill):
         self.change_multi_device_state(utterance=utterance, target_ids=target_ids, power=power, dim_value=dim_value)
 
     @intent_handler(
-        AdaptIntent("ScheduleStateChange")
-        .one_of("Turn", "Dim")
-        .require("Schedule")
-    )
-    def handle_schedule_state_change(self, message):
-        pass
-
-    @intent_handler(
         AdaptIntent("SwitchStateChange")
         .one_of("Turn", "Dim")
         # .one_of("Power", "Percent", "Fraction", "Dim")
@@ -494,6 +491,19 @@ class DeakoSkill(MycroftSkill):
         dialog = None
 
         self.log.debug(f"Utterance: {utterance}")
+        schedule_time, remaining_utterance = extract_datetime(utterance)
+        if schedule_time:
+            self._schedule_state_change(schedule_time, remaining_utterance)
+            # TODO: Have it speak something.
+            dialog = (
+                "schedule.event",
+                {
+                    "schedule_time": schedule_time,
+                    "remaining_utterance": remaining_utterance,
+                }
+            )
+            return self.end_session(dialog=dialog)
+
         if "other" in utterance:
             self.change_other_device_state(utterance)
             return None
@@ -502,7 +512,8 @@ class DeakoSkill(MycroftSkill):
                 self.change_multi_device_state(utterance)
                 return None
 
-        target_id, power, dim_value, target_device = self._parse_utterance(utterance)
+        target_id, power, dim_value, target_device, schedule_time = self._parse_utterance(utterance)
+
         self.log.debug(f"target_id: {target_id}\npower: {power}\ndim_value: {dim_value}") 
         if not target_id:
             dialog = "cant.find.device"
@@ -521,7 +532,7 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Event: {event_msg}")
 
         if not dim_value or "more" in utterance:
-            # Very hacky condition, to be improved.
+            # TODO: Very hacky condition, to be improved.
             return self.end_session(
                 dialog=dialog
             )
@@ -529,6 +540,18 @@ class DeakoSkill(MycroftSkill):
             # If a dim request, keep it open for a few seconds
             # for followup.
             self.bus.emit(self.continue_session(expect_response=True))
+
+    def _schedule_state_change(self, schedule_time, remaining_utterance):
+        local_date_time = now_local()
+        if schedule_time > local_date_time:
+            self.log.info(f"Scheduling event on {schedule_time}: {remaining_utterance}")
+            self.schedule_event(
+                handler=self.handle_change_device_state,
+                when=schedule_time,
+                data={"utterance": remaining_utterance},
+                name="device_state_change",
+            )
+
 
     def _set_default_dim_value(self, target_id):
         selected_dim_value = None
@@ -711,7 +734,6 @@ class DeakoSkill(MycroftSkill):
             return False
         else:
             return True
-
 
     def _extract_names(self, utterance):
         found = list()
@@ -984,7 +1006,8 @@ class DeakoSkill(MycroftSkill):
         power, dim_value = self._extract_power_and_dim(utterance, target_id)
 
         # target_id = named_device["data"]["uuid"]
-        return target_id, power, dim_value, target_device
+        return target_id, power, dim_value, target_device, schedule_time
+
 
     def _extract_power_and_dim(self, utterance, target_id=None):
         power = None
