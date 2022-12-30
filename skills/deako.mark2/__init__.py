@@ -445,6 +445,7 @@ class DeakoSkill(MycroftSkill):
 
         # If this is a schedule request, handle it.
         if self._schedule_state_change(utterance, self.handle_scene):
+            self.log.debug("Schedule was found, back in handle_scene")
             dialog = (
                 "scheduled.event",
                 {
@@ -452,6 +453,7 @@ class DeakoSkill(MycroftSkill):
                     "remaining_utterance": remaining_utterance,
                 }
             )
+            self.log.debug(f"Dialog is {dialog}, returning end_session.")
             return self.end_session(dialog=dialog)
 
         scene_name = str()
@@ -547,7 +549,9 @@ class DeakoSkill(MycroftSkill):
 
     def _schedule_state_change(self, utterance, handler):
         dialog = None
+        self.log.debug("Looking for schedule request.")
         schedule_time, remaining_utterance = extract_datetime(utterance)
+        self.log.debug(f"Found on {schedule_time}: {remaining_utterance}")
         if schedule_time:
             local_date_time = now_local()
             if schedule_time > local_date_time:
@@ -557,7 +561,8 @@ class DeakoSkill(MycroftSkill):
                     when=schedule_time,
                     data={"utterance": remaining_utterance},
                     name="device_state_change",
-                ) 
+                )
+                self.log.debug("Scheduled.")
 
 
     def _set_default_dim_value(self, target_id):
