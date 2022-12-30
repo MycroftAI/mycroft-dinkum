@@ -444,7 +444,15 @@ class DeakoSkill(MycroftSkill):
         utterance = message.data.get("utterance", "").lower().strip()
 
         # If this is a schedule request, handle it.
-        self._schedule_state_change(utterance, self.handle_scene)
+        if self._schedule_state_change(utterance, self.handle_scene):
+            dialog = (
+                "scheduled.event",
+                {
+                    "schedule_time": schedule_time,
+                    "remaining_utterance": remaining_utterance,
+                }
+            )
+            return self.end_session(dialog=dialog)
 
         scene_name = str()
         for scene in self.scenes:
@@ -549,18 +557,7 @@ class DeakoSkill(MycroftSkill):
                     when=schedule_time,
                     data={"utterance": remaining_utterance},
                     name="device_state_change",
-                )
-
-                dialog = (
-                    "scheduled.event",
-                    {
-                        "schedule_time": schedule_time,
-                        "remaining_utterance": remaining_utterance,
-                    }
-                )
-                return self.end_session(dialog=dialog)
-
-
+                ) 
 
 
     def _set_default_dim_value(self, target_id):
