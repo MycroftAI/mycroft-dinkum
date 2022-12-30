@@ -158,7 +158,7 @@ class DeakoSkill(MycroftSkill):
         self.lights = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Lights.voc"))
         self.names = self.rooms + self.furniture + self.appliances + self.lights
         self.scenes = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Scenes.voc"))
-        self.schedule_words = self.resources.load_vocabulary_file("Schedule")
+        self.schedule_words = self.load_names(Path(self.root_dir).joinpath("locale", "en-us", "vocabulary", "Schedule.voc"))
         # Names can potentially be more than one word and can overlap. We want to get
         # the longest matching name so that we dont erroneously have a partial match.
         self.names.sort(key=len, reverse=True)
@@ -442,19 +442,23 @@ class DeakoSkill(MycroftSkill):
         dim_value = None
 
         utterance = message.data.get("utterance", "").lower().strip()
-
+        self.log.debug(f"Got utterance: {utterance}")
         # If this is a schedule request, handle it.
-        if self._schedule_state_change(utterance, self.handle_scene):
-            self.log.debug("Schedule was found, back in handle_scene")
-            dialog = (
-                "scheduled.event",
-                {
-                    "schedule_time": schedule_time,
-                    "remaining_utterance": remaining_utterance,
-                }
-            )
-            self.log.debug(f"Dialog is {dialog}, returning end_session.")
-            return self.end_session(dialog=dialog)
+        if any(schedule_word in utterance for schedule_word in self.schedule_words):    
+            schedule_time, remaining_utterance = self._schedule_state_change(utterance, self.handle_scene) 
+            hour = None
+            minute = None
+            if schedule_time: 
+                self.log.debug("Schedule was found, back in handle_scene")
+                dialog = (
+                    "scheduled.event",
+                    {
+                        "schedule_time": schedule_time,
+                        "remaining_utterance": remaining_utterance,
+                    }
+                )
+                self.log.debug(f"Dialog is {dialog}, returning end_session.")
+                return self.end_session(dialog=dialog)
 
         scene_name = str()
         for scene in self.scenes:
@@ -551,18 +555,21 @@ class DeakoSkill(MycroftSkill):
         dialog = None
         self.log.debug("Looking for schedule request.")
         schedule_time, remaining_utterance = extract_datetime(utterance)
+        time_float = time.mktime(schedule_time.timetuple())
         self.log.debug(f"Found on {schedule_time}: {remaining_utterance}")
         if schedule_time:
             local_date_time = now_local()
             if schedule_time > local_date_time:
                 self.log.info(f"Scheduling event on {schedule_time}: {remaining_utterance}")
-                self.schedule_event(
+                result = self.schedule_event(
                     handler=handler,
-                    when=schedule_time,
+                    when=to_system(schedule_time),
                     data={"utterance": remaining_utterance},
                     name="device_state_change",
                 )
+                self.log.debug(f"Result: {result}")
                 self.log.debug("Scheduled.")
+                return schedule_time, remaining_utterance
 
 
     def _set_default_dim_value(self, target_id):
