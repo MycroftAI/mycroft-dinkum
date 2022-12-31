@@ -471,10 +471,11 @@ class DeakoSkill(MycroftSkill):
             schedule_time, remaining_utterance = self._schedule_state_change(utterance, self.handle_scene) 
             if schedule_time:
                 self.log.debug("Schedule was found, back in handle_scene")
+                spoken_time = self._format_time_for_speaking(schedule_time)
                 dialog = (
                     "scheduled.event",
                     {
-                        "schedule_time": schedule_time,
+                        "schedule_time": spoken_time,
                         "remaining_utterance": remaining_utterance,
                     }
                 )
