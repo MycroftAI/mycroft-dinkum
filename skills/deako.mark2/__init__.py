@@ -40,7 +40,7 @@ import re
 import json
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Union, Optional, Tuple, Any
 
 # import zeroconf
@@ -439,13 +439,13 @@ class DeakoSkill(MycroftSkill):
         """
         date_and_time_string = ""
         if schedule_time:
-            time_delta = schedule_time - datetime.now()
+            timezone_offset = -6.0  # Pacific Standard Time (UTC−08:00)
+            tzinfo = timezone(timedelta(hours=timezone_offset))
+            time_delta = schedule_time - datetime.now(tzinfo)
             minutes_seconds = divmod(time_delta.total_seconds(), 60)
-            # print('Total difference in minutes: ', minutes[0], 'minutes',
-            #       minutes[1], 'seconds')
-            hours = minutes_seconds[0] // 60
-            if hours > 0:
-                date_and_time_string = f"{hours} hours and {minutes_seconds[0]} minutes"
+            hours_minutes = divmod(minutes_seconds[0], 60)
+            if hours_minutes[0] > 0:
+                date_and_time_string = f"{hours_minutes[0]} hours and {hours_minutes[1]} minutes"
             else:
                 date_and_time_string = f"{minutes_seconds[0]} minutes"
             return date_and_time_string
