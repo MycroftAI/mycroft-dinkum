@@ -40,6 +40,7 @@ import re
 import json
 import time
 from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Union, Optional, Tuple, Any
 
 # import zeroconf
@@ -432,11 +433,33 @@ class DeakoSkill(MycroftSkill):
             dim_value=dim_value
         )
 
+    def _format_time_for_speaking(self, schedule_time):
+        """
+        Turn the date and time into something mycroft can speak.
+        """
+        date_and_time_string = ""
+        if schedule_time:
+            time_delta = schedule_time - datetime.now()
+            minutes_seconds = divmod(time_delta.total_seconds(), 60)
+            # print('Total difference in minutes: ', minutes[0], 'minutes',
+            #       minutes[1], 'seconds')
+            hours = minutes_seconds[0] // 60
+            if hours > 0:
+                date_and_time_string = f"{hours} hours and {minutes_seconds[0]} minutes"
+            else:
+                date_and_time_string = f"{minutes_seconds[0]} minutes"
+            return date_and_time_string
+
     @intent_handler(
         AdaptIntent("HandleScenes")
         .one_of("Scenes")
     )
     def handle_scene(self, message):
+        """
+        TODO: Refactor this so that scenes are handled the same way multiple
+        device commands are, through the change_device_state handler.
+        As of now a bit of this code is duplicated.
+        """
         dialog = None
         power = None
         dim_value = None
@@ -446,9 +469,7 @@ class DeakoSkill(MycroftSkill):
         # If this is a schedule request, handle it.
         if any(schedule_word in utterance for schedule_word in self.schedule_words):    
             schedule_time, remaining_utterance = self._schedule_state_change(utterance, self.handle_scene) 
-            hour = None
-            minute = None
-            if schedule_time: 
+            if schedule_time:
                 self.log.debug("Schedule was found, back in handle_scene")
                 dialog = (
                     "scheduled.event",
@@ -505,7 +526,20 @@ class DeakoSkill(MycroftSkill):
         utterance = message.data.get("utterance", "").lower().strip()
 
         # If this is a schedule request, handle it.
-        self._schedule_state_change(utterance, self.handle_change_device_state)
+        if any(schedule_word in utterance for schedule_word in self.schedule_words):
+            schedule_time, remaining_utterance = self._schedule_state_change(utterance, self.handle_scene)
+            if schedule_time:
+                spoken_time = self._format_time_for_speaking(schedule_time)
+                self.log.debug("Schedule was found, back in handle_scene")
+                dialog = (
+                    "scheduled.event",
+                    {
+                        "schedule_time": spoken_time,
+                        "remaining_utterance": remaining_utterance,
+                    }
+                )
+                self.log.debug(f"Dialog is {dialog}, returning end_session.")
+                return self.end_session(dialog=dialog)
 
         self._prepare_change_device_state(utterance)
 
@@ -550,6 +584,7 @@ class DeakoSkill(MycroftSkill):
             # If a dim request, keep it open for a few seconds
             # for followup.
             self.bus.emit(self.continue_session(expect_response=True))
+
 
     def _schedule_state_change(self, utterance, handler):
         dialog = None
