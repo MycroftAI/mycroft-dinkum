@@ -430,7 +430,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         tags = []
         confidence = 0.0
         stream_uri = ""
-        
+
         # "Play music" is a special case, an intent clash.
         # In order to allow local music to have preference over
         # the radio in cases where local music is present (handled
@@ -443,7 +443,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         # match level directly without having to check the particular
         # phrases here. This is only intended as a first step to test that
         # this will work.
-        if self.current_station and (phrase == "play music" or phrase == "play some music"):
+        self.log.debug(f"Current station: {self.current_station}")
+        if self.current_station and phrase == "music":
             self.log.debug("Generic command.")
             self.log.debug(f"Current station: {self.current_station}")
             match_level = CPSMatchLevel.GENERIC
@@ -451,7 +452,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             confidence = self.current_station.get("confidence", 0.0)
             stream_uri = self.current_station.get("url_resolved", "")
         elif self.current_station:
-            match_level = CPSMatchLevel.GENERIC
+            match_level = CPSMatchLevel.EXACT
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
             stream_uri = self.current_station.get("url_resolved", "")
@@ -481,6 +482,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "tags": tags,
         }
         self.log.error(f"Confidence: {confidence}")
+        self.log.debug(f"Returning: {self.station_name} {match_level} {skill_data}")
         return self.station_name, match_level, skill_data
 
     def CPS_start(self, _, data):

@@ -99,7 +99,7 @@ class PlaybackControlSkill(MycroftSkill):
         self.phrase = message.data["Phrase"]
         self.schedule_event(
             self._play_query_timeout,
-            5,
+            10,
             data={
                 "phrase": self.phrase,
                 "mycroft_session_id": self._mycroft_session_id,
