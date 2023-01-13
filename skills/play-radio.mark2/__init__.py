@@ -444,6 +444,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         # phrases here. This is only intended as a first step to test that
         # this will work.
         if self.current_station and (phrase == "play music" or phrase == "play some music"):
+            self.log.debug("Generic command.")
+            self.log.debug(f"Current station: {self.current_station}")
             match_level = CPSMatchLevel.GENERIC
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
