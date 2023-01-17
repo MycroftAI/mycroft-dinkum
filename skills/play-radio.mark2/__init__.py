@@ -430,7 +430,28 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         tags = []
         confidence = 0.0
         stream_uri = ""
-        if self.current_station:
+
+        # "Play music" is a special case, an intent clash.
+        # In order to allow local music to have preference over
+        # the radio in cases where local music is present (handled
+        # in the play-music or "jukebox" skill), in such cases we
+        # want to return a lower confidence even though we have
+        # selected a genre to play.
+        # TODO: The radio skill should be refactored so we can 
+        # do this more reasonably. It should keep track of the difference
+        # between defaulting to a genre and matching one, and set the 
+        # match level directly without having to check the particular
+        # phrases here. This is only intended as a first step to test that
+        # this will work.
+        self.log.debug(f"Current station: {self.current_station}")
+        if self.current_station and phrase == "music":
+            self.log.debug("Generic command.")
+            self.log.debug(f"Current station: {self.current_station}")
+            match_level = CPSMatchLevel.GENERIC
+            tags = self.current_station.get("tags", [])
+            confidence = self.current_station.get("confidence", 0.0)
+            stream_uri = self.current_station.get("url_resolved", "")
+        elif self.current_station:
             match_level = CPSMatchLevel.EXACT
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
@@ -461,6 +482,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "tags": tags,
         }
         self.log.error(f"Confidence: {confidence}")
+        self.log.debug(f"Returning: {self.station_name} {match_level} {skill_data}")
         return self.station_name, match_level, skill_data
 
     def CPS_start(self, _, data):

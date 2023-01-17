@@ -191,7 +191,15 @@ class LocalMusicSkill(CommonPlaySkill):
             self._mpd_playlist = list(self.mpd_client.search(phrase))
             self.log.debug("Result: %s", self._mpd_playlist)
             if self._mpd_playlist:
+                # We have a match with a particular thing in our library.
                 result = (phrase, CPSMatchLevel.EXACT, {})
+            else:
+                # We have no specific match, but if we have any music at all
+                # we want to return a GENERIC match to CPS.
+                self._mpd_playlist = list(self.mpd_client.random_play())
+                self.log.debug("Generic result: %s", self._mpd_playlist)
+                if self._mpd_playlist:
+                    result = (phrase, CPSMatchLevel.GENERIC, {})
         except Exception:
             self.log.exception("Error searching local music with MPD")
 
