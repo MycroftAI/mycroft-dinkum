@@ -1,3 +1,6 @@
 pyxdg==0.27
 requests==2.27.1
 mycroft-messagebus-client==0.9.4
+google-cloud-speech
+SpeechRecognition
+librosa
