@@ -26,7 +26,6 @@ from requests import HTTPError, RequestException
 
 from io import BytesIO
 
-import librosa
 from speech_recognition import (
     AudioData,
     AudioFile,
