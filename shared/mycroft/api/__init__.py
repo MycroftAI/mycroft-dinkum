@@ -490,7 +490,7 @@ class STTApi(Api):
             )
         except:
             audio_data = self._extract_audio_from_request(audio)
-            return self._call_google_stt(audio_data, language)
+            return {"transcription": self._call_google_stt(audio_data, language)}
 
     def _extract_audio_from_request(self, audio) -> AudioData:
         """Extracts the audio data from the request for use in Google STT API.
