@@ -557,7 +557,7 @@ class DeakoSkill(MycroftSkill):
                 self.change_multi_device_state(utterance)
                 return None
 
-        target_id, power, dim_value, target_device, schedule_time = self._parse_utterance(utterance)
+        target_id, power, dim_value, target_device = self._parse_utterance(utterance)
 
         self.log.debug(f"target_id: {target_id}\npower: {power}\ndim_value: {dim_value}") 
         if not target_id:
@@ -1061,8 +1061,7 @@ class DeakoSkill(MycroftSkill):
         power, dim_value = self._extract_power_and_dim(utterance, target_id)
 
         # target_id = named_device["data"]["uuid"]
-        return target_id, power, dim_value, target_device, schedule_time
-
+        return target_id, power, dim_value, target_device
 
     def _extract_power_and_dim(self, utterance, target_id=None):
         power = None
