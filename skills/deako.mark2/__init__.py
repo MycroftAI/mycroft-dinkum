@@ -847,7 +847,7 @@ class DeakoSkill(MycroftSkill):
             )
             return self.continue_session(
                 dialog=dialog,
-                expect_response=true,
+                expect_response=True,
                 state={"number_of_names": 1},
             )
 
