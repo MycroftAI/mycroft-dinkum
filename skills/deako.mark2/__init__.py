@@ -383,8 +383,10 @@ class DeakoSkill(MycroftSkill):
         """
         dialog = None
 
+        # TODO: Add ability to schedule here like the other ones.
+
         if not target_ids:
-            target_ids, power, dim_value, target_devices, schedule_time = self._parse_utterance_multiple(utterance)
+            target_ids, power, dim_value, target_devices = self._parse_utterance_multiple(utterance)
 
         if not target_ids:
             dialog = "cant.find.device"
