@@ -469,6 +469,8 @@ class DeakoSkill(MycroftSkill):
         utterance = message.data.get("utterance", "").lower().strip()
         self.log.debug(f"Got utterance: {utterance}")
         # If this is a schedule request, handle it.
+        # TODO: This appears several times and needs to be factored into the _schedule_state_change
+        # method so that it returns only the dialog needed to run end_session in here.
         if any(schedule_word in utterance for schedule_word in self.schedule_words):    
             schedule_time, remaining_utterance = self._schedule_state_change(utterance, self.handle_scene) 
             if schedule_time:
@@ -707,6 +709,9 @@ class DeakoSkill(MycroftSkill):
         .one_of("Name", "Furniture", "Appliances", "Rooms", "Pronouns")
     )
     def handle_change_device_name(self, message):
+        # TODO: Currently this doesn't check to see if there is already
+        # a device with the requested name, so rarely it could give more
+        # than one device the same name. Need to fix that.
         dialog = None
         pronoun = None
         self.current_names = list()
