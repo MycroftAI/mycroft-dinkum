@@ -578,15 +578,19 @@ class DeakoSkill(MycroftSkill):
         self.log.debug(f"Confirmation: {conf_msg}")
         self.log.debug(f"Event: {event_msg}")
 
-        if not dim_value or "more" in utterance:
-            # TODO: Very hacky condition, to be improved.
-            return self.end_session(
-                dialog=dialog
-            )
-        else:
+        return self.end_session(
+            dialog=dialog
+        )
+        # Originally wanted to keep the line open for a follow up request,
+        # but this makes it so that mycroft hangs if there is no follow up.
+        # The 'expect response' condition was clearly meant to wait for
+        # answers to direct questions, not for a follow up that may or
+        # may not come. To get that kind of thing working will take some
+        # significant work on the core.
+        # else:
             # If a dim request, keep it open for a few seconds
             # for followup.
-            self.bus.emit(self.continue_session(expect_response=True))
+            # self.bus.emit(self.continue_session(expect_response=True))
 
 
     def _schedule_state_change(self, utterance, handler):
