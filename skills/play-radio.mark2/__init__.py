@@ -229,8 +229,21 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
 
     def setup_for_play(self, utterance):
         try:
+            match_level = None
+            # If this is a generic play request, we want to make
+            # sure the match level is set to generic, otherwise,
+            # by default, it will be set to exact. The only case
+            # where this is an issue is "Play music" because it is
+            # both generic and also has to go through CPS because
+            # it will otherwise collide with the jukebox skill.
+            # Hence we look for an utterance which has been stripped to
+            # just "music".
+            if utterance == "music":
+                match_level = CPSMatchLevel.GENERIC
             self.rs.get_stations(utterance)
             self.current_station = self.rs.get_current_station()
+            # Only relevant when called by CPS match.
+            return match_level
         except GenreTagNotFound:
             self.log.debug("Genre not found exception in setup for play.")
             # Setting to None will cause it to do the right
@@ -424,14 +437,15 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         """
         # Translate match confidence levels to CPSMatchLevels
         self.log.debug("CPS Match Request")
-        self.setup_for_play(phrase)
+        match_level = self.setup_for_play(phrase)   # Will be CPSMatchLevel.GENERIC or None.
 
-        match_level = 0.0
         tags = []
         confidence = 0.0
         stream_uri = ""
+
+        self.log.debug(f"Current station: {self.current_station}")
         if self.current_station:
-            match_level = CPSMatchLevel.EXACT
+            match_level = match_level if match_level else CPSMatchLevel.EXACT
             tags = self.current_station.get("tags", [])
             confidence = self.current_station.get("confidence", 0.0)
             stream_uri = self.current_station.get("url_resolved", "")
@@ -461,6 +475,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             "tags": tags,
         }
         self.log.error(f"Confidence: {confidence}")
+        self.log.debug(f"Returning: {self.station_name} {match_level} {skill_data}")
         return self.station_name, match_level, skill_data
 
     def CPS_start(self, _, data):

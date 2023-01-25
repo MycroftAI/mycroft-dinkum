@@ -1,14 +1,12 @@
 # Mycroft Dinkum
 
-A re-imagining of Mycroft Core 1.
-
+Mycroft Dinkum is a consumer ready version of Mycroft created specifically for the Mark II. It is a substantial refactoring of the Mycroft Core code into what we’ve dubbed Mycroft Dinkum (after the thinkum dinkum in The Moon is a Harsh Mistress). 
 
 ## Why?
 
-The Mark II will release in September 2022, and needs a version of Mycroft that is both stable and maintainable.
+Bugfixes and new features in the existing verions of Mycroft have been difficult due to the highly inter-connected nature of the code base. Doing so required significant breaking changes from previous versions of Mycroft, and we know that those versions are in use by a range of projects. 
 
-Bugfixes and new features in the existing verions of Mycroft have been difficult due to the highly inter-connected nature of the code base. Dinkum splits Core into services, and removes anything that does not support the default skills.
-
+At launch, Dinkum splits [Classic Core](https://github.com/mycroftai/mycroft-core) into services, and removes anything that does not support the default Skills on a Mark II. 
 
 ## Architecture of Dinkum
 
@@ -32,47 +30,10 @@ Dinkum breaks Core into distinct services:
 * messagebus
     * Websocket-based message broadcast
 * skills
-    * Each skill is loaded as a separate service instance
+    * Each Skill is loaded as a separate service instance
 * voice
     * Microphone input, silence detection, speech to text
 
-
----
-
-
-## Sessions
-
-A unique feature of Dinkum is sessions. These are managed by the intent service, and allow for centralized deconfliction of the GUI and TTS systems.
-
-With sessions, skill intent handlers change from:
-
-``` python
-def handle_intent(self):
-    self.speak_dialog("my-dialog", data={"x": 1})
-    self.gui["y"] = 2
-    self.gui.show_page("my-page.qml")
-```
-
-to this:
-
-``` python
-def handle_intent(self):
-    return self.end_session(
-        dialog=("my-dialog", {"x": 1}),
-        gui=("my-page.qml", {"y": 2})
-    )
-```
-
-Rather than executing commands to control the GUI and TTS, the skill is returning a message that expresses what it *wants* to do. The session manager (intent service) can then decide whether or not to do it.
-
-A new session begins when an utterance is received, and is usually ended by a skill's intent handler (`self.end_session()`). When the session is over, the GUI returns to the home screen after all TTS has been spoken.
-
-Exceptions to the default flow include:
-
-* Using `self.continue_session(expect_response=True)` to get a response from the user.
-    * The skill's `raw_utterance` method is called with the utterance
-* Common Query/Play
-    * The parent skill uses `continue_session` and expects the child skill to end it
 
 ---
 
@@ -113,13 +74,13 @@ sudo scripts/generate-systemd-units.py \
         --skill skills/weather.mark2
 ```
 
-will start most of the default services and skills. The `--service` arguments have a priority number that controls the order the services will start. Higher numbers start *later*, and depend on the lower-numbered services. Skills will all start whenever `services/skills` is listed.
+will start most of the default Services and Skills. The `--service` arguments have a priority number that controls the order the services will start. Higher numbers start *later*, and depend on the lower-numbered services. Skills will all start whenever `services/skills` is listed.
 
 After generating systemd units, make sure to `sudo systemctl daemon-reload` and then you can `sudo systemctl start dinkum.target`
 
 All logs go into journalctl, so they can be viewed in realtime with `sudo journalctl -f -xe`
 
-You can also view individual service or skill logs:
+You can also view individual Service or Skill logs:
 
 * `sudo journalctl -f -u dinkum-audio.service`
 * `sudo journalctl -f -u dinkum-skill-homescreen.mark2.service`
@@ -132,11 +93,49 @@ See `dinkum*` in `/etc/systemd/system` for available units. `dinkum.target` is t
 ---
 
 
+## Sessions
+
+A unique feature of Dinkum is sessions. These are managed by the intent service, and allow for centralized deconfliction of the GUI and TTS systems.
+
+With sessions, Skill intent handlers change from:
+
+``` python
+def handle_intent(self):
+    self.speak_dialog("my-dialog", data={"x": 1})
+    self.gui["y"] = 2
+    self.gui.show_page("my-page.qml")
+```
+
+to this:
+
+``` python
+def handle_intent(self):
+    return self.end_session(
+        dialog=("my-dialog", {"x": 1}),
+        gui=("my-page.qml", {"y": 2})
+    )
+```
+
+Rather than executing commands to control the GUI and TTS, the Skill is returning a message that expresses what it *wants* to do. The session manager (intent service) can then decide whether or not to do it.
+
+A new session begins when an utterance is received, and is usually ended by a Skill's intent handler (`self.end_session()`). When the session is over, the GUI returns to the home screen after all TTS has been spoken.
+
+Exceptions to the default flow include:
+
+* Using `self.continue_session(expect_response=True)` to get a response from the user.
+    * The Skill's `raw_utterance` method is called with the utterance
+* Common Query/Play
+    * The parent Skill uses `continue_session` and expects the child Skill to end it
+
+
+---
+
+
 ## Skills
 
-Each skill is loaded and run individually by the skills service. Skills have a `skill_id`, which is always the name of their code directory (e.g., `alarm.mark2` for `skills/alarm.mark2`).
+Each Skill is loaded and run individually by the `skills` Service. Skills have a `skill_id`, which is always the name of their code directory (e.g., `alarm.mark2` for `skills/alarm.mark2`).
 
-The following core skills are available:
+The following core Skills are available:
 
 * alarm.mark2
     * Can set alarms for specific times, or recurring, with an optional name
