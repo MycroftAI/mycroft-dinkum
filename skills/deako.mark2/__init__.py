@@ -438,6 +438,8 @@ class DeakoSkill(MycroftSkill):
     def _format_time_for_speaking(self, schedule_time):
         """
         Turn the date and time into something mycroft can speak.
+        TODO: Turns out this at least in theory duplicates 'nice_duration'
+        in mycroft.util.format.
         """
         date_and_time_string = ""
         if schedule_time:
@@ -446,8 +448,14 @@ class DeakoSkill(MycroftSkill):
             time_delta = schedule_time - datetime.now(tzinfo)
             minutes_seconds = divmod(time_delta.total_seconds(), 60)
             hours_minutes = divmod(minutes_seconds[0], 60)
-            if hours_minutes[0] > 0:
+            if hours_minutes[0] == 1:
+                date_and_time_string = f"{hours_minutes[0]} hour and {hours_minutes[1]} minutes"
+            elif hours_minutes[0] > 0:
                 date_and_time_string = f"{hours_minutes[0]} hours and {hours_minutes[1]} minutes"
+            elif minutes_seconds[0] == 0 or minutes_seconds[0] == 1:
+                # If we ask for one minute, by the time it gets parsed it's less than
+                # one minute already. So we'll round up to one minute in such cases.
+                date_and_time_string = f"one minute"
             else:
                 date_and_time_string = f"{minutes_seconds[0]} minutes"
             return date_and_time_string
