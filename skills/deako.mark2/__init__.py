@@ -220,7 +220,7 @@ class DeakoSkill(MycroftSkill):
         self.log.info(f"Host discovered: {self.host}")
         self.connection = self.connect_to_host()
         self.devices = self.get_device_list()
-        self.log.info(f"self.devices: {self.devices}")
+        self.log.info(f"Deako devices found on startup: {self.devices}")
 
     @staticmethod
     def load_names(file_path):
