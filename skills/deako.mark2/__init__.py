@@ -419,7 +419,7 @@ class DeakoSkill(MycroftSkill):
         # Get state values
         power, dim_value = self._extract_power_and_dim(utterance)
 
-        self.log.debug(f"Devices: {device}")
+        self.log.debug(f"Devices: {self.devices}")
         # Get all device IDs that are not the last used device ID.
         target_ids = [
             device["data"]["uuid"] for device in self.devices
