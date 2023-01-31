@@ -419,6 +419,7 @@ class DeakoSkill(MycroftSkill):
         # Get state values
         power, dim_value = self._extract_power_and_dim(utterance)
 
+        self.log.debug(f"Devices: {device}")
         # Get all device IDs that are not the last used device ID.
         target_ids = [
             device["data"]["uuid"] for device in self.devices
@@ -532,6 +533,7 @@ class DeakoSkill(MycroftSkill):
         E.g.:
             "Turn on desk light."
         """
+        self.log.debug(f"Last used device: {self.last_used_device}")
         self.current_names = list()
 
         self.log.info("Deako skill handler triggered.")
