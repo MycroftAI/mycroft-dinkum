@@ -481,9 +481,18 @@ class ConnectCheck(MycroftSkill):
                 )
             )
         elif server_state == Authentication.SERVER_UNAVAILABLE:
-            # Show failure page and retry
-            self.log.warning("Server was unavailable. Retrying...")
-            self._fail_and_restart()
+            if self.config["enclosure"]["insist_on_selene_pair"]:
+                # Show failure page and retry
+                self.log.warning("Server was unavailable. Retrying...")
+                self._fail_and_restart()
+            else:
+                # Since we are preparing for a post-selene future, we will want
+                # instead to allow Mycroft to skip the rest of the pairing setup
+                # in cases where the selene server is not available.
+                # Call it done.
+                self._state = State.DONE
+                self.bus.emit(Message("server-connect.startup-finished"))
+                self.bus.emit(self.end_session(gui_clear=GuiClear.NEVER))
         else:
             # Paired already, continue with pantacor sync
             self._state = State.SYNC_PANTACOR
