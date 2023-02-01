@@ -24,8 +24,19 @@ from mycroft.util.platform import get_arch
 from mycroft.version import VersionManager
 from requests import HTTPError, RequestException
 
+from io import BytesIO
+
+from speech_recognition import (
+    AudioData,
+    AudioFile,
+    Recognizer,
+    RequestError,
+    UnknownValueError,
+)
+
 LOG = logging.getLogger(__package__)
 UUID = "{MYCROFT_UUID}"
+SAMPLE_RATE = 16000
 
 
 class BackendDown(RequestException):
@@ -448,9 +459,17 @@ class STTApi(Api):
 
     def __init__(self, path):
         super().__init__(path)
+        self.recognizer = Recognizer()
 
-    def stt(self, audio, language, limit):
+    def stt(self, audio, language, limit, direct_ok=True):
         """Web API wrapper for performing Speech to Text (STT)
+
+        First tries to get STT from Google API through Selene API,
+        which provides a layer of anonymity by making the request
+        on the unit's behalf.
+
+        Since Selene will go away some day, this will fallback to
+        directly querying the Google API as long as direct_ok is True.
 
         Args:
             audio (bytes): The recorded audio, as in a FLAC file
@@ -460,15 +479,61 @@ class STTApi(Api):
         Returns:
             str: JSON structure with transcription results
         """
+        try:
+            return self.request(
+                {
+                    "method": "POST",
+                    "headers": {"Content-Type": "audio/x-flac"},
+                    "query": {"lang": language, "limit": limit},
+                    "data": audio,
+                }
+            )
+        except:
+            audio_data = self._extract_audio_from_request(audio)
+            return {"transcription": self._call_google_stt(audio_data, language)}
 
-        return self.request(
-            {
-                "method": "POST",
-                "headers": {"Content-Type": "audio/x-flac"},
-                "query": {"lang": language, "limit": limit},
-                "data": audio,
-            }
-        )
+    def _extract_audio_from_request(self, audio) -> AudioData:
+        """Extracts the audio data from the request for use in Google STT API.
+        We need to replicate the first 16 bytes in the audio due a bug with
+        the Google speech recognition library that removes the first 16 bytes
+        from the flac file we are sending.
+        Returns:
+            Object representing the audio data in a format that can be used to call
+            Google's STT API
+        """
+        # _log.info(f"{self.request_id}: Extracting audio data from request")
+        request_audio = audio[:16] + audio
+        with AudioFile(BytesIO(request_audio)) as source:
+            audio_data = self.recognizer.record(source)
+        return audio_data
+
+    def _call_google_stt(self, audio: AudioData, language: str) -> str:
+        """Uses the audio data from the request to call the Google STT API
+        Args:
+            audio: audio data representing the words spoken by the user
+        Returns:
+            text transcription of the audio data
+        """
+        LOG.info("Transcribing audio with Google STT")
+        # lang = self.request.args["lang"]
+        transcription = None
+        # start_time = datetime.now()
+        try:
+            transcription = self.recognizer.recognize_google(
+                audio,
+                # key=self.config["GOOGLE_STT_KEY"],
+                language=language
+            )
+        except RequestError:
+            LOG.exception("Request to Google STT failed")
+        except UnknownValueError:
+            LOG.exception("STT transcription deemed unintelligible by Google")
+        else:
+            LOG.info(f"Google STT request successful: {transcription}")
+            # self.transcription_success = True
+        # end_time = datetime.now()
+        # self.transcription_duration = (end_time - start_time).total_seconds()
+        return transcription
 
 
 class GeolocationApi(Api):
