@@ -141,22 +141,26 @@ class OpenWeatherMapApi(Api):
         )
         LOG.debug(f"Parameters: {query_parameters}")
         path = "/onecall"
-        api_request = dict(path="/onecall", query=query_parameters)
+        api_request = dict(path="/oncall", query=query_parameters)
         try:
             response = self.request(api_request)
             local_weather = WeatherReport(response)
         except Exception:
             # For whatever reason, we didn't get back a usable response.
             # This is a direct attempt to hit the api as fallback.
-
+            LOG.debug("Trying direct api call for weather.")
             weather_config = Configuration.get().get("openweathermap")
             owm_key = weather_config["key"]
             owm_url = weather_config["url"]
 
-            params = dict(self.request.args)
-            params["APPID"] = owm_key
-            response = requests.get(owm_url + "/" + path, params=params)
-
+            query_parameters["APPID"] = owm_key
+            LOG.debug(f'Calling: {owm_url + "/" + path}')
+            response = requests.get(owm_url + "/" + path, params=query_parameters)
+            LOG.debug(f"Reponse: {response.text}")
+            decoded = json.loads(response.content.decode("utf-8"))
+            LOG.debug(f"Decoded: {decoded}")
+            LOG.debug(f"Type: {type(decoded)}")
             local_weather = WeatherReport(json.loads(response.content.decode("utf-8")))
+            LOG.debug(f"local_weather: {local_weather}")
 
         return local_weather
