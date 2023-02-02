@@ -131,7 +131,7 @@ class OpenWeatherMapApi(Api):
             measurement_system = "imperial"
         else:
             measurement_system = "metric"
-
+        LOG.debug("Entered get_weather_for_coordinates.")
         query_parameters = dict(
             exclude="minutely",
             lang=owm_language(lang),
@@ -141,10 +141,16 @@ class OpenWeatherMapApi(Api):
         )
         LOG.debug(f"Parameters: {query_parameters}")
         path = "/onecall"
-        api_request = dict(path="/oncall", query=query_parameters)
+        api_request = dict(path="/onecall", query=query_parameters)
+        LOG.debug(f"Api_request: {api_request}")
         try:
+            LOG.debug("Normal api call.")
             response = self.request(api_request)
+            LOG.debug(f"Normal response: {response}")
+            LOG.debug(f"Normal response type: {type(response)}")
             local_weather = WeatherReport(response)
+            LOG.debug(f"Normal local weather: {local_weather}")
+            LOG.debug(f"Normal local weather type: {type(local_weather)}")
         except Exception:
             # For whatever reason, we didn't get back a usable response.
             # This is a direct attempt to hit the api as fallback.
@@ -154,13 +160,16 @@ class OpenWeatherMapApi(Api):
             owm_url = weather_config["url"]
 
             query_parameters["APPID"] = owm_key
+            LOG.debug(f'query_parameters: {query_parameters}')
             LOG.debug(f'Calling: {owm_url + "/" + path}')
             response = requests.get(owm_url + "/" + path, params=query_parameters)
             LOG.debug(f"Reponse: {response.text}")
+            LOG.debug(f"Reponse type: {type(response.text)}")
             decoded = json.loads(response.content.decode("utf-8"))
             LOG.debug(f"Decoded: {decoded}")
             LOG.debug(f"Type: {type(decoded)}")
             local_weather = WeatherReport(json.loads(response.content.decode("utf-8")))
             LOG.debug(f"local_weather: {local_weather}")
+            LOG.debug(f"local_weather type: {type(local_weather)}")
 
         return local_weather
