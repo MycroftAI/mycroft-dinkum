@@ -148,6 +148,7 @@ class OpenWeatherMapApi(Api):
             # For whatever reason, we didn't get back a usable response.
             # This is a direct attempt to hit the api as fallback.
             weather_config = Configuration.get().get("openweathermap")
+
             # Yeah we know...
             default_yek = base64.b64decode(b'OWU0NzdkMDk0YmYxOWFiMDE4NzFjOTIwZDI3ZGJiODg=')
             owm_key = weather_config.get("key", default_yek.decode("utf-8"))
