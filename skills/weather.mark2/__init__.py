@@ -87,8 +87,13 @@ class WeatherSkill(MycroftSkill):
         to get it.
         """
         temperature_unit = self.weather_config.temperature_unit
-
+        self.log.debug("Entering handle_get_local_forecast.")
         try:
+            self.log.debug("Calling get_weather_for_coordinates.")
+            self.log.debug(f"temperature_unit {temperature_unit}")
+            self.log.debug(f"self.weather_config.latitude {self.weather_config.latitude}")
+            self.log.debug(f"self.weather_config.longitude {self.weather_config.longitude}")
+            self.log.debug(f"self.lang {self.lang}")
             weather = self.weather_api.get_weather_for_coordinates(
                 temperature_unit,
                 self.weather_config.latitude,

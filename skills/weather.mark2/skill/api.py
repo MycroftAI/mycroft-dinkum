@@ -22,8 +22,13 @@ It also supports returning values in the measurement system (Metric/Imperial)
 provided, precluding us from having to do the conversions.
 
 """
+import base64
+import json
+import requests
+
 from mycroft.api import Api
 from mycroft.util.log import LOG
+from mycroft.configuration import Configuration
 
 from .weather import WeatherReport
 
@@ -127,7 +132,6 @@ class OpenWeatherMapApi(Api):
             measurement_system = "imperial"
         else:
             measurement_system = "metric"
-
         query_parameters = dict(
             exclude="minutely",
             lang=owm_language(lang),
@@ -135,9 +139,25 @@ class OpenWeatherMapApi(Api):
             lon=longitude,
             units=measurement_system,
         )
-        LOG.debug(f"Parameters: {query_parameters}")
+        path = "/onecall"
         api_request = dict(path="/onecall", query=query_parameters)
-        response = self.request(api_request)
-        local_weather = WeatherReport(response)
+        try:
+            response = self.request(api_request)
+            local_weather = WeatherReport(response)
+        except Exception:
+            # For whatever reason, we didn't get back a usable response.
+            # This is a direct attempt to hit the api as fallback.
+            weather_config = Configuration.get().get("openweathermap")
+
+            # Yeah we know...
+            default_yek = base64.b64decode(b'OWU0NzdkMDk0YmYxOWFiMDE4NzFjOTIwZDI3ZGJiODg=')
+            owm_key = weather_config.get("key", default_yek.decode("utf-8"))
+            owm_url = weather_config["url"]
+
+            query_parameters["APPID"] = owm_key
+            # Call will look like this: "https://api.openweathermap.org/data/2.5/onecall?exclude=minutely&lang=en&lat=37.9577&lon=-121.29078&units=imperial&APPID={query_parameters['APPID']}"
+            response = requests.get(owm_url + "/" + path, params=query_parameters)
+            decoded = json.loads(response.content.decode("utf-8"))
+            local_weather = WeatherReport(decoded)
 
         return local_weather

@@ -16,6 +16,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List
 
+from mycroft.util.log import LOG
+
 from .config import MILES_PER_HOUR
 from .util import convert_to_local_datetime
 
@@ -124,14 +126,27 @@ class Weather:
     """Abstract data representation of commonalities in forecast types."""
 
     def __init__(self, weather: dict, timezone: str):
+        LOG.debug(f"Weather: {weather}") 
         self.date_time = convert_to_local_datetime(weather["dt"], timezone)
-        self.feels_like = weather["feelsLike"]
+        try:
+            self.feels_like = weather["feelsLike"]
+        except:
+            self.feels_like = weather["feels_like"]
         self.pressure = weather["pressure"]
         self.humidity = weather["humidity"]
-        self.dew_point = weather["dewPoint"]
+        try:
+            self.dew_point = weather["dewPoint"]
+        except:
+            self.dew_point = weather["dew_point"]
         self.clouds = weather["clouds"]
-        self.wind_speed = int(weather["windSpeed"])
-        self.wind_direction = self._determine_wind_direction(weather["windDeg"])
+        try:
+            self.wind_speed = int(weather["windSpeed"])
+        except:
+            self.wind_speed = int(weather["wind_speed"])
+        try:
+            self.wind_direction = self._determine_wind_direction(weather["windDeg"])
+        except:
+            self.wind_direction = self._determine_wind_direction(weather["wind_deg"])
         self.condition = WeatherCondition(weather["weather"][0])
 
     @staticmethod
@@ -216,7 +231,10 @@ class DailyWeather(Weather):
         self.sunrise = convert_to_local_datetime(weather["sunrise"], timezone)
         self.sunset = convert_to_local_datetime(weather["sunset"], timezone)
         self.temperature = DailyTemperature(weather["temp"])
-        self.feels_like = DailyFeelsLike(weather["feelsLike"])
+        try:
+            self.feels_like = DailyFeelsLike(weather["feelsLike"])
+        except:
+            self.feels_like = DailyFeelsLike(weather["feels_like"])
         self.chance_of_precipitation = int(weather["pop"] * 100)
 
 
@@ -244,6 +262,10 @@ class WeatherReport:
     """Full representation of the data returned by the Open Weather Maps One Call API"""
 
     def __init__(self, report):
+        LOG.debug(f"Report: {report}")
+        LOG.debug(f"Type: {type(report)}")
+        LOG.debug(f'Timezone: {report["timezone"]}')
+
         timezone = report["timezone"]
         self.current = CurrentWeather(report["current"], timezone)
         self.hourly = [HourlyWeather(hour, timezone) for hour in report["hourly"]]
