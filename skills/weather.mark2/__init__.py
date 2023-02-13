@@ -555,6 +555,9 @@ class WeatherSkill(MycroftSkill):
             weather, dialog = self._get_weather(intent_data)
             if weather is not None:
                 forecast, timeframe = weather.get_next_precipitation(intent_data)
+                if not forecast:
+                    # No rain is forecast.
+                    return self.end_session(dialog="no.rain")
                 intent_data.timeframe = timeframe
                 dialog_args = intent_data, self.weather_config, forecast
                 precipitation_dialog = get_dialog_for_timeframe(

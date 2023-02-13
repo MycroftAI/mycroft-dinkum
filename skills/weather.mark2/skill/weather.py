@@ -389,5 +389,4 @@ class WeatherReport:
                 if daily.chance_of_precipitation > THIRTY_PERCENT:
                     report = daily
                     break
-
         return report, timeframe
