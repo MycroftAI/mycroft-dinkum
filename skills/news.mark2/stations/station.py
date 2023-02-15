@@ -282,7 +282,7 @@ stations = dict(
     VRT=FileStation(
         "VRT",
         "VRT Nieuws",
-        "https://progressive-audio.lwc.vrtcdn.be/content/fixed/11_11niws-snip_hi.mp3",
+        "http://progressive-audio.vrtcdn.be/content/fixed/11_11niws-snip_hi.mp3",
         None,
     ),
     WDR=RSSStation(
